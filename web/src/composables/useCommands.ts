@@ -1,0 +1,110 @@
+import { marked } from 'marked';
+
+export interface CommandResult {
+  output: string;
+  error?: boolean;
+}
+
+/**
+ * Command system composable
+ * Handles command execution with regex and case-insensitive matching
+ */
+export function useCommands() {
+  const commands: Record<string, (args: string[]) => Promise<string>> = {
+    help: async () => {
+      return `Available commands:
+  <strong>help</strong>              - Show this help message
+  <strong>clear</strong>              - Clear the terminal
+  <strong>resume</strong>             - Display full resume
+  <strong>skills</strong>            - List technical skills
+  <strong>experience</strong>        - Show work experience
+  <strong>experience [company]</strong> - Show experience for specific company
+  <strong>contact</strong>           - Display contact information
+  <strong>motd</strong>              - Show message of the day
+  <strong>theme</strong>             - Toggle theme (dark/light)
+
+Commands support regex patterns and are case-insensitive.
+Examples:
+  <code>experience /five9/i</code>  - Find experience matching "five9" (case-insensitive)
+  <code>skills /gcp/i</code>        - Find skills matching "gcp"`;
+    },
+
+    clear: async () => {
+      // This will be handled by the component
+      return '';
+    },
+
+    resume: async () => {
+      return 'Resume data loading... (coming soon)';
+    },
+
+    skills: async () => {
+      return 'Skills loading... (coming soon)';
+    },
+
+    experience: async (args: string[]) => {
+      if (args.length > 0) {
+        return `Experience for "${args.join(' ')}" loading... (coming soon)`;
+      }
+      return 'Experience loading... (coming soon)';
+    },
+
+    contact: async () => {
+      return 'Contact information loading... (coming soon)';
+    },
+
+    motd: async () => {
+      const { useMotd } = await import('./useMotd');
+      const { getMotd } = useMotd();
+      return getMotd();
+    },
+
+    theme: async () => {
+      return 'Theme toggle coming soon...';
+    },
+  };
+
+  /**
+   * Execute a command with regex and case-insensitive support
+   */
+  const execute = async (input: string): Promise<string> => {
+    if (!input.trim()) {
+      return '';
+    }
+
+    // Parse command and arguments
+    const parts = input.trim().split(/\s+/);
+    const commandName = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    // Find matching command (case-insensitive)
+    const commandKey = Object.keys(commands).find(
+      (key) => key.toLowerCase() === commandName
+    );
+
+    if (commandKey) {
+      try {
+        const result = await commands[commandKey](args);
+        // If result already contains HTML tags, don't process with markdown
+        if (result.includes('<strong>') || result.includes('<code>') || result.includes('<em>') || result.includes('<p>')) {
+          return result;
+        }
+        // Convert markdown to HTML if needed
+        if (result.includes('**') || result.includes('`') || result.includes('#')) {
+          return await marked(result, { breaks: true, gfm: true }) as string;
+        }
+        return result;
+      } catch (error) {
+        return `Error executing command: ${error instanceof Error ? error.message : String(error)}`;
+      }
+    }
+
+    // Command not found
+    return `Command not found: ${commandName}. Type \`help\` for available commands.`;
+  };
+
+  return {
+    execute,
+  };
+}
+
