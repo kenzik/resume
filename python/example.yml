@@ -1,0 +1,69 @@
+profile: >
+  Experienced software engineer with 10+ years of experience building scalable web applications 
+  and cloud infrastructure. Passionate about clean code, automation, and delivering high-quality 
+  solutions that solve real business problems. Strong background in full-stack development, 
+  DevOps practices, and team leadership.
+
+skills:
+  - "Python"
+  - "JavaScript / TypeScript"
+  - "React / Next.js"
+  - "AWS / Cloud Infrastructure"
+  - "Docker / Kubernetes"
+  - "CI/CD Pipelines"
+  - "PostgreSQL / MongoDB"
+  - "Agile / Scrum"
+
+experience:
+  - company: "Tech Solutions Inc."
+    title: "Senior Software Engineer"
+    date: "January 2020 – Present"
+    summary: >
+      Lead development of customer-facing web applications and internal tooling. 
+      Architected microservices infrastructure supporting millions of daily active users.
+    sections:
+      - title: "Platform Development"
+        bullets:
+          - "Designed and implemented RESTful API architecture serving 10M+ requests daily with 99.9% uptime."
+          - "Built real-time notification system using WebSockets and Redis pub/sub, reducing latency by 60%."
+          - "Led migration from monolithic to microservices architecture, improving deployment frequency by 5x."
+      - title: "DevOps & Infrastructure"
+        bullets:
+          - "Implemented CI/CD pipelines using GitHub Actions and Jenkins, reducing deployment time from 2 hours to 15 minutes."
+          - "Containerized applications with Docker and orchestrated using Kubernetes on AWS EKS."
+          - "Set up monitoring and alerting with Prometheus and Grafana, reducing MTTR by 40%."
+    tech: "Python, TypeScript, React, AWS, Docker, Kubernetes, PostgreSQL, Redis, GitHub Actions"
+
+  - company: "StartupCo"
+    title: "Full-Stack Developer"
+    date: "June 2017 – December 2019"
+    sections:
+      - title: "Product Development"
+        bullets:
+          - "Built MVP web application from scratch using React and Node.js, acquiring first 1,000 users in 3 months."
+          - "Implemented payment processing integration with Stripe, processing $500K+ in transactions."
+          - "Developed admin dashboard for business analytics, enabling data-driven decision making."
+    tech: "JavaScript, React, Node.js, MongoDB, Stripe API, AWS"
+
+  - company: "Digital Agency"
+    title: "Web Developer"
+    date: "August 2015 – May 2017"
+    sections:
+      - title: "Highlights"
+        bullets:
+          - "Developed responsive websites for 20+ clients using modern JavaScript frameworks."
+          - "Optimized website performance, achieving 90+ Lighthouse scores across all projects."
+          - "Collaborated with designers to implement pixel-perfect UI/UX designs."
+    tech: "HTML, CSS, JavaScript, WordPress, PHP"
+
+earlier:
+  - "Junior Developer — Web Design Studio (2013–2015)"
+  - "Intern — Software Development Company (2012–2013)"
+
+certs:
+  - "AWS Certified Solutions Architect – Associate"
+  - "Kubernetes Administrator (CKA) (In Progress)"
+
+education:
+  - "State University — Bachelor of Science in Computer Science"
+
