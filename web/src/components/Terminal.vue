@@ -433,7 +433,7 @@ onUnmounted(() => {
 .motd-banner {
   margin-bottom: 20px;
   margin-top: 0;
-  line-height: 1.0; // Tight spacing for ASCII art
+  line-height: 1.0 !important; // Tight spacing for ASCII art, override inherited line-height
 }
 
 // MOTD text content - comfortable spacing
