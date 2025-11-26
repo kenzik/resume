@@ -1,0 +1,46 @@
+// App Global Styles
+// This file is imported by quasar.config.js
+
+// Global CSS variables are set by the theme system via useTheme composable
+// They are applied to :root in the composable
+
+// Base terminal styling
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family, monospace);
+  font-size: var(--font-size, 14px);
+  line-height: var(--font-line-height, 1.6);
+  background-color: var(--color-background, #1e1e1e);
+  color: var(--color-foreground, #d4d4d4);
+}
+
+// Selection styling
+::selection {
+  background-color: var(--color-selection, #264f78);
+  color: var(--color-foreground, #d4d4d4);
+}
+
+// Scrollbar styling (optional, for terminal aesthetic)
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-background, #1e1e1e);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-brightBlack, #666666);
+  border-radius: 6px;
+
+  &:hover {
+    background: var(--color-white, #e5e5e5);
+  }
+}
+

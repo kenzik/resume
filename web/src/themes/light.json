@@ -1,0 +1,44 @@
+{
+  "name": "cursor-light",
+  "displayName": "Cursor Light",
+  "colors": {
+    "background": "#ffffff",
+    "foreground": "#333333",
+    "cursor": "#333333",
+    "selection": "#add6ff",
+    "black": "#000000",
+    "red": "#cd3131",
+    "green": "#0dbc79",
+    "yellow": "#e5e510",
+    "blue": "#2472c8",
+    "magenta": "#bc3fbc",
+    "cyan": "#11a8cd",
+    "white": "#e5e5e5",
+    "brightBlack": "#666666",
+    "brightRed": "#f14c4c",
+    "brightGreen": "#23d18b",
+    "brightYellow": "#f5f543",
+    "brightBlue": "#3b8eea",
+    "brightMagenta": "#d670d6",
+    "brightCyan": "#29b8db",
+    "brightWhite": "#ffffff"
+  },
+  "terminal": {
+    "prompt": "#0dbc79",
+    "command": "#2472c8",
+    "output": "#333333",
+    "error": "#cd3131",
+    "success": "#0dbc79",
+    "warning": "#e5e510",
+    "info": "#11a8cd"
+  },
+  "font": {
+    "family": "'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace",
+    "size": "14px",
+    "lineHeight": "1.6"
+  },
+  "spacing": {
+    "padding": "20px"
+  }
+}
+
