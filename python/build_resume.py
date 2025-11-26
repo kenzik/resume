@@ -12,11 +12,61 @@ from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
 
+# --- CONSTANTS ---
+# Section titles that should not be displayed as headers
+SKIP_SECTION_TITLES = {"Highlights", "Key Projects"}
+
+# Resume section titles (used across all formats)
+SECTION_PROFILE = "PROFILE"
+SECTION_COMPETENCIES = "CORE COMPETENCIES"
+SECTION_EXPERIENCE = "PROFESSIONAL EXPERIENCE"
+SECTION_EARLIER = "EARLIER ROLES"
+SECTION_CERTS_EDU = "CERTIFICATIONS & EDUCATION"
+
+# Separators
+SEPARATOR_CONTACT = " | "  # Contact info separator
+SEPARATOR_SKILLS_DOCX = " • "  # Skills separator for DOCX/MD
+SEPARATOR_SKILLS_PDF = " - "  # Skills separator for PDF
+SEPARATOR_JOB = " | "  # Job company | title separator
+SEPARATOR_MD_SECTION = "---"  # Markdown section separator
+
+# DOCX constants
+DOCX_FONT_NAME = "Calibri"
+DOCX_FONT_SIZE = 11
+
+# PDF layout constants
+PDF_FONT_FAMILY = "Helvetica"
+PDF_FOOTER_MARGIN = -15
+PDF_FOOTER_FONT_SIZE = 8
+PDF_PAGE_BREAK_Y = 250
+PDF_MARGIN = 15
+PDF_HEADER_FONT_SIZE = 24
+PDF_SECTION_FONT_SIZE = 12
+PDF_BODY_FONT_SIZE = 10
+PDF_JOB_TITLE_FONT_SIZE = 11
+PDF_SUBSECTION_FONT_SIZE = 10
+PDF_TECH_FONT_SIZE = 9
+PDF_BULLET_PREFIX = "- "  # Bullet point prefix for PDF
+
+# RTF constants
+RTF_BULLET = "\u2022"  # Proper bullet character
+RTF_FONT_NAME = "Arial"  # RTF font name
+RTF_HEADER = r"{\rtf1\ansi\deff0{\fonttbl{\f0 Arial;}}\viewkind4\uc1\pard\sa200\sl276\slmult1\lang9\f0\fs22"
+
+# Education delimiter
+EDU_DELIMITER = "—"
+
+# Magic strings for formatting logic
+STRING_IN_PROGRESS = "In Progress"
+STRING_UNIVERSITY = "University"
+STRING_REDACTED_LOC = "[REDACTED LOC]"
+STRING_REDACTED_TEL = "[REDACTED TEL]"
+
+
 # --- UTILS ---
-def clean_pdf(text):
-    if not text:
-        return ""
-    replacements = {
+# Pre-compile translation table for PDF cleaning (much faster than multiple replace calls)
+_PDF_REPLACEMENTS = str.maketrans(
+    {
         "\u2022": "-",
         "\u2013": "-",
         "\u2014": "--",
@@ -26,22 +76,33 @@ def clean_pdf(text):
         "\u201d": '"',
         "\u2026": "...",
     }
-    for k, v in replacements.items():
-        text = text.replace(k, v)
+)
+
+
+def clean_pdf(text):
+    """Clean text for PDF output using efficient str.translate()."""
+    if not text:
+        return ""
+    text = text.translate(_PDF_REPLACEMENTS)
     return text.encode("latin-1", "replace").decode("latin-1")
 
 
 def clean_rtf(text):
+    """Clean text for RTF output with proper escaping."""
     if not text:
         return ""
+    # Escape special RTF characters first
     text = text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
+    # Process non-ASCII characters more efficiently
     res = []
     for char in text:
         code = ord(char)
         if code < 128:
             res.append(char)
         else:
-            res.append(f"\\u{code - 65536 if code > 32767 else code}?")
+            # RTF Unicode escape: \uN? where N is signed 16-bit integer
+            rtf_code = code - 65536 if code > 32767 else code
+            res.append(f"\\u{rtf_code}?")
     return "".join(res)
 
 
@@ -62,13 +123,27 @@ def get_contact_string(reveal_pii):
         parts.append(city)
         parts.append(phone)
     else:
-        parts.append("[REDACTED LOC]")
-        parts.append("[REDACTED TEL]")
+        parts.append(STRING_REDACTED_LOC)
+        parts.append(STRING_REDACTED_TEL)
 
     parts.append(email)
     parts.append(linkedin)
 
-    return " | ".join(parts)
+    return SEPARATOR_CONTACT.join(parts)
+
+
+# --- HELPER FUNCTIONS ---
+def should_show_section_title(title):
+    """Check if a section title should be displayed as a header."""
+    return title and title not in SKIP_SECTION_TITLES
+
+
+def parse_education(edu_string):
+    """Parse education string into institution and degree parts."""
+    parts = edu_string.split(EDU_DELIMITER, 1)
+    institution = parts[0].strip()
+    degree = parts[1].strip() if len(parts) > 1 else None
+    return institution, degree
 
 
 # --- RENDERERS ---
@@ -78,8 +153,8 @@ def render_docx(data, filename):
     print(f"[+] Generating DOCX -> {filename}...")
     doc = Document()
     style = doc.styles["Normal"]
-    style.font.name = "Calibri"
-    style.font.size = Pt(11)
+    style.font.name = DOCX_FONT_NAME
+    style.font.size = Pt(DOCX_FONT_SIZE)
 
     # Header
     h1 = doc.add_heading(data["header"]["name"], 0)
@@ -87,27 +162,24 @@ def render_docx(data, filename):
     doc.add_paragraph(data["header"]["contact"]).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
     # Sections
-    doc.add_heading("PROFILE", level=1)
+    doc.add_heading(SECTION_PROFILE, level=1)
     doc.add_paragraph(data["profile"])
 
-    doc.add_heading("CORE COMPETENCIES", level=1)
-    doc.add_paragraph(" • ".join(data["skills"]))
+    doc.add_heading(SECTION_COMPETENCIES, level=1)
+    doc.add_paragraph(SEPARATOR_SKILLS_DOCX.join(data["skills"]))
 
-    doc.add_heading("PROFESSIONAL EXPERIENCE", level=1)
+    doc.add_heading(SECTION_EXPERIENCE, level=1)
     for job in data["experience"]:
         p = doc.add_paragraph()
         p.add_run(job["company"]).bold = True
-        p.add_run(f" | {job['title']}").italic = True
+        p.add_run(f"{SEPARATOR_JOB}{job['title']}").italic = True
         p.add_run(f"\n{job['date']}")
 
         if job.get("summary"):
             doc.add_paragraph(job["summary"])
 
         for section in job.get("sections", []):
-            if section.get("title") and section["title"] not in [
-                "Highlights",
-                "Key Projects",
-            ]:
+            if should_show_section_title(section.get("title")):
                 doc.add_paragraph(section["title"]).bold = True
             for bullet in section["bullets"]:
                 doc.add_paragraph(bullet, style="List Bullet")
@@ -116,63 +188,64 @@ def render_docx(data, filename):
             doc.add_paragraph(job["tech"]).italic = True
         doc.add_paragraph()
 
-    doc.add_heading("EARLIER ROLES", level=1)
+    doc.add_heading(SECTION_EARLIER, level=1)
     for role in data["earlier"]:
         doc.add_paragraph(role)
 
-    doc.add_heading("CERTIFICATIONS & EDUCATION", level=1)
+    doc.add_heading(SECTION_CERTS_EDU, level=1)
     for cert in data["certs"]:
         p = doc.add_paragraph()
-        p.add_run(cert).bold = "In Progress" in cert
+        p.add_run(cert).bold = STRING_IN_PROGRESS in cert
     for edu in data["education"]:
-        parts = edu.split("—")
+        institution, degree = parse_education(edu)
         p = doc.add_paragraph()
-        p.add_run(parts[0].strip() + " — ").bold = True
-        if len(parts) > 1:
-            p.add_run(parts[1].strip())
+        p.add_run(f"{institution} {EDU_DELIMITER} ").bold = True
+        if degree:
+            p.add_run(degree)
 
     doc.save(filename)
 
 
 def render_md(data, filename):
+    """Render resume as Markdown with optimized string building."""
     print(f"[+] Generating MD -> {filename}...")
     try:
+        lines = [
+            f"# {data['header']['name']}\n",
+            f"**{data['header']['contact']}**\n",
+            f"## {SECTION_PROFILE}\n\n{data['profile']}\n",
+            f"## {SECTION_COMPETENCIES}\n\n{SEPARATOR_SKILLS_DOCX.join(data['skills'])}\n",
+            f"## {SECTION_EXPERIENCE}\n",
+        ]
+
+        for job in data["experience"]:
+            lines.append(
+                f"### {job['company']}{SEPARATOR_JOB}*{job['title']}*\n**{job['date']}**\n"
+            )
+            if job.get("summary"):
+                lines.append(f"{job['summary']}\n")
+            for section in job.get("sections", []):
+                if should_show_section_title(section.get("title")):
+                    lines.append(f"**{section['title']}**\n")
+                lines.extend(f"* {bullet}\n" for bullet in section["bullets"])
+                lines.append("\n")
+            if job.get("tech"):
+                lines.append(f"*{job['tech']}*\n")
+            lines.append(f"{SEPARATOR_MD_SECTION}\n")
+
+        lines.append(f"\n## {SECTION_EARLIER}\n")
+        lines.extend(f"* {role}\n" for role in data["earlier"])
+        lines.append(f"\n## {SECTION_CERTS_EDU}\n")
+        lines.extend(f"* **{cert}**\n" for cert in data["certs"])
+        for edu in data["education"]:
+            institution, degree = parse_education(edu)
+            if degree:
+                lines.append(f"* **{institution}** {EDU_DELIMITER} {degree}\n")
+            else:
+                lines.append(f"* **{institution}**\n")
+
         with open(filename, "w", encoding="utf-8") as f:
-            f.write(f"# {data['header']['name']}\n\n")
-            f.write(f"**{data['header']['contact']}**\n\n")
-            f.write(f"## PROFILE\n\n{data['profile']}\n\n")
-            f.write(f"## CORE COMPETENCIES\n\n" + " • ".join(data["skills"]) + "\n\n")
-            f.write("## PROFESSIONAL EXPERIENCE\n\n")
-            for job in data["experience"]:
-                f.write(
-                    f"### {job['company']} | *{job['title']}*\n**{job['date']}**\n\n"
-                )
-                if job.get("summary"):
-                    f.write(f"{job['summary']}\n\n")
-                for section in job.get("sections", []):
-                    if section.get("title") and section["title"] not in [
-                        "Highlights",
-                        "Key Projects",
-                    ]:
-                        f.write(f"**{section['title']}**\n")
-                    for bullet in section["bullets"]:
-                        f.write(f"* {bullet}\n")
-                    f.write("\n")
-                if job.get("tech"):
-                    f.write(f"*{job['tech']}*\n\n")
-                f.write("---\n\n")
-            f.write("## EARLIER ROLES\n\n")
-            for role in data["earlier"]:
-                f.write(f"* {role}\n")
-            f.write("\n## CERTIFICATIONS & EDUCATION\n\n")
-            for c in data["certs"]:
-                f.write(f"* **{c}**\n")
-            for e in data["education"]:
-                parts = e.split("—")
-                f.write(
-                    f"* **{parts[0].strip()}**"
-                    + (f" — {parts[1].strip()}\n" if len(parts) > 1 else "\n")
-                )
+            f.writelines(lines)
     except Exception as e:
         print(f"FAILED to write Markdown: {e}")
         raise e
@@ -183,17 +256,17 @@ def render_pdf(data, filename):
 
     class PDF(FPDF):
         def footer(self):
-            self.set_y(-15)
-            self.set_font("Helvetica", "I", 8)
+            self.set_y(PDF_FOOTER_MARGIN)
+            self.set_font(PDF_FONT_FAMILY, "I", PDF_FOOTER_FONT_SIZE)
             self.cell(0, 10, f"Page {self.page_no()}", align="C")
 
     pdf = PDF()
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.set_auto_page_break(auto=True, margin=PDF_MARGIN)
     width = pdf.epw
 
     # --- HEADER ---
-    pdf.set_font("Helvetica", "B", 24)
+    pdf.set_font(PDF_FONT_FAMILY, "B", PDF_HEADER_FONT_SIZE)
     pdf.cell(
         width,
         10,
@@ -202,7 +275,7 @@ def render_pdf(data, filename):
         new_y=YPos.NEXT,
         align="C",
     )
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
     pdf.cell(
         width,
         10,
@@ -215,34 +288,34 @@ def render_pdf(data, filename):
 
     # --- SECTIONS ---
     sections = [
-        ("PROFILE", "text", data["profile"]),
-        ("CORE COMPETENCIES", "text", " - ".join(data["skills"])),
+        (SECTION_PROFILE, "text", data["profile"]),
+        (SECTION_COMPETENCIES, "text", SEPARATOR_SKILLS_PDF.join(data["skills"])),
     ]
 
     for title, mode, content in sections:
-        pdf.set_font("Helvetica", "B", 12)
+        pdf.set_font(PDF_FONT_FAMILY, "B", PDF_SECTION_FONT_SIZE)
         pdf.set_fill_color(220, 220, 220)
         pdf.cell(width, 8, title, new_x=XPos.LMARGIN, new_y=YPos.NEXT, fill=False)
         pdf.ln(2)
-        pdf.set_font("Helvetica", "", 10)
+        pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
         pdf.multi_cell(width, 5, clean_pdf(content))
         pdf.ln(4)
 
     # --- EXPERIENCE ---
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(width, 8, "PROFESSIONAL EXPERIENCE", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font(PDF_FONT_FAMILY, "B", PDF_SECTION_FONT_SIZE)
+    pdf.cell(width, 8, SECTION_EXPERIENCE, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(2)
 
     for job in data["experience"]:
-        pdf.set_font("Helvetica", "B", 11)
+        pdf.set_font(PDF_FONT_FAMILY, "B", PDF_JOB_TITLE_FONT_SIZE)
         pdf.cell(
             width,
             6,
-            clean_pdf(f"{job['company']} | {job['title']}"),
+            clean_pdf(f"{job['company']}{SEPARATOR_JOB}{job['title']}"),
             new_x=XPos.LMARGIN,
             new_y=YPos.NEXT,
         )
-        pdf.set_font("Helvetica", "", 10)
+        pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
         pdf.cell(width, 5, clean_pdf(job["date"]), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         pdf.ln(2)
 
@@ -251,11 +324,8 @@ def render_pdf(data, filename):
             pdf.ln(2)
 
         for section in job.get("sections", []):
-            if section.get("title") and section["title"] not in [
-                "Highlights",
-                "Key Projects",
-            ]:
-                pdf.set_font("Helvetica", "B", 10)
+            if should_show_section_title(section.get("title")):
+                pdf.set_font(PDF_FONT_FAMILY, "B", PDF_SUBSECTION_FONT_SIZE)
                 pdf.cell(
                     width,
                     6,
@@ -263,48 +333,45 @@ def render_pdf(data, filename):
                     new_x=XPos.LMARGIN,
                     new_y=YPos.NEXT,
                 )
-            pdf.set_font("Helvetica", "", 10)
+            pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
             for bullet in section["bullets"]:
                 pdf.set_x(pdf.l_margin + 2)
-                pdf.multi_cell(width - 2, 5, f"- {clean_pdf(bullet)}")
+                pdf.multi_cell(width - 2, 5, f"{PDF_BULLET_PREFIX}{clean_pdf(bullet)}")
             pdf.ln(2)
 
         if job.get("tech"):
-            pdf.set_font("Helvetica", "I", 9)
+            pdf.set_font(PDF_FONT_FAMILY, "I", PDF_TECH_FONT_SIZE)
             pdf.multi_cell(width, 5, clean_pdf(job["tech"]))
         pdf.ln(4)
 
     # --- TAIL SECTIONS ---
-    if pdf.get_y() > 250:
+    if pdf.get_y() > PDF_PAGE_BREAK_Y:
         pdf.add_page()
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(width, 8, "EARLIER ROLES", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.set_font(PDF_FONT_FAMILY, "B", PDF_SECTION_FONT_SIZE)
+    pdf.cell(width, 8, SECTION_EARLIER, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(2)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
     for role in data["earlier"]:
         pdf.multi_cell(width, 5, clean_pdf(role))
     pdf.ln(4)
 
-    if pdf.get_y() > 250:
+    if pdf.get_y() > PDF_PAGE_BREAK_Y:
         pdf.add_page()
-    pdf.set_font("Helvetica", "B", 12)
-    pdf.cell(
-        width, 8, "CERTIFICATIONS & EDUCATION", new_x=XPos.LMARGIN, new_y=YPos.NEXT
-    )
+    pdf.set_font(PDF_FONT_FAMILY, "B", PDF_SECTION_FONT_SIZE)
+    pdf.cell(width, 8, SECTION_CERTS_EDU, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(2)
     for item in data["certs"] + data["education"]:
-        is_bold = "In Progress" in item or "University" in item
-        pdf.set_font("Helvetica", "B" if is_bold else "", 10)
+        is_bold = STRING_IN_PROGRESS in item or STRING_UNIVERSITY in item
+        pdf.set_font(PDF_FONT_FAMILY, "B" if is_bold else "", PDF_BODY_FONT_SIZE)
         pdf.multi_cell(width, 6, clean_pdf(item))
 
     pdf.output(filename)
 
 
 def render_rtf(data, filename):
+    """Render resume as RTF with proper Unicode handling."""
     print(f"[+] Generating RTF -> {filename}...")
-    rtf = [
-        r"{\rtf1\ansi\deff0{\fonttbl{\f0 Arial;}}\viewkind4\uc1\pard\sa200\sl276\slmult1\lang9\f0\fs22"
-    ]
+    rtf = [RTF_HEADER]
 
     def line(txt, bold=False, italic=False, ul=False):
         fmt = r"\par"
@@ -323,17 +390,19 @@ def render_rtf(data, filename):
     rtf.append(r"\qc\b\fs32 " + clean_rtf(data["header"]["name"]) + r"\par")
     rtf.append(r"\fs22\b0 " + clean_rtf(data["header"]["contact"]) + r"\par\par")
 
-    line("PROFILE", bold=True, ul=True)
+    line(SECTION_PROFILE, bold=True, ul=True)
     line(data["profile"])
-    line("CORE COMPETENCIES", bold=True, ul=True)
-    line(" \u8226? ".join(data["skills"]))
+    line(SECTION_COMPETENCIES, bold=True, ul=True)
+    line(f" {RTF_BULLET} ".join(data["skills"]))
 
-    line("PROFESSIONAL EXPERIENCE", bold=True, ul=True)
+    line(SECTION_EXPERIENCE, bold=True, ul=True)
     for job in data["experience"]:
         rtf.append(
             r"\pard\sa200\sl276\slmult1\b "
             + clean_rtf(job["company"])
-            + r"\b0  | \i "
+            + r"\b0 "
+            + clean_rtf(SEPARATOR_JOB)
+            + r"\i "
             + clean_rtf(job["title"])
             + r"\i0\par"
         )
@@ -341,14 +410,13 @@ def render_rtf(data, filename):
         if job.get("summary"):
             line(job["summary"])
         for section in job.get("sections", []):
-            if section.get("title") and section["title"] not in [
-                "Highlights",
-                "Key Projects",
-            ]:
+            if should_show_section_title(section.get("title")):
                 line(section["title"], bold=True)
             for bullet in section["bullets"]:
                 rtf.append(
-                    r"\pard\sa200\sl276\slmult1\tx360\li360\fi-360 \u8226? \tab "
+                    r"\pard\sa200\sl276\slmult1\tx360\li360\fi-360 "
+                    + clean_rtf(RTF_BULLET)
+                    + r" \tab "
                     + clean_rtf(bullet)
                     + r"\par"
                 )
@@ -357,22 +425,26 @@ def render_rtf(data, filename):
         else:
             rtf.append(r"\par")
 
-    line("EARLIER ROLES", bold=True, ul=True)
+    line(SECTION_EARLIER, bold=True, ul=True)
     for role in data["earlier"]:
         rtf.append(
-            r"\pard\sa200\sl276\slmult1\tx360\li360\fi-360 \u8226? \tab "
+            r"\pard\sa200\sl276\slmult1\tx360\li360\fi-360 "
+            + clean_rtf(RTF_BULLET)
+            + r" \tab "
             + clean_rtf(role)
             + r"\par"
         )
 
-    line("CERTIFICATIONS & EDUCATION", bold=True, ul=True)
+    line(SECTION_CERTS_EDU, bold=True, ul=True)
     for item in data["certs"] + data["education"]:
-        bold = "In Progress" in item or "University" in item
+        bold = STRING_IN_PROGRESS in item or STRING_UNIVERSITY in item
         txt = clean_rtf(item)
         if bold:
             txt = r"\b " + txt + r"\b0"
         rtf.append(
-            r"\pard\sa200\sl276\slmult1\tx360\li360\fi-360 \u8226? \tab "
+            r"\pard\sa200\sl276\slmult1\tx360\li360\fi-360 "
+            + clean_rtf(RTF_BULLET)
+            + r" \tab "
             + txt
             + r"\par"
         )
@@ -393,8 +465,8 @@ if __name__ == "__main__":
         default="docx",
         help="Output format(s)",
     )
-    parser.add_argument("--name", default="Resume", help="Output filename base")
-    parser.add_argument("--source", default="resume.yml", help="Source YAML file")
+    parser.add_argument("--name", default="resume", help="Output filename base")
+    parser.add_argument("--source", default="example.yml", help="Source YAML file")
     parser.add_argument(
         "--reveal-pii", action="store_true", help="Reveal PII (Phone/City) in output"
     )
@@ -428,13 +500,15 @@ if __name__ == "__main__":
 
     # 3. LOAD YAML
     if not os.path.exists(args.source):
-        sys.exit(f"[!] Error: Source file '{args.source}' not found.")
+        print(f"[!] Error: Source file '{args.source}' not found.", file=sys.stderr)
+        sys.exit(1)
 
     try:
         with open(args.source, "r", encoding="utf-8") as f:
             data = yaml.safe_load(f)
     except yaml.YAMLError as e:
-        sys.exit(f"[!] Error parsing YAML: {e}")
+        print(f"[!] Error parsing YAML: {e}", file=sys.stderr)
+        sys.exit(1)
 
     # 4. INJECT HEADER (Combine Env + Args)
     data["header"] = {
@@ -454,4 +528,5 @@ if __name__ == "__main__":
             render_rtf(data, f"{args.name}.rtf")
         print("[+] Done.")
     except Exception as e:
-        print(f"[!] Unexpected error during generation: {e}")
+        print(f"[!] Unexpected error during generation: {e}", file=sys.stderr)
+        sys.exit(1)
