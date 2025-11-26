@@ -34,7 +34,7 @@
   },
   "font": {
     "family": "'MonoLisa', 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace",
-    "size": "14px",
+    "size": "16px",
     "lineHeight": "1.8"
   },
   "spacing": {
