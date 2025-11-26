@@ -1,6 +1,17 @@
 // App Global Styles
 // This file is imported by quasar.config.js
 
+// MonoLisa font loading (if font files are available)
+// To use MonoLisa webfont, add font files to public/fonts/ and uncomment:
+// @font-face {
+//   font-family: 'MonoLisa';
+//   src: url('/fonts/MonoLisa-Regular.woff2') format('woff2'),
+//        url('/fonts/MonoLisa-Regular.woff') format('woff');
+//   font-weight: normal;
+//   font-style: normal;
+//   font-display: swap;
+// }
+
 // Global CSS variables are set by the theme system via useTheme composable
 // They are applied to :root in the composable
 

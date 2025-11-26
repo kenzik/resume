@@ -22,6 +22,8 @@ export function useCommands() {
   <strong>contact</strong>           - Display contact information
   <strong>motd</strong>              - Show message of the day
   <strong>theme</strong>             - Toggle theme (dark/light)
+  <strong>font</strong>              - Show available fonts or change font
+  <strong>font [name]</strong>       - Change terminal font
 
 Commands support regex patterns and are case-insensitive.
 Examples:
@@ -61,6 +63,59 @@ Examples:
 
     theme: async () => {
       return 'Theme toggle coming soon...';
+    },
+
+    font: async (args: string[]) => {
+      const { useFont } = await import('./useFont');
+      const font = useFont();
+      
+      if (args.length === 0) {
+        // List fonts and show current settings
+        const fonts = font.listFonts();
+        const current = font.getCurrentFont();
+        const rendered = font.getRenderedFont();
+        const lineHeight = font.getLineHeight();
+        const fontStatus = rendered === current || rendered === 'MonoLisa' 
+          ? `<strong>${rendered}</strong> ✓` 
+          : `<strong>${rendered}</strong> (fallback, ${current} not available)`;
+        
+        return `Current font setting: <strong>${current}</strong>
+Actually rendered: ${fontStatus}
+Current line height: <strong>${lineHeight}</strong>
+
+Available fonts:
+${fonts.map(f => `  ${f === current ? `<strong>* ${f}</strong>` : `  ${f}`}`).join('\n')}
+
+Usage:
+  <code>font &lt;name&gt;</code>           - Change font
+  <code>font spacing &lt;value&gt;</code> - Change line height (0.5 - 3.0)
+  
+Examples:
+  <code>font "JetBrains Mono"</code>
+  <code>font spacing 2.0</code>`;
+      }
+      
+      // Handle spacing command
+      if (args[0].toLowerCase() === 'spacing' && args.length > 1) {
+        const lineHeight = parseFloat(args[1]);
+        if (isNaN(lineHeight) || lineHeight <= 0 || lineHeight > 3) {
+          return `Invalid line height: "${args[1]}". Must be between 0.5 and 3.0.`;
+        }
+        const result = font.setLineHeight(lineHeight);
+        if (result) {
+          return `Line height changed to: <strong>${font.getLineHeight()}</strong>`;
+        }
+        return `Failed to set line height.`;
+      }
+      
+      // Handle font name
+      const fontName = args.join(' ');
+      const result = font.setFont(fontName);
+      if (result) {
+        return `Font changed to: <strong>${font.getCurrentFont()}</strong>`;
+      } else {
+        return `Font not found: "${fontName}". Type <code>font</code> to see available fonts.`;
+      }
     },
   };
 

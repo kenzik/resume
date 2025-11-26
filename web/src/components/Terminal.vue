@@ -2,7 +2,10 @@
   <div class="terminal" ref="terminalRef">
     <div class="terminal-output" ref="outputRef">
       <!-- MOTD -->
-      <div class="motd" v-if="showMotd" v-html="formattedMotd"></div>
+      <div v-if="showMotd">
+        <div class="motd motd-banner" v-html="formattedMotdBanner"></div>
+        <div class="motd motd-text" v-html="formattedMotdText"></div>
+      </div>
       
       <!-- Command history -->
       <template v-for="(entry, index) in history" :key="index">
@@ -63,7 +66,8 @@ const currentInput = ref('');
 const history = ref<Array<{ command: string; output: string }>>([]);
 const historyIndex = ref(-1);
 const showCursor = ref(true);
-const motd = ref('');
+const motdBanner = ref('');
+const motdText = ref('');
 const showMotd = ref(true);
 
 const { getMotd } = useMotd();
@@ -71,22 +75,29 @@ const { execute: executeCmd } = useCommands();
 const { typeText, isTyping } = useTypewriter();
 
 // Typewriter delay configuration (milliseconds per character)
-const typewriterDelay = ref(1); // Fast typing speed - configurable
+const typewriterDelay = ref(0.25); // Very fast typing speed - configurable
 
 // Format MOTD with ANSI to HTML conversion
-const formattedMotd = computed(() => {
-  return ansiToHtml(motd.value);
+const formattedMotdBanner = computed(() => {
+  return ansiToHtml(motdBanner.value);
+});
+
+const formattedMotdText = computed(() => {
+  return ansiToHtml(motdText.value);
 });
 
 // Load MOTD on mount with typewriter effect
 onMounted(async () => {
-  const motdText = getMotd();
+  const { banner, text } = getMotd();
   
-  // Type out MOTD with typewriter effect
-  await typeText(motdText, {
+  // Type out ASCII art banner first (fast, no delay needed)
+  motdBanner.value = banner;
+  
+  // Type out MOTD text with typewriter effect
+  await typeText(text, {
     delay: typewriterDelay.value,
-    onChar: (text) => {
-      motd.value = text;
+    onChar: (typedText) => {
+      motdText.value = typedText;
       scrollToBottom();
     },
   });
@@ -279,7 +290,7 @@ onUnmounted(() => {
 .terminal-line {
   display: flex;
   align-items: flex-start;
-  margin-bottom: 0;
+  margin-bottom: 16px;
   min-height: 1.6em;
   word-wrap: break-word;
   white-space: pre-wrap;
@@ -315,6 +326,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   position: relative;
+  // Override terminal-line margin for input line
+  margin-bottom: 0 !important;
 }
 
 .terminal-input {
@@ -348,14 +361,14 @@ onUnmounted(() => {
 
 .terminal-output-text {
   color: var(--terminal-output, #d4d4d4);
-  margin-top: 0;
-  margin-bottom: 0;
+  margin-top: 8px;
+  margin-bottom: 20px;
   margin-left: 0;
   padding: 0;
   width: 100%;
   display: block;
   white-space: pre-wrap;
-  line-height: 1.6;
+  line-height: var(--font-line-height, 1.8);
   clear: both;
   
   :deep(pre) {
@@ -398,13 +411,33 @@ onUnmounted(() => {
   animation: blink 1s infinite;
 }
 
+// Default line-height for all terminal text
+.terminal-output {
+  line-height: var(--font-line-height, 1.8);
+  
+  * {
+    line-height: inherit;
+  }
+}
+
 .motd {
   color: var(--terminal-output, #d4d4d4);
-  margin-bottom: 20px;
-  line-height: 1.0;
   white-space: pre-wrap;
   font-family: var(--font-family, monospace);
   font-size: var(--font-size, 14px);
+}
+
+// ASCII art banner - tight spacing
+.motd-banner {
+  margin-bottom: 20px;
+  margin-top: 0;
+  line-height: 1.0; // Tight spacing for ASCII art
+}
+
+// MOTD text content - comfortable spacing
+.motd-text {
+  margin-bottom: 20px;
+  line-height: var(--font-line-height, 1.8); // Comfortable spacing for text
 }
 </style>
 

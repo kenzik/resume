@@ -18,7 +18,7 @@ const ANSI = {
 };
 
 export function useMotd() {
-  const getMotd = (): string => {
+  const getMotd = (): { banner: string; text: string } => {
     // Art content (without ANSI codes) - all padded to 72 chars for consistent rectangular box
     const artLines = [
       '██║  ██╗███████╗███╗   ██╗███████╗██╗██╗  ██╗',  // 45 chars
@@ -43,7 +43,9 @@ ${ANSI.cyan}╔═════════════════════�
 ║  ${ANSI.bright}${ANSI.green}${paddedArt[5]}${ANSI.reset}${ANSI.cyan} ║
 ║                                                                           ║
 ╚═══════════════════════════════════════════════════════════════════════════╝${ANSI.reset}
+`.trim();
 
+    const text = `
 ${ANSI.bright}${ANSI.cyan}Hi. I'm Dave.${ANSI.reset}
 
 ${ANSI.yellow}Cloud-Native Architect | AI Infrastructure & Strategy | Full-Stack Engineer | Senior Technical Leader${ANSI.reset}
@@ -90,7 +92,7 @@ ${ANSI.dim}───────────────────────
 
 `.trim();
 
-    return banner;
+    return { banner, text };
   };
 
   return {
