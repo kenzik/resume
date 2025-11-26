@@ -33,9 +33,9 @@
     "info": "#29b8db"
   },
   "font": {
-    "family": "'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace",
+    "family": "'MonoLisa', 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace",
     "size": "14px",
-    "lineHeight": "1.6"
+    "lineHeight": "1.8"
   },
   "spacing": {
     "padding": "20px"
