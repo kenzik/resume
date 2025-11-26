@@ -5,9 +5,13 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useTheme } from './composables/useTheme';
+import { useFont } from './composables/useFont';
 
 // Initialize theme system
 const theme = useTheme();
+
+// Initialize font system
+useFont();
 
 // Debug theme initialization
 onMounted(() => {
