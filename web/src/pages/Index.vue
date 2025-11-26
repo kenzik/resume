@@ -2,28 +2,22 @@
   <q-layout view="hHh lpR fFf">
     <q-page-container>
       <q-page class="terminal-page">
-        <div class="terminal-container">
-          <h1>Terminal Resume</h1>
-          <p>Coming soon...</p>
-          <p>Theme test: Background should be dark</p>
-        </div>
+        <Terminal />
       </q-page>
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-// Placeholder for now
+import Terminal from '../components/Terminal.vue';
 </script>
 
 <style lang="scss" scoped>
 .terminal-page {
-  padding: var(--spacing-padding, 20px);
-}
-
-.terminal-container {
-  max-width: 1200px;
-  margin: 0 auto;
+  padding: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 </style>
 
