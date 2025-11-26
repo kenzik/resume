@@ -3,8 +3,8 @@
     <div class="terminal-output" ref="outputRef">
       <!-- MOTD -->
       <div v-if="showMotd">
-        <div class="motd motd-banner" v-html="formattedMotdBanner"></div>
-        <div class="motd motd-text" v-html="formattedMotdText"></div>
+        <div class="motd motd-banner">{{ formattedMotdBanner }}</div>
+        <div class="motd motd-text">{{ formattedMotdText }}</div>
       </div>
       
       <!-- Command history -->
@@ -77,13 +77,15 @@ const { typeText, isTyping } = useTypewriter();
 // Typewriter delay configuration (milliseconds per character)
 const typewriterDelay = ref(0.25); // Very fast typing speed - configurable
 
-// Format MOTD with ANSI to HTML conversion
+// Format MOTD - plain text, no ANSI colors for old-school terminal vibe
 const formattedMotdBanner = computed(() => {
-  return ansiToHtml(motdBanner.value);
+  // Plain text, no HTML conversion needed
+  return motdBanner.value;
 });
 
 const formattedMotdText = computed(() => {
-  return ansiToHtml(motdText.value);
+  // Plain text, no HTML conversion needed
+  return motdText.value;
 });
 
 // Load MOTD on mount with typewriter effect

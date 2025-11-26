@@ -33,62 +33,62 @@ export function useMotd() {
     const paddedArt = artLines.map(line => line.padEnd(72, ' '));
     
     const banner = `
-${ANSI.cyan}╔═══════════════════════════════════════════════════════════════════════════╗
+╔═══════════════════════════════════════════════════════════════════════════╗
 ║                                                                           ║
-║  ${ANSI.bright}${ANSI.green}${paddedArt[0]}${ANSI.reset}${ANSI.cyan} ║
-║  ${ANSI.bright}${ANSI.green}${paddedArt[1]}${ANSI.reset}${ANSI.cyan} ║
-║  ${ANSI.bright}${ANSI.green}${paddedArt[2]}${ANSI.reset}${ANSI.cyan} ║
-║  ${ANSI.bright}${ANSI.green}${paddedArt[3]}${ANSI.reset}${ANSI.cyan} ║
-║  ${ANSI.bright}${ANSI.green}${paddedArt[4]}${ANSI.reset}${ANSI.cyan} ║
-║  ${ANSI.bright}${ANSI.green}${paddedArt[5]}${ANSI.reset}${ANSI.cyan} ║
+║  ${paddedArt[0]} ║
+║  ${paddedArt[1]} ║
+║  ${paddedArt[2]} ║
+║  ${paddedArt[3]} ║
+║  ${paddedArt[4]} ║
+║  ${paddedArt[5]} ║
 ║                                                                           ║
-╚═══════════════════════════════════════════════════════════════════════════╝${ANSI.reset}
+╚═══════════════════════════════════════════════════════════════════════════╝
 `.trim();
 
     const text = `
-${ANSI.bright}${ANSI.cyan}Hi. I'm Dave.${ANSI.reset}
+Hi. I'm Dave.
 
-${ANSI.yellow}Cloud-Native Architect | AI Infrastructure & Strategy | Full-Stack Engineer | Senior Technical Leader${ANSI.reset}
+Cloud-Native Architect | AI Infrastructure & Strategy | Full-Stack Engineer | Senior Technical Leader
 
-${ANSI.dim}─────────────────────────────────────────────────────────────────────────────${ANSI.reset}
+─────────────────────────────────────────────────────────────────────────────
 
-${ANSI.bright}About Me:${ANSI.reset}
+About Me:
 
-  Senior Technologist with ${ANSI.green}25+ years of experience${ANSI.reset} bridging executive business 
-  strategy and deep-tech engineering. Career spans from ${ANSI.cyan}Founder/CTO${ANSI.reset} to 
-  ${ANSI.cyan}Senior Principal Architect${ANSI.reset}, including work with Fortune 50 enterprises.
+  Senior Technologist with 25+ years of experience bridging executive business 
+  strategy and deep-tech engineering. Career spans from Founder/CTO to 
+  Senior Principal Architect, including work with Fortune 50 enterprises.
 
-  Currently pivoting deeper into ${ANSI.magenta}AI/ML Infrastructure${ANSI.reset}—architecting 
+  Currently pivoting deeper into AI/ML Infrastructure—architecting 
   high-performance compute, RAG pipelines, and scalable cloud systems that power AI models.
 
-  Actively pursuing ${ANSI.yellow}NVIDIA architecture certifications${ANSI.reset} and seeking roles 
-  at the intersection of ${ANSI.cyan}High-Performance Computing (HPC), Cloud-Native Infrastructure, 
-  and Applied AI${ANSI.reset}.
+  Actively pursuing NVIDIA architecture certifications and seeking roles 
+  at the intersection of High-Performance Computing (HPC), Cloud-Native Infrastructure, 
+  and Applied AI.
 
-${ANSI.dim}─────────────────────────────────────────────────────────────────────────────${ANSI.reset}
+─────────────────────────────────────────────────────────────────────────────
 
-${ANSI.bright}Technical Arsenal:${ANSI.reset}
+Technical Arsenal:
 
-  ${ANSI.magenta}AI & ML:${ANSI.reset}        LangChain, RAG, Vertex AI, Pinecone, Redis Vector, Prompt Engineering
-  ${ANSI.blue}Cloud & Infra:${ANSI.reset}     Google Cloud Platform (GCP), Terraform (IaC), Docker
-  ${ANSI.cyan}High Scale:${ANSI.reset}        Redis Streams/Cluster, WebSockets, Distributed Systems
-  ${ANSI.green}Languages:${ANSI.reset}        Python, TypeScript, Node.js, Go, Bash
-  ${ANSI.yellow}Leadership:${ANSI.reset}      Solution Architecture, Technical Strategy, Team Mentorship
+  AI & ML:        LangChain, RAG, Vertex AI, Pinecone, Redis Vector, Prompt Engineering
+  Cloud & Infra:     Google Cloud Platform (GCP), Terraform (IaC), Docker
+  High Scale:        Redis Streams/Cluster, WebSockets, Distributed Systems
+  Languages:        Python, TypeScript, Node.js, Go, Bash
+  Leadership:      Solution Architecture, Technical Strategy, Team Mentorship
 
-${ANSI.dim}─────────────────────────────────────────────────────────────────────────────${ANSI.reset}
+─────────────────────────────────────────────────────────────────────────────
 
-${ANSI.bright}About This Resume:${ANSI.reset}
+About This Resume:
 
-  This is a "Resume as Code" project demonstrating ${ANSI.cyan}Separation of Concerns${ANSI.reset} 
-  and ${ANSI.cyan}Single Source of Truth${ANSI.reset}:
+  This is a "Resume as Code" project demonstrating Separation of Concerns 
+  and Single Source of Truth:
 
-  1. ${ANSI.green}Data Layer:${ANSI.reset}    Career history stored as structured YAML
-  2. ${ANSI.green}Logic Layer:${ANSI.reset}   Python engine for formatting rules
-  3. ${ANSI.green}Presentation:${ANSI.reset}  Generates PDF, DOCX, Markdown, RTF formats
+  1. Data Layer:    Career history stored as structured YAML
+  2. Logic Layer:   Python engine for formatting rules
+  3. Presentation:  Generates PDF, DOCX, Markdown, RTF formats
 
-${ANSI.dim}─────────────────────────────────────────────────────────────────────────────${ANSI.reset}
+─────────────────────────────────────────────────────────────────────────────
 
-  Type ${ANSI.bright}${ANSI.green}help${ANSI.reset} to see available commands.
+  Type help to see available commands.
 
 `.trim();
 
