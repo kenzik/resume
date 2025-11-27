@@ -11,13 +11,12 @@ const SKIP_SECTION_TITLES = new Set(["Highlights", "Key Projects"]);
 // Separators
 const SEPARATOR_JOB = " | ";
 const SEPARATOR_SKILLS = " • ";
-const SEPARATOR_LINE = "─────────────────────────────────────────────────────────────────────────────";
 
 /**
- * Format section header with separator line
+ * Format section header (markdown h2)
  */
 export function formatSectionHeader(title: string): string {
-  return `${title}\n${SEPARATOR_LINE}\n`;
+  return `${title}\n\n`;
 }
 
 /**
@@ -71,12 +70,13 @@ function isRelevantSection(section: ResumeSection, job: Experience): boolean {
 export function formatExperienceEntry(job: Experience, showOnlyRelevant: boolean = false): string {
   const lines: string[] = [];
   
-  // Company | Title (bold-like, but plain text)
-  lines.push(`${job.company}${SEPARATOR_JOB}${job.title}`);
+  // Company | Title (markdown bold)
+  lines.push(`**${job.company}**${SEPARATOR_JOB}**${job.title}**`);
+  lines.push('');
   
-  // Date
-  lines.push(job.date);
-  lines.push(''); // Blank line
+  // Date (markdown italic)
+  lines.push(`*${job.date}*`);
+  lines.push('');
   
   // Summary if present
   if (job.summary) {
@@ -94,69 +94,61 @@ export function formatExperienceEntry(job: Experience, showOnlyRelevant: boolean
       // If filtering but no relevant sections found, show all sections
       for (const section of job.sections) {
         if (section.title && !SKIP_SECTION_TITLES.has(section.title)) {
-          lines.push(section.title);
+          lines.push(`**${section.title}**`);
+          lines.push('');
         }
         for (const bullet of section.bullets) {
-          lines.push(`  - ${bullet}`);
+          lines.push(`- ${bullet}`);
         }
         lines.push('');
       }
     } else {
       for (const section of sectionsToShow) {
-        // Only show section title if it's not in skip list
+        // Only show section title if it's not in skip list (markdown bold)
         if (section.title && !SKIP_SECTION_TITLES.has(section.title)) {
-          lines.push(section.title);
+          lines.push(`**${section.title}**`);
+          lines.push('');
         }
         
-        // Bullets (indented with 2 spaces and dash)
+        // Bullets (markdown list)
         for (const bullet of section.bullets) {
-          lines.push(`  - ${bullet}`);
+          lines.push(`- ${bullet}`);
         }
-        lines.push(''); // Blank line after section
+        lines.push('');
       }
     }
   }
   
-  // Tech stack if present (indented, italic-like)
+  // Tech stack if present (markdown italic)
   if (job.tech) {
-    lines.push(`  ${job.tech}`);
-    lines.push(''); // Blank line
+    lines.push(`*Tech: ${job.tech}*`);
+    lines.push('');
   }
   
   return lines.join('\n');
 }
 
 /**
- * Format earlier roles
+ * Format earlier roles (markdown list)
  */
 export function formatEarlierRoles(roles: string[]): string {
-  return roles.map(role => `  - ${role}`).join('\n');
+  return roles.map(role => `- ${role}`).join('\n');
 }
 
 /**
- * Format certifications and education
+ * Format certifications and education (markdown list)
  */
 export function formatCertsAndEducation(certs: string[], education: string[]): string {
   const lines: string[] = [];
   
   // Certifications
   for (const cert of certs) {
-    const isInProgress = cert.includes("In Progress");
-    if (isInProgress) {
-      lines.push(`  - ${cert}`);
-    } else {
-      lines.push(`  - ${cert}`);
-    }
+    lines.push(`- ${cert}`);
   }
   
   // Education
   for (const edu of education) {
-    const isUniversity = edu.includes("University");
-    if (isUniversity) {
-      lines.push(`  - ${edu}`);
-    } else {
-      lines.push(`  - ${edu}`);
-    }
+    lines.push(`- ${edu}`);
   }
   
   return lines.join('\n');
