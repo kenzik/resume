@@ -1,6 +1,6 @@
 {
-  "name": "cursor-light",
-  "displayName": "Cursor Light",
+  "name": "light",
+  "displayName": "Light",
   "colors": {
     "background": "#ffffff",
     "foreground": "#333333",
@@ -34,7 +34,7 @@
   },
   "font": {
     "family": "'MonoLisa', 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace",
-    "size": "17px",
+    "size": "18px",
     "weight": "600",
     "lineHeight": "1.8"
   },
