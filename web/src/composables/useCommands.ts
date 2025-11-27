@@ -6,11 +6,25 @@ export interface CommandResult {
 }
 
 /**
+ * Command context passed to command handlers
+ */
+export interface CommandContext {
+  args: string[];
+  stdin?: string;  // Piped input from previous command
+}
+
+/**
+ * Command handler function signature
+ */
+type CommandHandler = (ctx: CommandContext) => Promise<string>;
+
+/**
  * Command system composable
  * Handles command execution with regex and case-insensitive matching
+ * Supports piped input (stdin) for pipeline operations
  */
 export function useCommands() {
-  const commands: Record<string, (args: string[]) => Promise<string>> = {
+  const commands: Record<string, CommandHandler> = {
     help: async () => {
       return `**Available commands:**
 
@@ -25,12 +39,21 @@ export function useCommands() {
 - **theme** - List and change themes
 - **font** - Show available fonts or change font
 
+**Pipe commands** (use with |):
+
+- **more** - Page through output (e.g., \`resume | more\`)
+- **grep <pattern>** - Filter lines matching pattern
+- **head [n]** - Show first n lines (default: 10)
+- **tail [n]** - Show last n lines (default: 10)
+
 Commands support regex patterns and are case-insensitive.
 
 **Examples:**
 
 - \`experience /five9/i\` - Find experience matching "five9"
-- \`skills /gcp/i\` - Find skills matching "gcp"`;
+- \`skills /gcp/i\` - Find skills matching "gcp"
+- \`resume | more\` - Page through full resume
+- \`experience | grep kubernetes\` - Filter experience for kubernetes`;
     },
 
     clear: async () => {
@@ -58,14 +81,14 @@ Commands support regex patterns and are case-insensitive.
       return resume.getSkills();
     },
 
-    experience: async (args: string[]) => {
+    experience: async (ctx: CommandContext) => {
       const { useResume } = await import('./useResume');
       const resume = useResume();
       await resume.loadResume();
       if (resume.error.value) {
         return `Error: ${resume.error.value}`;
       }
-      const filter = args.length > 0 ? args.join(' ') : undefined;
+      const filter = ctx.args.length > 0 ? ctx.args.join(' ') : undefined;
       return resume.getExperience(filter);
     },
 
@@ -86,12 +109,12 @@ Commands support regex patterns and are case-insensitive.
       return getMotd();
     },
 
-    theme: async (args: string[]) => {
+    theme: async (ctx: CommandContext) => {
       const { useTheme } = await import('./useTheme');
       const { themes } = await import('../themes');
       const theme = useTheme();
       
-      if (args.length === 0) {
+      if (ctx.args.length === 0) {
         // List all available themes
         const current = theme.currentThemeName.value;
         const themeList = Object.entries(themes).map(([key, themeData]) => {
@@ -124,7 +147,7 @@ ${themeList.join('\n')}
       }
       
       // Handle toggle command
-      if (args[0].toLowerCase() === 'toggle') {
+      if (ctx.args[0].toLowerCase() === 'toggle') {
         theme.toggleTheme();
         const newTheme = theme.currentThemeName.value;
         const displayName = newTheme === 'auto'
@@ -134,7 +157,7 @@ ${themeList.join('\n')}
       }
       
       // Handle theme name
-      const themeName = args[0].toLowerCase();
+      const themeName = ctx.args[0].toLowerCase();
       if (themeName === 'dark' || themeName === 'light' || themeName === 'auto') {
         theme.setTheme(themeName as 'dark' | 'light' | 'auto');
         const displayName = themeName === 'auto' 
@@ -142,15 +165,15 @@ ${themeList.join('\n')}
           : themes[themeName]?.displayName || themeName;
         return `Theme changed to: **${displayName}**`;
       } else {
-        return `Invalid theme: "${args[0]}". Available themes: dark, light, auto. Type \`theme\` to see details.`;
+        return `Invalid theme: "${ctx.args[0]}". Available themes: dark, light, auto. Type \`theme\` to see details.`;
       }
     },
 
-    font: async (args: string[]) => {
+    font: async (ctx: CommandContext) => {
       const { useFont } = await import('./useFont');
       const font = useFont();
       
-      if (args.length === 0) {
+      if (ctx.args.length === 0) {
         // List fonts and show current settings
         const fonts = font.listFonts();
         const current = font.getCurrentFont();
@@ -178,10 +201,10 @@ ${fontList.join('\n')}
       }
       
       // Handle spacing command
-      if (args[0].toLowerCase() === 'spacing' && args.length > 1) {
-        const lineHeight = parseFloat(args[1]);
+      if (ctx.args[0].toLowerCase() === 'spacing' && ctx.args.length > 1) {
+        const lineHeight = parseFloat(ctx.args[1]);
         if (isNaN(lineHeight) || lineHeight <= 0 || lineHeight > 3) {
-          return `Invalid line height: "${args[1]}". Must be between 0.5 and 3.0.`;
+          return `Invalid line height: "${ctx.args[1]}". Must be between 0.5 and 3.0.`;
         }
         const result = font.setLineHeight(lineHeight);
         if (result) {
@@ -191,7 +214,7 @@ ${fontList.join('\n')}
       }
       
       // Handle font name
-      const fontName = args.join(' ');
+      const fontName = ctx.args.join(' ');
       const result = font.setFont(fontName);
       if (result) {
         return `Font changed to: **${font.getCurrentFont()}**`;
@@ -199,32 +222,142 @@ ${fontList.join('\n')}
         return `Font not found: "${fontName}". Type \`font\` to see available fonts.`;
       }
     },
+
+    // =========================================================================
+    // Pipe-friendly commands (work with stdin from previous command)
+    // =========================================================================
+
+    /**
+     * grep - Filter lines matching a pattern
+     * Usage: command | grep <pattern>
+     */
+    grep: async (ctx: CommandContext) => {
+      const pattern = ctx.args[0];
+      if (!pattern) {
+        return 'Usage: grep <pattern>\nExample: resume | grep kubernetes';
+      }
+      
+      const content = ctx.stdin || '';
+      if (!content) {
+        return 'grep: no input. Use with pipe: command | grep <pattern>';
+      }
+      
+      try {
+        // Support regex patterns like /pattern/i
+        let regex: RegExp;
+        const regexMatch = pattern.match(/^\/(.+)\/([gimsu]*)$/);
+        if (regexMatch) {
+          regex = new RegExp(regexMatch[1], regexMatch[2] || 'i');
+        } else {
+          regex = new RegExp(pattern, 'i');
+        }
+        
+        const lines = content.split('\n');
+        const matched = lines.filter(line => regex.test(line));
+        
+        if (matched.length === 0) {
+          return `No matches found for: ${pattern}`;
+        }
+        
+        return matched.join('\n');
+      } catch (e) {
+        return `Invalid pattern: ${pattern}`;
+      }
+    },
+
+    /**
+     * head - Show first n lines
+     * Usage: command | head [n]
+     */
+    head: async (ctx: CommandContext) => {
+      const n = parseInt(ctx.args[0]) || 10;
+      const content = ctx.stdin || '';
+      
+      if (!content) {
+        return 'head: no input. Use with pipe: command | head [n]';
+      }
+      
+      const lines = content.split('\n');
+      return lines.slice(0, n).join('\n');
+    },
+
+    /**
+     * tail - Show last n lines
+     * Usage: command | tail [n]
+     */
+    tail: async (ctx: CommandContext) => {
+      const n = parseInt(ctx.args[0]) || 10;
+      const content = ctx.stdin || '';
+      
+      if (!content) {
+        return 'tail: no input. Use with pipe: command | tail [n]';
+      }
+      
+      const lines = content.split('\n');
+      return lines.slice(-n).join('\n');
+    },
+
+    /**
+     * wc - Count lines, words, characters
+     * Usage: command | wc
+     */
+    wc: async (ctx: CommandContext) => {
+      const content = ctx.stdin || '';
+      
+      if (!content) {
+        return 'wc: no input. Use with pipe: command | wc';
+      }
+      
+      const lines = content.split('\n').length;
+      const words = content.split(/\s+/).filter(w => w.length > 0).length;
+      const chars = content.length;
+      
+      return `${lines} lines, ${words} words, ${chars} characters`;
+    },
+
+    /**
+     * more - Page through content (handled specially by pipeline)
+     * This is a placeholder - actual paging is handled in Terminal.vue
+     */
+    more: async (ctx: CommandContext) => {
+      // This command is handled specially by the pipeline executor
+      // It should never reach here in normal operation
+      return ctx.stdin || 'Usage: command | more';
+    },
+
+    /**
+     * less - Page through content (alias for more)
+     */
+    less: async (ctx: CommandContext) => {
+      return ctx.stdin || 'Usage: command | less';
+    },
   };
 
   /**
-   * Execute a command with regex and case-insensitive support
+   * Execute a single command with optional stdin
+   * Returns RAW output (not markdown-processed)
    */
-  const execute = async (input: string): Promise<string> => {
-    if (!input.trim()) {
+  const executeRaw = async (
+    commandName: string,
+    args: string[] = [],
+    stdin?: string
+  ): Promise<string> => {
+    if (!commandName.trim()) {
       return '';
     }
 
-    // Parse command and arguments
-    const parts = input.trim().split(/\s+/);
-    const commandName = parts[0].toLowerCase();
-    const args = parts.slice(1);
+    const cmdLower = commandName.toLowerCase();
 
     // Find matching command (case-insensitive)
     const commandKey = Object.keys(commands).find(
-      (key) => key.toLowerCase() === commandName
+      (key) => key.toLowerCase() === cmdLower
     );
 
     if (commandKey) {
       try {
-        const result = await commands[commandKey](args);
-        if (!result) return '';
-        // Process all output through marked for consistent rendering
-        return await marked(result, { breaks: false, gfm: true }) as string;
+        const ctx: CommandContext = { args, stdin };
+        const result = await commands[commandKey](ctx);
+        return result || '';
       } catch (error) {
         return `Error executing command: ${error instanceof Error ? error.message : String(error)}`;
       }
@@ -234,8 +367,35 @@ ${fontList.join('\n')}
     return `Command not found: ${commandName}. Type \`help\` for available commands.`;
   };
 
+  /**
+   * Execute a command string (legacy interface for simple commands)
+   * Parses input and executes, returning RAW output
+   */
+  const execute = async (input: string, stdin?: string): Promise<string> => {
+    if (!input.trim()) {
+      return '';
+    }
+
+    // Parse command and arguments
+    const parts = input.trim().split(/\s+/);
+    const commandName = parts[0];
+    const args = parts.slice(1);
+
+    return executeRaw(commandName, args, stdin);
+  };
+
+  /**
+   * Render raw command output to HTML via markdown
+   * Call this only for final display (not for intermediate pipe steps)
+   */
+  const renderForDisplay = async (output: string): Promise<string> => {
+    if (!output) return '';
+    return await marked(output, { breaks: false, gfm: true }) as string;
+  };
+
   return {
     execute,
+    executeRaw,
+    renderForDisplay,
   };
 }
-

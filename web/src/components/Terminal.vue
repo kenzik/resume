@@ -1,7 +1,7 @@
 <template>
-  <div class="terminal" ref="terminalRef">
-    <div class="terminal-output" ref="outputRef">
-      <!-- Command history -->
+  <div class="terminal" :class="{ 'pager-active': pagerMode }" ref="terminalRef">
+    <!-- Normal terminal output - hidden during pager mode -->
+    <div v-show="!pagerMode" class="terminal-output" ref="outputRef">
       <template v-for="(entry, index) in history" :key="index">
         <!-- Command line (skip for startup commands - output only) -->
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -20,7 +20,7 @@
         </div>
       </template>
       
-      <!-- Current input line - inside scrollable area, follows output naturally -->
+      <!-- Current input line -->
       <div class="terminal-line terminal-input-line">
         <div class="terminal-prompt">
           <span class="prompt-user">dave@resume</span>
@@ -48,14 +48,27 @@
         </div>
       </div>
     </div>
+    
+    <!-- Pager mode - separate scrollable area with fixed prompt at bottom -->
+    <div v-show="pagerMode" class="pager-wrapper">
+      <!-- Prompt first in DOM, appears last due to column-reverse -->
+      <div class="pager-prompt">
+        {{ pagerPromptText }}
+      </div>
+      <div class="pager-content-area" ref="pagerContentRef">
+        <div class="terminal-output-text pager-content" v-html="pagerContent"></div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useCommands } from '../composables/useCommands';
 import { useTypewriter } from '../composables/useTypewriter';
+import { usePipeline, hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
 import { ansiToHtml } from '../utils/ansiToHtml';
+import { PAGER_CONFIG, formatPagerProgress } from '../config';
 
 // Commands to run automatically on startup (single code path for all commands)
 const startupCommands = ['motd'];
@@ -73,8 +86,15 @@ const showCursor = ref(true);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
-const { execute: executeCmd } = useCommands();
-const { typeText, isTyping } = useTypewriter();
+// Pager mode state
+const pagerMode = ref(false);
+const pagerContent = ref('');           // Full HTML content to display
+const pagerCommand = ref('');           // The command that triggered pager mode
+const pagerAtEnd = ref(false);          // True when scrolled to bottom
+const pagerContentRef = ref<HTMLElement | null>(null);
+
+const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
+const { typeText, isTyping, stopTyping } = useTypewriter();
 
 // Typewriter speed configuration
 // Speed = charsPerTick / delay (chars per ms)
@@ -83,10 +103,90 @@ const typewriterConfig = ref({
   charsPerTick: 5, // characters per tick - increase for faster output
 });
 
+// Faster typewriter for pager mode (large content)
+const pagerTypewriterConfig = {
+  delay: 2,
+  charsPerTick: 50, // Much faster for paging
+};
+
+// Compute pager prompt text based on scroll position
+const pagerPromptText = computed(() => {
+  if (pagerAtEnd.value) {
+    return PAGER_CONFIG.endPrompt;
+  }
+  return PAGER_CONFIG.morePrompt;
+});
+
+// Check if pager is at the end (can't scroll further)
+const checkPagerAtEnd = () => {
+  if (pagerContentRef.value) {
+    const el = pagerContentRef.value;
+    // Allow 5px tolerance for floating point issues
+    pagerAtEnd.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
+  }
+};
+
+// Scroll pager content by one viewport
+const pagerPageDown = () => {
+  if (pagerContentRef.value) {
+    const el = pagerContentRef.value;
+    const pageHeight = el.clientHeight - 40; // Leave some overlap
+    el.scrollBy({ top: pageHeight, behavior: 'instant' });
+    
+    // Check if we've reached the end after scrolling
+    nextTick(() => {
+      checkPagerAtEnd();
+    });
+  }
+};
+
+// Exit pager mode
+const exitPager = () => {
+  // Add command to history without output (like real `more` - output was already displayed)
+  addHistoryEntry(pagerCommand.value, '');
+  
+  // Reset pager state
+  pagerMode.value = false;
+  pagerContent.value = '';
+  pagerCommand.value = '';
+  pagerAtEnd.value = false;
+  
+  // Refocus input
+  nextTick(() => {
+    inputRef.value?.focus();
+    scrollToBottom();
+  });
+};
+
+// Enter pager mode with content
+const enterPagerMode = async (command: string, rawContent: string) => {
+  pagerCommand.value = command;
+  pagerAtEnd.value = false;
+  pagerMode.value = true;
+  
+  // Render markdown to HTML
+  const htmlContent = await renderForDisplay(rawContent);
+  
+  // Type out content with faster pager typewriter
+  await typeText(htmlContent, {
+    delay: pagerTypewriterConfig.delay,
+    charsPerTick: pagerTypewriterConfig.charsPerTick,
+    onChar: (text) => {
+      pagerContent.value = text;
+    },
+  });
+  
+  // After typewriter, check if content fits in viewport (no paging needed)
+  nextTick(() => {
+    checkPagerAtEnd();
+  });
+};
+
 // Process a startup command (output only, no prompt shown)
 const processStartupCommand = async (command: string) => {
   // Execute command through the same path as user commands
-  const output = await executeCmd(command);
+  const rawOutput = await executeCmd(command);
+  const output = await renderForDisplay(rawOutput);
   
   // Add entry with isStartup flag (prompt won't be shown)
   history.value.push({ command, output: '', isStartup: true });
@@ -129,7 +229,7 @@ onMounted(async () => {
   });
 });
 
-// Process a single command
+// Process a single command (may be a pipeline)
 const processCommand = async (command: string) => {
   // Handle clear command specially
   if (command.toLowerCase() === 'clear') {
@@ -137,8 +237,15 @@ const processCommand = async (command: string) => {
     return;
   }
 
-  // Execute command and get output
-  let output = await executeCmd(command);
+  // Check if this is a pipeline (contains |)
+  if (hasPipe(command)) {
+    await processPipeline(command);
+    return;
+  }
+
+  // Single command - execute and display
+  const rawOutput = await executeCmd(command);
+  const output = await renderForDisplay(rawOutput);
   
   // Add command to history first (without output)
   addHistoryEntry(command, '');
@@ -170,6 +277,53 @@ const processCommand = async (command: string) => {
   }
   
   // Scroll to bottom
+  scrollToBottom();
+};
+
+// Process a pipeline command (e.g., "resume | more")
+const processPipeline = async (command: string) => {
+  const segments = parsePipeline(command);
+  
+  // Execute pipeline
+  const result = await executePipeline(segments, async (cmd, args, stdin) => {
+    return executeRaw(cmd, args, stdin);
+  });
+  
+  // Check if we should enter pager mode
+  if (result.pagerMode && result.pagerContent) {
+    await enterPagerMode(command, result.pagerContent);
+    return;
+  }
+  
+  // Normal output - render and display
+  const output = await renderForDisplay(result.output);
+  
+  // Add command to history
+  addHistoryEntry(command, '');
+  
+  // Type out output with typewriter effect
+  if (output) {
+    let typedOutput = '';
+    await typeText(output, {
+      delay: typewriterConfig.value.delay,
+      charsPerTick: typewriterConfig.value.charsPerTick,
+      onChar: (text) => {
+        typedOutput = text;
+        if (history.value.length > 0) {
+          const htmlOutput = typedOutput.includes('\x1b[') 
+            ? ansiToHtml(typedOutput) 
+            : typedOutput;
+          history.value[history.value.length - 1].output = htmlOutput;
+        }
+        scrollToBottom();
+      },
+    });
+    
+    if (typedOutput.includes('\x1b[')) {
+      history.value[history.value.length - 1].output = ansiToHtml(typedOutput);
+    }
+  }
+  
   scrollToBottom();
 };
 
@@ -288,9 +442,7 @@ const updateCursorPosition = () => {
 // Scroll to bottom - use scrollIntoView on input for reliability
 const scrollToBottom = () => {
   nextTick(() => {
-    if (inputRef.value) {
-      inputRef.value.scrollIntoView({ block: 'end', behavior: 'instant' });
-    } else if (outputRef.value) {
+    if (outputRef.value) {
       outputRef.value.scrollTop = outputRef.value.scrollHeight;
     }
   });
@@ -301,6 +453,15 @@ const clearTerminal = () => {
   history.value = [];
   currentInput.value = '';
   historyIndex.value = -1;
+  
+  // Exit pager mode if active
+  if (pagerMode.value) {
+    pagerMode.value = false;
+    pagerContent.value = '';
+    pagerCommand.value = '';
+    pagerAtEnd.value = false;
+  }
+  
   updateCursorPosition();
   nextTick(() => {
     inputRef.value?.focus();
@@ -308,9 +469,34 @@ const clearTerminal = () => {
   });
 };
 
-// Handle keyboard shortcuts
+// Handle keyboard shortcuts (including pager mode)
 const handleKeyDown = (e: KeyboardEvent) => {
-  // Ctrl+L to clear (works globally)
+  // Pager mode key handling
+  if (pagerMode.value) {
+    e.preventDefault();
+    
+    // At end of content - any key exits
+    if (pagerAtEnd.value) {
+      exitPager();
+      return;
+    }
+    
+    // Check for exit keys (q, Escape)
+    if (PAGER_CONFIG.exitKeys.includes(e.key)) {
+      exitPager();
+      return;
+    }
+    
+    // Check for next page keys (space, Enter, etc.)
+    if (PAGER_CONFIG.nextPageKeys.includes(e.key)) {
+      pagerPageDown();
+      return;
+    }
+    
+    return;
+  }
+  
+  // Normal mode: Ctrl+L to clear (works globally)
   if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
     e.preventDefault();
     clearTerminal();
@@ -321,7 +507,9 @@ const handleKeyDown = (e: KeyboardEvent) => {
 watch(() => terminalRef.value, (el) => {
   if (el) {
     el.addEventListener('click', () => {
-      inputRef.value?.focus();
+      if (!pagerMode.value) {
+        inputRef.value?.focus();
+      }
     });
   }
 }, { immediate: true });
@@ -331,7 +519,7 @@ watch(currentInput, () => {
   updateCursorPosition();
 });
 
-// Add global keyboard event listener for Ctrl+L
+// Add global keyboard event listener
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
 });
@@ -411,6 +599,7 @@ onUnmounted(() => {
   padding-right: 10px;
   position: relative;
   z-index: 10;  // Above scanlines (1) and vignette (0)
+  min-height: 0; // Allow flex shrinking
   
   // Hide scrollbar but keep scroll functionality
   scrollbar-width: none;  // Firefox
@@ -609,6 +798,45 @@ onUnmounted(() => {
   animation: blink 1s infinite;
 }
 
+// Pager styles - wrapper takes remaining space, prompt at top
+.pager-wrapper {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+}
+
+.pager-content-area {
+  flex: 1 1 0;  // Grow AND shrink
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;  // Allow shrinking below content size
+  
+  // Hide scrollbar
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.pager-content {
+  // Inherits terminal-output-text styles
+}
+
+.pager-prompt {
+  flex-shrink: 0;
+  color: var(--terminal-info, #29b8db);
+  background: var(--color-background, #1e1e1e);
+  padding: 0.5rem 0;
+  font-weight: bold;
+  border-bottom: 1px solid var(--color-brightBlack, #444);
+  z-index: 10;
+  margin-bottom: 0.5rem;
+}
+
 // Default line-height for all terminal text
 // Only apply to direct children, not nested elements
 .terminal-output {
@@ -620,4 +848,3 @@ onUnmounted(() => {
   }
 }
 </style>
-
