@@ -30,6 +30,7 @@ html, body {
 body {
   font-family: var(--font-family, monospace);
   font-size: var(--font-size, 14px);
+  font-weight: var(--font-weight, 400);
   line-height: var(--font-line-height, 1.6);
   background-color: var(--color-background, #1e1e1e);
   color: var(--color-foreground, #d4d4d4);

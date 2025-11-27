@@ -77,6 +77,7 @@ function applyTheme(theme: Theme) {
   // Apply font
   root.style.setProperty('--font-family', theme.font.family);
   root.style.setProperty('--font-size', theme.font.size);
+  root.style.setProperty('--font-weight', theme.font.weight || '400');
   root.style.setProperty('--font-line-height', theme.font.lineHeight);
 
   // Apply spacing
