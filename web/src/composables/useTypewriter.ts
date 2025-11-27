@@ -1,64 +1,90 @@
 import { ref } from 'vue';
 
 export interface TypewriterOptions {
-  delay?: number; // Delay between characters in milliseconds
-  onChar?: (char: string) => void; // Callback for each character
+  delay?: number; // Delay between ticks in milliseconds (min ~4ms due to browser limits)
+  charsPerTick?: number; // Characters to type per tick (increase for faster output)
+  onChar?: (text: string) => void; // Callback with current text
   onComplete?: () => void; // Callback when complete
 }
 
 /**
  * Typewriter effect composable
  * Simulates old modem/terminal typing speed
+ * 
+ * Speed is controlled by two factors:
+ * - delay: milliseconds between ticks (browser minimum is ~4ms)
+ * - charsPerTick: how many characters to output per tick
+ * 
+ * For very fast output, increase charsPerTick rather than decreasing delay.
+ * Example: charsPerTick=10 at delay=4 = ~2500 chars/second
  */
 export function useTypewriter() {
   const isTyping = ref(false);
   
   /**
-   * Type out text character by character
+   * Type out text with batched character output
    */
   const typeText = async (
     text: string,
     options: TypewriterOptions = {}
   ): Promise<string> => {
     const {
-      delay = 2, // Default 10ms per character (fast modem speed)
+      delay = 4, // Minimum practical delay (browser clamps to ~4ms anyway)
+      charsPerTick = 5, // Characters per tick - increase for faster output
       onChar,
       onComplete,
     } = options;
 
-    isTyping.value = true;
-    let result = '';
+    // For zero/negative delay or very large charsPerTick, just output immediately
+    if (delay <= 0 || charsPerTick >= text.length) {
+      isTyping.value = true;
+      if (onChar) {
+        onChar(text);
+      }
+      isTyping.value = false;
+      if (onComplete) {
+        onComplete();
+      }
+      return text;
+    }
 
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      result += char;
+    isTyping.value = true;
+    let i = 0;
+
+    while (i < text.length) {
+      // Calculate end of this chunk
+      let chunkEnd = Math.min(i + charsPerTick, text.length);
       
+      // Extend chunk to include complete ANSI sequences
+      while (chunkEnd < text.length) {
+        // Check if we're in the middle of an ANSI sequence
+        const chunk = text.substring(i, chunkEnd);
+        const lastEsc = chunk.lastIndexOf('\x1b');
+        if (lastEsc !== -1) {
+          // Find the 'm' that ends this sequence
+          const seqStart = i + lastEsc;
+          let seqEnd = seqStart + 1;
+          while (seqEnd < text.length && text[seqEnd] !== 'm') {
+            seqEnd++;
+          }
+          if (seqEnd < text.length && seqEnd >= chunkEnd) {
+            // Extend chunk to include the full ANSI sequence
+            chunkEnd = seqEnd + 1;
+          }
+        }
+        break;
+      }
+
+      // Output the chunk
+      const result = text.substring(0, chunkEnd);
       if (onChar) {
         onChar(result);
       }
 
-      // Handle ANSI escape sequences - don't delay for them
-      if (char === '\x1b') {
-        // Find the end of the ANSI sequence
-        let j = i + 1;
-        while (j < text.length && text[j] !== 'm') {
-          j++;
-        }
-        if (j < text.length) {
-          // Include the entire ANSI sequence
-          result = text.substring(0, j + 1);
-          i = j;
-          if (onChar) {
-            onChar(result);
-          }
-          continue;
-        }
-      }
+      i = chunkEnd;
 
-      // Delay between characters (except for ANSI codes)
-      // Skip setTimeout when delay is under 2ms to avoid event loop overhead
-      // This allows very fast typing while still maintaining a slight typewriter effect
-      if (i < text.length - 1 && delay > .1) {
+      // Delay before next chunk (skip if we're done)
+      if (i < text.length) {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
@@ -69,7 +95,7 @@ export function useTypewriter() {
       onComplete();
     }
 
-    return result;
+    return text;
   };
 
   return {
