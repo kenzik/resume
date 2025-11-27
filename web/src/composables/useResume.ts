@@ -78,12 +78,18 @@ export function getSkills(): string {
 /**
  * Get formatted experience
  * @param filter - Optional regex pattern or company name to filter by
+ * @param showOnlyRelevant - If true, only show relevant sections (default: true when no filter)
  */
-export function getExperience(filter?: string): string {
+export function getExperience(filter?: string, showOnlyRelevant?: boolean): string {
   if (!resumeData.value) return '';
   
   const header = formatSectionHeader(SECTION_EXPERIENCE);
   let experiences = resumeData.value.experience;
+  
+  // Default: show only relevant sections when no filter is provided
+  const shouldShowOnlyRelevant = showOnlyRelevant !== undefined 
+    ? showOnlyRelevant 
+    : !filter; // Show relevant by default when no filter
   
   // Apply filter if provided
   if (filter) {
@@ -113,7 +119,7 @@ export function getExperience(filter?: string): string {
     }
   }
   
-  const formatted = experiences.map(formatExperienceEntry).join('\n');
+  const formatted = experiences.map(job => formatExperienceEntry(job, shouldShowOnlyRelevant)).join('\n');
   return `${header}${formatted}`;
 }
 
@@ -175,8 +181,8 @@ export function getFullResume(): string {
   // Skills
   lines.push(getSkills());
   
-  // Experience
-  lines.push(getExperience());
+  // Experience (show all sections in full resume)
+  lines.push(getExperience(undefined, false));
   
   // Earlier roles
   if (resumeData.value.earlier.length > 0) {

@@ -28,9 +28,47 @@ export function formatSkills(skills: string[]): string {
 }
 
 /**
- * Format a single experience entry
+ * Check if a section is relevant based on keywords/patterns
+ * Uses fuzzy matching to find sections with relevant content
  */
-export function formatExperienceEntry(job: Experience): string {
+function isRelevantSection(section: ResumeSection, job: Experience): boolean {
+  // Keywords that indicate relevance (case-insensitive)
+  const relevanceKeywords = [
+    /architect|design|build|deliver|lead|create|develop|implement|optimize|scale/i,
+    /ai|ml|llm|rag|gcp|cloud|infrastructure|platform|real-time|data/i,
+    /enterprise|production|mvp|solution|system|service|api|microservice/i,
+  ];
+  
+  // Check section title
+  if (section.title) {
+    const titleText = section.title.toLowerCase();
+    if (relevanceKeywords.some(pattern => pattern.test(titleText))) {
+      return true;
+    }
+  }
+  
+  // Check bullets for relevance
+  const allBulletText = section.bullets.join(' ').toLowerCase();
+  if (relevanceKeywords.some(pattern => pattern.test(allBulletText))) {
+    return true;
+  }
+  
+  // Check tech stack if available
+  if (job.tech) {
+    const techText = job.tech.toLowerCase();
+    if (relevanceKeywords.some(pattern => pattern.test(techText))) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Format a single experience entry
+ * @param showOnlyRelevant - If true, only show sections that match relevance criteria
+ */
+export function formatExperienceEntry(job: Experience, showOnlyRelevant: boolean = false): string {
   const lines: string[] = [];
   
   // Company | Title (bold-like, but plain text)
@@ -48,17 +86,34 @@ export function formatExperienceEntry(job: Experience): string {
   
   // Sections with bullets
   if (job.sections) {
-    for (const section of job.sections) {
-      // Only show section title if it's not in skip list
-      if (section.title && !SKIP_SECTION_TITLES.has(section.title)) {
-        lines.push(section.title);
+    const sectionsToShow = showOnlyRelevant
+      ? job.sections.filter(section => isRelevantSection(section, job))
+      : job.sections;
+    
+    if (sectionsToShow.length === 0 && showOnlyRelevant) {
+      // If filtering but no relevant sections found, show all sections
+      for (const section of job.sections) {
+        if (section.title && !SKIP_SECTION_TITLES.has(section.title)) {
+          lines.push(section.title);
+        }
+        for (const bullet of section.bullets) {
+          lines.push(`  - ${bullet}`);
+        }
+        lines.push('');
       }
-      
-      // Bullets (indented with 2 spaces and dash)
-      for (const bullet of section.bullets) {
-        lines.push(`  - ${bullet}`);
+    } else {
+      for (const section of sectionsToShow) {
+        // Only show section title if it's not in skip list
+        if (section.title && !SKIP_SECTION_TITLES.has(section.title)) {
+          lines.push(section.title);
+        }
+        
+        // Bullets (indented with 2 spaces and dash)
+        for (const bullet of section.bullets) {
+          lines.push(`  - ${bullet}`);
+        }
+        lines.push(''); // Blank line after section
       }
-      lines.push(''); // Blank line after section
     }
   }
   
