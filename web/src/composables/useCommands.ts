@@ -95,21 +95,16 @@ Examples:
         // List fonts and show current settings
         const fonts = font.listFonts();
         const current = font.getCurrentFont();
-        const rendered = font.getRenderedFont();
         const lineHeight = font.getLineHeight();
-        const fontStatus = rendered === current || rendered === 'MonoLisa' 
-          ? `<strong>${rendered}</strong> ✓` 
-          : `<strong>${rendered}</strong> (fallback, ${current} not available)`;
         
-        return `Current font setting: <strong>${current}</strong>
-Actually rendered: ${fontStatus}
+        return `Current font: <strong>${current}</strong>
 Current line height: <strong>${lineHeight}</strong>
 
 Available fonts:
 ${fonts.map(f => `  ${f === current ? `<strong>* ${f}</strong>` : `  ${f}`}`).join('\n')}
 
 Usage:
-  <code>font &lt;name&gt;</code>           - Change font
+  <code>font &lt;name&gt;</code>           - Change font (immediate visual feedback)
   <code>font spacing &lt;value&gt;</code> - Change line height (0.5 - 3.0)
   
 Examples:
