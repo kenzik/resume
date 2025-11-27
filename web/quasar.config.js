@@ -9,6 +9,8 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js
 
 const { configure } = require('quasar/wrappers');
+const path = require('path');
+const fs = require('fs');
 
 module.exports = configure(function (ctx) {
   return {
@@ -79,8 +81,32 @@ module.exports = configure(function (ctx) {
       open: true // opens browser window automatically
     },
 
+    // Extend Vite config to serve data from root /data folder
+    extendViteConf(viteConf) {
+      // Allow serving files from parent directory (for ../data)
+      viteConf.server = viteConf.server || {};
+      viteConf.server.fs = viteConf.server.fs || {};
+      viteConf.server.fs.allow = viteConf.server.fs.allow || [];
+      viteConf.server.fs.allow.push(path.resolve(__dirname, '..'));
+    },
+
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#Property%3A-build
     build: {
+      // Copy data files to build output after build completes
+      afterBuild() {
+        const srcYaml = path.resolve(__dirname, '../data/kenzik.yml');
+        const destDir = path.resolve(__dirname, 'dist/spa/data');
+        const destYaml = path.join(destDir, 'kenzik.yml');
+
+        // Create data directory in dist
+        if (!fs.existsSync(destDir)) {
+          fs.mkdirSync(destDir, { recursive: true });
+        }
+
+        // Copy YAML file
+        fs.copyFileSync(srcYaml, destYaml);
+        console.log(' Data • Copied kenzik.yml to dist/spa/data/');
+      },
       target: {
         browser: [ 'es2019', 'edge88', 'firefox78', 'chrome87', 'safari13.1' ],
         node: 'node20'
