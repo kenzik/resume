@@ -346,6 +346,7 @@ onUnmounted(() => {
 
 <style lang="scss" scoped>
 .terminal {
+  position: relative;
   width: 100%;
   height: 100vh;
   background-color: var(--color-background, #1e1e1e);
@@ -359,6 +360,50 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  border-radius: 12px;
+  
+  // CRT screen glow
+  box-shadow: 
+    inset 0 0 100px rgba(0, 20, 20, 0.3),     // Inner dark vignette
+    inset 0 0 50px rgba(0, 150, 120, 0.02);   // Subtle green tint
+  
+  // Scanlines overlay
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.08) 0px,
+      rgba(0, 0, 0, 0.08) 1px,
+      transparent 1px,
+      transparent 3px
+    );
+    pointer-events: none;
+    z-index: 100;
+    border-radius: 12px;
+  }
+  
+  // Vignette effect (darker at edges)
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(
+      ellipse at center,
+      transparent 50%,
+      rgba(0, 0, 0, 0.25) 100%
+    );
+    pointer-events: none;
+    z-index: 99;
+    border-radius: 12px;
+  }
 }
 
 .terminal-output {
