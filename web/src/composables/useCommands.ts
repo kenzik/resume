@@ -21,7 +21,7 @@ export function useCommands() {
   <strong>experience [company]</strong> - Show experience for specific company
   <strong>contact</strong>           - Display contact information
   <strong>motd</strong>              - Show message of the day
-  <strong>theme</strong>             - Toggle theme (dark/light)
+  <strong>theme</strong>             - List and change themes
   <strong>font</strong>              - Show available fonts or change font
   <strong>font [name]</strong>       - Change terminal font
 
@@ -83,8 +83,61 @@ Examples:
       return getMotd();
     },
 
-    theme: async () => {
-      return 'Theme toggle coming soon...';
+    theme: async (args: string[]) => {
+      const { useTheme } = await import('./useTheme');
+      const { themes } = await import('../themes');
+      const theme = useTheme();
+      
+      if (args.length === 0) {
+        // List all available themes
+        const current = theme.currentThemeName.value;
+        const themeList = Object.entries(themes).map(([key, themeData]) => {
+          const isCurrent = current === key || (current === 'auto' && key === (theme.systemPrefersDark.value ? 'dark' : 'light'));
+          const marker = isCurrent ? '<strong>*</strong> ' : '  ';
+          return `${marker}<strong>${key}</strong> - ${themeData.displayName}`;
+        });
+        
+        // Add 'auto' option
+        const autoMarker = current === 'auto' ? '<strong>*</strong> ' : '  ';
+        themeList.unshift(`${autoMarker}<strong>auto</strong> - Follow system preference (currently: ${theme.systemPrefersDark.value ? 'dark' : 'light'})`);
+        
+        return `Current theme: <strong>${current === 'auto' ? `auto (${theme.systemPrefersDark.value ? 'dark' : 'light'})` : current}</strong>
+
+Available themes:
+${themeList.join('\n')}
+
+Usage:
+  <code>theme &lt;name&gt;</code>  - Switch to a theme (dark, light, or auto)
+  <code>theme toggle</code>      - Toggle between dark and light
+  
+Examples:
+  <code>theme dark</code>
+  <code>theme light</code>
+  <code>theme auto</code>
+  <code>theme toggle</code>`;
+      }
+      
+      // Handle toggle command
+      if (args[0].toLowerCase() === 'toggle') {
+        theme.toggleTheme();
+        const newTheme = theme.currentThemeName.value;
+        const displayName = newTheme === 'auto'
+          ? `auto (${theme.systemPrefersDark.value ? 'dark' : 'light'})`
+          : themes[newTheme]?.displayName || newTheme;
+        return `Theme toggled to: <strong>${displayName}</strong>`;
+      }
+      
+      // Handle theme name
+      const themeName = args[0].toLowerCase();
+      if (themeName === 'dark' || themeName === 'light' || themeName === 'auto') {
+        theme.setTheme(themeName as 'dark' | 'light' | 'auto');
+        const displayName = themeName === 'auto' 
+          ? `auto (${theme.systemPrefersDark.value ? 'dark' : 'light'})`
+          : themes[themeName]?.displayName || themeName;
+        return `Theme changed to: <strong>${displayName}</strong>`;
+      } else {
+        return `Invalid theme: "${args[0]}". Available themes: dark, light, auto. Type <code>theme</code> to see details.`;
+      }
     },
 
     font: async (args: string[]) => {
