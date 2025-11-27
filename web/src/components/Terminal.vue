@@ -377,8 +377,8 @@ onUnmounted(() => {
     bottom: 0;
     background: repeating-linear-gradient(
       0deg,
-      rgba(0, 0, 0, 0.08) 0px,
-      rgba(0, 0, 0, 0.08) 1px,
+      rgba(0, 0, 0, 0.20) 0px,
+      rgba(0, 0, 0, 0.20) 1px,
       transparent 1px,
       transparent 3px
     );
@@ -412,22 +412,12 @@ onUnmounted(() => {
   overflow-x: hidden;
   padding-right: 10px;
   
-  // Custom scrollbar
+  // Hide scrollbar but keep scroll functionality
+  scrollbar-width: none;  // Firefox
+  -ms-overflow-style: none;  // IE/Edge
+  
   &::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  &::-webkit-scrollbar-track {
-    background: var(--color-background, #1e1e1e);
-  }
-  
-  &::-webkit-scrollbar-thumb {
-    background: var(--color-brightBlack, #666666);
-    border-radius: 4px;
-    
-    &:hover {
-      background: var(--color-white, #e5e5e5);
-    }
+    display: none;  // Chrome/Safari/Opera
   }
 }
 
