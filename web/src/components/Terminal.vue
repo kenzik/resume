@@ -471,7 +471,7 @@ onUnmounted(() => {
   width: 100%;
   display: block;
   white-space: pre-wrap;
-  line-height: var(--font-line-height, 1.8);
+  line-height: 1.6;
   clear: both;
   
   :deep(pre) {
@@ -486,6 +486,10 @@ onUnmounted(() => {
     padding: 2px 6px;
     border-radius: 3px;
     color: var(--terminal-command, #3b8eea);
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1.2;
+    margin: .125rem 0;
   }
   
   :deep(strong) {
