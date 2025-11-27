@@ -1,6 +1,6 @@
 {
-  "name": "cursor-dark",
-  "displayName": "Cursor Dark",
+  "name": "dark",
+  "displayName": "Dark",
   "colors": {
     "background": "#1e1e1e",
     "foreground": "#d4d4d4",
@@ -34,7 +34,7 @@
   },
   "font": {
     "family": "'MonoLisa', 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace",
-    "size": "17px",
+    "size": "18px",
     "weight": "600",
     "lineHeight": "1.8"
   },
