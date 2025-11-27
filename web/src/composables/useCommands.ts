@@ -37,22 +37,44 @@ Examples:
     },
 
     resume: async () => {
-      return 'Resume data loading... (coming soon)';
+      const { useResume } = await import('./useResume');
+      const resume = useResume();
+      await resume.loadResume();
+      if (resume.error.value) {
+        return `Error: ${resume.error.value}`;
+      }
+      return resume.getFullResume();
     },
 
     skills: async () => {
-      return 'Skills loading... (coming soon)';
+      const { useResume } = await import('./useResume');
+      const resume = useResume();
+      await resume.loadResume();
+      if (resume.error.value) {
+        return `Error: ${resume.error.value}`;
+      }
+      return resume.getSkills();
     },
 
     experience: async (args: string[]) => {
-      if (args.length > 0) {
-        return `Experience for "${args.join(' ')}" loading... (coming soon)`;
+      const { useResume } = await import('./useResume');
+      const resume = useResume();
+      await resume.loadResume();
+      if (resume.error.value) {
+        return `Error: ${resume.error.value}`;
       }
-      return 'Experience loading... (coming soon)';
+      const filter = args.length > 0 ? args.join(' ') : undefined;
+      return resume.getExperience(filter);
     },
 
     contact: async () => {
-      return 'Contact information loading... (coming soon)';
+      const { useResume } = await import('./useResume');
+      const resume = useResume();
+      await resume.loadResume();
+      if (resume.error.value) {
+        return `Error: ${resume.error.value}`;
+      }
+      return resume.getContact();
     },
 
     motd: async () => {
