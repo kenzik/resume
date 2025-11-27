@@ -1,16 +1,8 @@
 // App Global Styles
 // This file is imported by quasar.config.js
 
-// MonoLisa font loading (if font files are available)
-// To use MonoLisa webfont, add font files to public/fonts/ and uncomment:
-// @font-face {
-//   font-family: 'MonoLisa';
-//   src: url('/fonts/MonoLisa-Regular.woff2') format('woff2'),
-//        url('/fonts/MonoLisa-Regular.woff') format('woff');
-//   font-weight: normal;
-//   font-style: normal;
-//   font-display: swap;
-// }
+// JuliaMono is self-hosted in public/fonts/ and loaded via the font system
+// Downloaded from: https://github.com/cormullion/juliamono/releases
 
 // Global CSS variables are set by the theme system via useTheme composable
 // They are applied to :root in the composable
@@ -21,9 +13,11 @@
 }
 
 html, body {
-  margin: 0;
+  margin: 0 auto;
   padding: 0;
   height: 100%;
+  width: 90%;
+  max-width: 1200px;
   overflow: hidden;
 }
 
