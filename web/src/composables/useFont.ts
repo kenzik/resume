@@ -1,43 +1,29 @@
 import { ref, computed, onMounted, nextTick } from 'vue';
+import { fonts, getFont, getDefaultFont, getDefaultLineHeight, type FontConfig } from '../config';
 
 const STORAGE_KEY_FONT = 'kenzik-resume-font';
 const STORAGE_KEY_LINE_HEIGHT = 'kenzik-resume-line-height';
-const DEFAULT_FONT = 'MonoLisa';
-const DEFAULT_LINE_HEIGHT = 1.8; // More spacious default for MonoLisa
-
-// Available fonts
-// Note: MonoLisa is a commercial font from https://www.monolisa.dev/
-// To use MonoLisa:
-//   1. Install it on your system (system font), OR
-//   2. Add font files to public/fonts/ and uncomment @font-face in app.scss
-// If MonoLisa is not available, fallback fonts will be used.
-export const availableFonts = [
-  { name: 'MonoLisa', family: "'MonoLisa', 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace" },
-  { name: 'JetBrains Mono', family: "'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace" },
-  { name: 'Fira Code', family: "'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace" },
-  { name: 'Consolas', family: "'Consolas', 'Monaco', 'Courier New', monospace" },
-  { name: 'Monaco', family: "'Monaco', 'Courier New', monospace" },
-  { name: 'Courier New', family: "'Courier New', monospace" },
-];
 
 // Reactive state
-const currentFont = ref<string>(DEFAULT_FONT);
-const currentLineHeight = ref<number>(DEFAULT_LINE_HEIGHT);
+const currentFont = ref<string>(getDefaultFont());
+const currentLineHeight = ref<number>(getDefaultLineHeight());
+const hasCustomFont = ref<boolean>(false); // Track if user manually changed font
 
 // Load font preference from localStorage
 function loadFontPreference(): string {
-  if (typeof window === 'undefined') return DEFAULT_FONT;
+  if (typeof window === 'undefined') return getDefaultFont();
   
   const stored = localStorage.getItem(STORAGE_KEY_FONT);
-  if (stored && availableFonts.find(f => f.name === stored)) {
+  if (stored && getFont(stored)) {
+    hasCustomFont.value = true; // User has a custom preference
     return stored;
   }
-  return DEFAULT_FONT;
+  return getDefaultFont();
 }
 
 // Load line height preference from localStorage
 function loadLineHeightPreference(): number {
-  if (typeof window === 'undefined') return DEFAULT_LINE_HEIGHT;
+  if (typeof window === 'undefined') return getDefaultLineHeight();
   
   const stored = localStorage.getItem(STORAGE_KEY_LINE_HEIGHT);
   if (stored) {
@@ -46,13 +32,14 @@ function loadLineHeightPreference(): number {
       return parsed;
     }
   }
-  return DEFAULT_LINE_HEIGHT;
+  return getDefaultLineHeight();
 }
 
 // Save font preference to localStorage
 function saveFontPreference(font: string) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEY_FONT, font);
+  hasCustomFont.value = true; // Mark as custom
 }
 
 // Save line height preference to localStorage
@@ -61,13 +48,21 @@ function saveLineHeightPreference(lineHeight: number) {
   localStorage.setItem(STORAGE_KEY_LINE_HEIGHT, lineHeight.toString());
 }
 
-// Apply font to document
+// Apply font to document - IMMEDIATE application
 function applyFont(fontName: string) {
   if (typeof document === 'undefined') return;
 
-  const font = availableFonts.find(f => f.name === fontName) || availableFonts[0];
+  const font = getFont(fontName);
+  if (!font) {
+    console.warn(`Font "${fontName}" not found in config`);
+    return;
+  }
+
   const root = document.documentElement;
   root.style.setProperty('--font-family', font.family);
+  
+  // Force immediate reflow to ensure visual update
+  void root.offsetHeight;
 }
 
 // Apply line height to document
@@ -88,20 +83,6 @@ function initializeFont() {
   currentLineHeight.value = loadLineHeightPreference();
   applyFont(currentFont.value);
   applyLineHeight(currentLineHeight.value);
-  
-  // Debug: Log which font is actually being used
-  if (typeof document !== 'undefined') {
-    setTimeout(() => {
-      const body = document.body;
-      const computed = window.getComputedStyle(body);
-      const renderedFont = computed.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-      console.log('Font system initialized:', {
-        requested: currentFont.value,
-        rendered: renderedFont,
-        lineHeight: currentLineHeight.value
-      });
-    }, 100);
-  }
 }
 
 export function useFont() {
@@ -119,13 +100,13 @@ export function useFont() {
     }
   });
 
-  // Set font manually
+  // Set font manually - IMMEDIATE visual feedback
   const setFont = (fontName: string): boolean => {
-    const font = availableFonts.find(f => f.name.toLowerCase() === fontName.toLowerCase());
+    const font = fonts.fonts.find(f => f.name.toLowerCase() === fontName.toLowerCase());
     if (font) {
       currentFont.value = font.name;
       saveFontPreference(font.name);
-      applyFont(font.name);
+      applyFont(font.name); // Apply immediately
       return true;
     }
     return false;
@@ -138,15 +119,15 @@ export function useFont() {
 
   // List available fonts
   const listFonts = () => {
-    return availableFonts.map(f => f.name);
+    return fonts.fonts.map(f => f.name);
   };
 
-  // Set line height
+  // Set line height - IMMEDIATE visual feedback
   const setLineHeight = (lineHeight: number): boolean => {
     if (lineHeight > 0 && lineHeight <= 3) {
       currentLineHeight.value = lineHeight;
       saveLineHeightPreference(lineHeight);
-      applyLineHeight(lineHeight);
+      applyLineHeight(lineHeight); // Apply immediately
       return true;
     }
     return false;
@@ -157,15 +138,9 @@ export function useFont() {
     return currentLineHeight.value;
   };
 
-  // Check which font is actually being rendered
-  const getRenderedFont = (): string => {
-    if (typeof document === 'undefined') return 'unknown';
-    const body = document.body;
-    const computed = window.getComputedStyle(body);
-    const fontFamily = computed.fontFamily;
-    // Extract the first font from the font-family string
-    const firstFont = fontFamily.split(',')[0].replace(/['"]/g, '').trim();
-    return firstFont;
+  // Check if user has set a custom font (so theme won't override it)
+  const hasCustomFontPreference = () => {
+    return hasCustomFont.value;
   };
 
   return {
@@ -176,8 +151,8 @@ export function useFont() {
     listFonts,
     setLineHeight,
     getLineHeight,
-    getRenderedFont,
-    availableFonts,
+    hasCustomFontPreference,
+    availableFonts: fonts.fonts,
   };
 }
 
