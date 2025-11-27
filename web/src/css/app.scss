@@ -12,22 +12,36 @@
   box-sizing: border-box;
 }
 
-html, body {
-  margin: 0 auto;
+html {
+  margin: 0;
   padding: 0;
   height: 100%;
-  width: 90%;
-  max-width: 1200px;
+  width: 100%;
   overflow: hidden;
+  background-color: #080808; // Dark outer background
 }
 
 body {
+  margin: 20px auto;
+  padding: 0;
+  height: calc(100% - 40px);
+  width: 90%;
+  max-width: 1200px;
+  overflow: hidden;
   font-family: var(--font-family, monospace);
   font-size: var(--font-size, 14px);
   font-weight: var(--font-weight, 400);
   line-height: var(--font-line-height, 1.6);
   background-color: var(--color-background, #1e1e1e);
   color: var(--color-foreground, #d4d4d4);
+  
+  // CRT bezel effect
+  border-radius: 16px;
+  box-shadow: 
+    0 0 0 3px #1a1a1a,             // Inner bezel
+    0 0 0 6px #0d0d0d,             // Outer bezel  
+    0 0 40px rgba(0, 0, 0, 0.8),   // Soft shadow
+    inset 0 0 80px rgba(0, 0, 0, 0.3); // Inner shadow for depth
 }
 
 #q-app {
