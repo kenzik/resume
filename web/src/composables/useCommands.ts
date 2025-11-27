@@ -79,7 +79,8 @@ Examples:
 
     motd: async () => {
       const { useMotd } = await import('./useMotd');
-      const { getMotd } = useMotd();
+      const { getMotd, loadMotd } = useMotd();
+      await loadMotd();
       return getMotd();
     },
 

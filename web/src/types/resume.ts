@@ -22,6 +22,10 @@ export interface ResumeHeader {
   contact: string;
 }
 
+export interface WebConfig {
+  motd: string;
+}
+
 export interface ResumeData {
   profile: string;
   skills: string[];
@@ -30,5 +34,19 @@ export interface ResumeData {
   certs: string[];
   education: string[];
   header?: ResumeHeader; // Injected from env vars
+}
+
+export interface ResumeYamlData {
+  profile: string;
+  skills: string[];
+  experience: Experience[];
+  earlier?: string[];
+  certs?: string[];
+  education?: string[];
+}
+
+export interface YamlData {
+  web?: WebConfig;
+  resume: ResumeYamlData;
 }
 

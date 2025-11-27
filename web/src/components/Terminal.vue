@@ -77,7 +77,7 @@ const showMotd = ref(true);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
-const { getMotd } = useMotd();
+const { getMotd, loadMotd } = useMotd();
 const { execute: executeCmd } = useCommands();
 const { typeText, isTyping } = useTypewriter();
 
@@ -92,6 +92,8 @@ const formattedMotd = computed(() => {
 
 // Load MOTD on mount with typewriter effect
 onMounted(async () => {
+  // Load MOTD from YAML first
+  await loadMotd();
   const motdText = getMotd();
   
   // Type out MOTD with typewriter effect

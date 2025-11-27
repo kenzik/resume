@@ -23,8 +23,17 @@ The app will open at `http://localhost:9000`
 ## Features
 
 - **Theme System**: Auto-switching dark/light themes based on system preference
-- **Terminal UI**: Interactive terminal interface (coming soon)
-- **Resume Data**: Loaded from `kenzik.yml` (coming soon)
+- **Terminal UI**: Interactive terminal interface with typewriter effect
+- **Resume Data**: Loaded from Single Source of Truth (`data/kenzik.yml`)
+
+## Data Architecture (Single Source of Truth)
+
+All resume and web configuration data is sourced from `/data/kenzik.yml` in the project root:
+
+- **Development**: Vite serves the file directly from `../data/` via `fs.allow` configuration
+- **Production**: The `afterBuild` hook in `quasar.config.js` copies the YAML to `dist/spa/data/`
+
+This ensures the YAML file is never duplicated and changes propagate automatically.
 
 ## Project Structure
 
