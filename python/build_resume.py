@@ -466,7 +466,11 @@ if __name__ == "__main__":
         help="Output format(s)",
     )
     parser.add_argument("--name", default="resume", help="Output filename base")
-    parser.add_argument("--source", default="example.yml", help="Source YAML file")
+    parser.add_argument(
+        "--source",
+        default="../data/example.yml",
+        help="Source YAML file (default: ../data/example.yml)",
+    )
     parser.add_argument(
         "--reveal-pii", action="store_true", help="Reveal PII (Phone/City) in output"
     )
@@ -505,10 +509,17 @@ if __name__ == "__main__":
 
     try:
         with open(args.source, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
+            raw_data = yaml.safe_load(f)
     except yaml.YAMLError as e:
         print(f"[!] Error parsing YAML: {e}", file=sys.stderr)
         sys.exit(1)
+
+    if "resume" not in raw_data:
+        print(f"[!] Error: YAML must contain a 'resume' key.", file=sys.stderr)
+        sys.exit(1)
+
+    data = raw_data["resume"]
+    print(f"[+] Loaded resume data from '{args.source}'")
 
     # 4. INJECT HEADER (Combine Env + Args)
     data["header"] = {
