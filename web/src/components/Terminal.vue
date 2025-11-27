@@ -348,7 +348,7 @@ onUnmounted(() => {
 .terminal {
   position: relative;
   width: 100%;
-  height: 100vh;
+  height: 100%;  // Fill the 4:3 body container
   background-color: var(--color-background, #1e1e1e);
   color: var(--color-foreground, #d4d4d4);
   font-family: var(--font-family, monospace);
