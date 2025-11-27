@@ -24,23 +24,11 @@ web:
     --------
 
     ## Technical Arsenal
-
        - **AI & ML:** LangChain, RAG, Vertex AI, Pinecone, Redis Vector, Prompt Engineering
        - **Cloud & Infra:** Google Cloud Platform (GCP), Terraform (IaC), Docker
        - **High Scale:** Redis Streams/Cluster, WebSockets, Distributed Systems (Sub-20ms latency at scale)
        - **Languages:** Python, TypeScript, Node.js, Go, Bash 
        - **Leadership:** Solution Architecture, Technical Strategy, Team Mentorship, Agile/Scrum
-
-    --------
-
-    ## About this Resume
-
-      This is a "Resume as Code" project demonstrating Separation of Concerns and Single 
-      Source of Truth:
-
-      1. Data Layer:    Career history stored as structured YAML
-      2. Logic Layer:   Python engine for formatting rules
-      3. Presentation:  Generates PDF, DOCX, Markdown, RTF formats
 
 resume:
   profile: >
