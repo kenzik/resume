@@ -74,13 +74,15 @@ const historyIndex = ref(-1);
 const showCursor = ref(true);
 const motd = ref('');
 const showMotd = ref(true);
+const commandQueue = ref<string[]>([]);
+const isExecutingCommand = ref(false);
 
 const { getMotd } = useMotd();
 const { execute: executeCmd } = useCommands();
 const { typeText, isTyping } = useTypewriter();
 
 // Typewriter delay configuration (milliseconds per character)
-const typewriterDelay = ref(0.25); // Very fast typing speed - configurable
+const typewriterDelay = ref(2); // Very fast typing speed - configurable
 
 // Format MOTD - plain text, no ANSI colors for old-school terminal vibe
 const formattedMotd = computed(() => {
@@ -113,17 +115,8 @@ onMounted(async () => {
   });
 });
 
-// Execute command
-const executeCommand = async () => {
-  const command = currentInput.value.trim();
-  if (!command) {
-    addHistoryEntry('', '');
-    currentInput.value = '';
-    updateCursorPosition();
-    scrollToBottom();
-    return;
-  }
-
+// Process a single command
+const processCommand = async (command: string) => {
   // Handle clear command specially
   if (command.toLowerCase() === 'clear') {
     clearTerminal();
@@ -135,12 +128,6 @@ const executeCommand = async () => {
   
   // Add command to history first (without output)
   addHistoryEntry(command, '');
-  
-  // Clear input immediately after adding to history (before typewriter effect)
-  // This prevents the command from appearing duplicated during output
-  currentInput.value = '';
-  historyIndex.value = -1;
-  updateCursorPosition();
   
   // Type out output with typewriter effect
   if (output) {
@@ -169,11 +156,56 @@ const executeCommand = async () => {
   
   // Scroll to bottom
   scrollToBottom();
+};
+
+// Process the command queue
+const processCommandQueue = async () => {
+  if (isExecutingCommand.value || commandQueue.value.length === 0) {
+    return;
+  }
+
+  isExecutingCommand.value = true;
+
+  while (commandQueue.value.length > 0) {
+    const command = commandQueue.value.shift();
+    if (command) {
+      await processCommand(command);
+    }
+  }
+
+  isExecutingCommand.value = false;
   
-  // Refocus input
+  // Refocus input after all commands are processed
   nextTick(() => {
     inputRef.value?.focus();
   });
+};
+
+// Execute command (entry point - queues if needed)
+const executeCommand = async () => {
+  const command = currentInput.value.trim();
+  if (!command) {
+    addHistoryEntry('', '');
+    currentInput.value = '';
+    updateCursorPosition();
+    scrollToBottom();
+    return;
+  }
+
+  // Clear input immediately
+  currentInput.value = '';
+  historyIndex.value = -1;
+  updateCursorPosition();
+
+  // If a command is currently executing, queue this one
+  if (isExecutingCommand.value) {
+    commandQueue.value.push(command);
+    return;
+  }
+
+  // Otherwise, add to queue and start processing
+  commandQueue.value.push(command);
+  await processCommandQueue();
 };
 
 // Add entry to history
