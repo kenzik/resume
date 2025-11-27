@@ -33,9 +33,8 @@
     "info": "#29b8db"
   },
   "font": {
-    "family": "'MonoLisa', 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace",
     "size": "18px",
-    "weight": "600",
+    "weight": "400",
     "lineHeight": "1.8"
   },
   "spacing": {

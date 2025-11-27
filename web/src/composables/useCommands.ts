@@ -217,7 +217,7 @@ Examples:
         }
         // Convert markdown to HTML if needed
         if (result.includes('**') || result.includes('`') || result.includes('#')) {
-          return await marked(result, { breaks: true, gfm: true }) as string;
+          return await marked(result, { breaks: false, gfm: true }) as string;
         }
         return result;
       } catch (error) {

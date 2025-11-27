@@ -1,5 +1,5 @@
-import { ref, computed, onMounted, nextTick } from 'vue';
-import { fonts, getFont, getDefaultFont, getDefaultLineHeight, type FontConfig } from '../config';
+import { ref, computed, onMounted, nextTick, getCurrentInstance } from 'vue';
+import { fonts, getFont, getDefaultFont, getDefaultLineHeight, loadWebFont, preloadWebFonts, type FontConfig } from '../config';
 
 const STORAGE_KEY_FONT = 'kenzik-resume-font';
 const STORAGE_KEY_LINE_HEIGHT = 'kenzik-resume-line-height';
@@ -58,6 +58,9 @@ function applyFont(fontName: string) {
     return;
   }
 
+  // Load web font if needed
+  loadWebFont(fontName);
+
   const root = document.documentElement;
   root.style.setProperty('--font-family', font.family);
   
@@ -79,6 +82,10 @@ let fontInitialized = false;
 function initializeFont() {
   if (fontInitialized || typeof window === 'undefined') return;
   fontInitialized = true;
+  
+  // Preload all web fonts so they're ready when user switches
+  preloadWebFonts();
+  
   currentFont.value = loadFontPreference();
   currentLineHeight.value = loadLineHeightPreference();
   applyFont(currentFont.value);
@@ -91,14 +98,17 @@ export function useFont() {
     initializeFont();
   }
 
-  // Also initialize on mount (for Vue component lifecycle)
-  onMounted(() => {
-    if (!fontInitialized) {
-      nextTick(() => {
-        initializeFont();
-      });
-    }
-  });
+  // Only use onMounted if we're inside a Vue component context
+  // This prevents warnings when useFont is called from commands
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      if (!fontInitialized) {
+        nextTick(() => {
+          initializeFont();
+        });
+      }
+    });
+  }
 
   // Set font manually - IMMEDIATE visual feedback
   const setFont = (fontName: string): boolean => {
