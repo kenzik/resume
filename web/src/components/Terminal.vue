@@ -77,8 +77,12 @@ const isExecutingCommand = ref(false);
 const { execute: executeCmd } = useCommands();
 const { typeText, isTyping } = useTypewriter();
 
-// Typewriter delay configuration (milliseconds per character)
-const typewriterDelay = ref(2); // Very fast typing speed - configurable
+// Typewriter speed configuration
+// Speed = charsPerTick / delay (chars per ms)
+const typewriterConfig = ref({
+  delay: 5,         // ms between ticks (browser minimum is ~4ms)
+  charsPerTick: 5, // characters per tick - increase for faster output
+});
 
 // Process a startup command (output only, no prompt shown)
 const processStartupCommand = async (command: string) => {
@@ -92,7 +96,8 @@ const processStartupCommand = async (command: string) => {
   // Type out output with typewriter effect
   if (output) {
     await typeText(output, {
-      delay: typewriterDelay.value,
+      delay: typewriterConfig.value.delay,
+      charsPerTick: typewriterConfig.value.charsPerTick,
       onChar: (text) => {
         const htmlOutput = text.includes('\x1b[') ? ansiToHtml(text) : text;
         history.value[entryIndex].output = htmlOutput;
@@ -146,7 +151,8 @@ const processCommand = async (command: string) => {
   if (output) {
     let typedOutput = '';
     await typeText(output, {
-      delay: typewriterDelay.value,
+      delay: typewriterConfig.value.delay,
+      charsPerTick: typewriterConfig.value.charsPerTick,
       onChar: (text) => {
         typedOutput = text;
         // Update the last history entry with current output
