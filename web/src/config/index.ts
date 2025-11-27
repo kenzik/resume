@@ -1,5 +1,38 @@
 import fontsConfig from './fonts.json';
 
+// =============================================================================
+// Pager Configuration (for `more` and `less` commands)
+// =============================================================================
+export const PAGER_CONFIG = {
+  // Message shown when more content is available
+  morePrompt: '-- Press SPACE for next page, q to quit --',
+  
+  // Message shown at the end of content
+  endPrompt: '(END) Press any key to exit',
+  
+  // Format string for progress (use {current} and {total} placeholders)
+  progressFormat: '({current}/{total} lines)',
+  
+  // Keys that advance to the next page
+  nextPageKeys: [' ', 'Enter', 'f', 'PageDown'],
+  
+  // Keys that exit the pager
+  exitKeys: ['q', 'Escape'],
+  
+  // Lines to reserve at bottom for pager prompt
+  reservedLines: 2,
+};
+
+// Helper to format progress string
+export function formatPagerProgress(current: number, total: number): string {
+  return PAGER_CONFIG.progressFormat
+    .replace('{current}', String(current))
+    .replace('{total}', String(total));
+}
+
+// =============================================================================
+// Font Configuration
+// =============================================================================
 export interface FontConfig {
   name: string;
   family: string;
