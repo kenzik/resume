@@ -20,7 +20,17 @@
           <span class="terminal-command">{{ entry.command }}</span>
         </div>
         <!-- Output on new line -->
-        <div v-if="entry.output" class="terminal-output-text" v-html="entry.output"></div>
+        <template v-if="entry.output">
+          <!-- Split output if it contains ASCII art (starts with ╔) -->
+          <template v-if="entry.output.includes('╔') && entry.output.includes('╝')">
+            <!-- Extract ASCII art portion (from ╔ to ╝) -->
+            <div class="motd motd-banner">{{ extractAsciiArt(entry.output) }}</div>
+            <!-- Extract text portion (after ╝) -->
+            <div class="motd motd-text">{{ extractTextAfterArt(entry.output) }}</div>
+          </template>
+          <!-- Regular output without ASCII art -->
+          <div v-else class="terminal-output-text" v-html="entry.output"></div>
+        </template>
         <div v-else-if="isTyping && index === history.length - 1" class="terminal-output-text">
           <span class="typing-indicator">▋</span>
         </div>
@@ -180,6 +190,39 @@ const addHistoryEntry = (command: string, output: string) => {
   history.value.push({ command, output });
 };
 
+// Extract ASCII art portion from output (from ╔ to ╝)
+const extractAsciiArt = (output: string): string => {
+  const artStart = output.indexOf('╔');
+  const artEnd = output.indexOf('╝');
+  if (artStart !== -1 && artEnd !== -1) {
+    // Include the ╝ character and everything up to the next newline
+    const endOfLine = output.indexOf('\n', artEnd);
+    if (endOfLine !== -1) {
+      return output.substring(artStart, endOfLine + 1);
+    }
+    return output.substring(artStart, artEnd + 1);
+  }
+  return '';
+};
+
+// Extract text portion after ASCII art
+const extractTextAfterArt = (output: string): string => {
+  const artEnd = output.indexOf('╝');
+  if (artEnd !== -1) {
+    // Find the end of the line containing ╝, then get everything after
+    const endOfLine = output.indexOf('\n', artEnd);
+    if (endOfLine !== -1) {
+      // Skip the newline after the art box, and any following newlines
+      let textStart = endOfLine + 1;
+      while (textStart < output.length && output[textStart] === '\n') {
+        textStart++;
+      }
+      return output.substring(textStart);
+    }
+  }
+  return output;
+};
+
 // Navigate command history
 const navigateHistory = (direction: number) => {
   if (history.value.length === 0) return;
@@ -256,6 +299,7 @@ onUnmounted(() => {
   color: var(--color-foreground, #d4d4d4);
   font-family: var(--font-family, monospace);
   font-size: var(--font-size, 14px);
+  font-weight: var(--font-weight, 400);
   line-height: var(--font-line-height, 1.6);
   padding: var(--spacing-padding, 20px);
   overflow: hidden;
@@ -292,7 +336,7 @@ onUnmounted(() => {
 .terminal-line {
   display: flex;
   align-items: flex-start;
-  margin-bottom: 16px;
+  margin-bottom: 0.5rem;
   min-height: 1.6em;
   word-wrap: break-word;
   white-space: pre-wrap;
@@ -363,8 +407,8 @@ onUnmounted(() => {
 
 .terminal-output-text {
   color: var(--terminal-output, #d4d4d4);
-  margin-top: 8px;
-  margin-bottom: 20px;
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
   margin-left: 0;
   padding: 0;
   width: 100%;
@@ -376,7 +420,7 @@ onUnmounted(() => {
   :deep(pre) {
     margin: 0;
     font-family: var(--font-family, monospace);
-    line-height: 1.6;
+    line-height: var(--font-line-height, 1.8);
   }
   
   :deep(code) {
@@ -395,7 +439,7 @@ onUnmounted(() => {
   :deep(p) {
     margin: 0;
     padding: 0;
-    line-height: 1.6;
+    line-height: var(--font-line-height, 1.8);
   }
   
   :deep(div) {
@@ -404,7 +448,7 @@ onUnmounted(() => {
   }
   
   :deep(br) {
-    line-height: 1.6;
+    line-height: var(--font-line-height, 1.8);
   }
 }
 
@@ -414,10 +458,13 @@ onUnmounted(() => {
 }
 
 // Default line-height for all terminal text
+// Only apply to direct children, not nested elements
 .terminal-output {
   line-height: var(--font-line-height, 1.8);
   
-  * {
+  // Apply line-height to direct children only, but let specific classes override
+  > .terminal-line,
+  > .motd:not(.motd-banner) {
     line-height: inherit;
   }
 }
@@ -433,7 +480,12 @@ onUnmounted(() => {
 .motd-banner {
   margin-bottom: 20px;
   margin-top: 0;
-  line-height: 1.0 !important; // Tight spacing for ASCII art, override inherited line-height
+  line-height: 1.0; // Tight spacing for ASCII art
+  
+  // Ensure all children also have tight spacing
+  * {
+    line-height: 1.0;
+  }
 }
 
 // MOTD text content - comfortable spacing
