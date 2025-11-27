@@ -1,5 +1,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { getTheme, type Theme, type ThemeName } from '../themes';
+import { getDefaultFont } from '../config';
 
 const STORAGE_KEY = 'kenzik-resume-theme';
 const DEFAULT_THEME: ThemeName = 'auto';
@@ -74,11 +75,27 @@ function applyTheme(theme: Theme) {
     root.style.setProperty(`--terminal-${key}`, value);
   });
 
-  // Apply font
-  root.style.setProperty('--font-family', theme.font.family);
+  // Apply font ONLY if no custom font has been set
+  const customFont = typeof window !== 'undefined' 
+    ? localStorage.getItem('kenzik-resume-font')
+    : null;
+  
+  if (!customFont || customFont === getDefaultFont()) {
+    // Only apply theme font if no custom font preference
+    root.style.setProperty('--font-family', theme.font.family);
+  }
+  
+  // Always apply other font properties (size, weight)
   root.style.setProperty('--font-size', theme.font.size);
   root.style.setProperty('--font-weight', theme.font.weight || '400');
-  root.style.setProperty('--font-line-height', theme.font.lineHeight);
+  
+  // Only apply theme line-height if no custom preference
+  const customLineHeight = typeof window !== 'undefined'
+    ? localStorage.getItem('kenzik-resume-line-height')
+    : null;
+  if (!customLineHeight) {
+    root.style.setProperty('--font-line-height', theme.font.lineHeight);
+  }
 
   // Apply spacing
   root.style.setProperty('--spacing-padding', theme.spacing.padding);
