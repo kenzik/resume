@@ -34,6 +34,7 @@ export interface TerminalColors {
 export interface ThemeFont {
   family: string;
   size: string;
+  weight?: string;
   lineHeight: string;
 }
 
