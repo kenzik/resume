@@ -496,7 +496,7 @@ onUnmounted(() => {
   :deep(p) {
     margin: 0;
     padding: 0;
-    line-height: var(--font-line-height, 1.8);
+    line-height: 1.5;
   }
   
   :deep(div) {
@@ -505,7 +505,56 @@ onUnmounted(() => {
   }
   
   :deep(br) {
-    line-height: var(--font-line-height, 1.8);
+    line-height: 1.5;
+  }
+
+  :deep(h1) {
+    font-size: 1.4em;
+    line-height: 1;
+    font-weight: normal;
+    color: var(--terminal-success, #23d18b);
+    margin: 0.5em 0 0.25em 0;
+  }
+
+  :deep(h2) {
+    font-size: 1em;
+    line-height: 1;
+    font-weight: bold;
+    color: var(--terminal-success, #23d18b);
+    margin: 0.5em 0 0.25em 0;
+  }
+
+  :deep(h3) {
+    font-size: 1em;
+    line-height: 1.125;
+    font-weight: bold;
+    color: var(--terminal-info, #29b8db);
+    margin: 0.4em 0 0.2em 0;
+    text-transform: uppercase;
+  }
+
+  :deep(h4), :deep(h5), :deep(h6) {
+    font-size: 1em;
+    font-weight: bold;
+    color: var(--terminal-info, #29b8db);
+    margin: 0.3em 0 0.15em 0;
+  }
+
+  :deep(hr) {
+    border: none;
+    border-top: 1px solid var(--color-brightBlack, #666666);
+    margin: 0.5em 0;
+  }
+
+  :deep(ul), :deep(ol) {
+    margin: 0.25em 0;
+    padding-left: 1.5em;
+    list-style-position: inside;
+  }
+
+  :deep(li) {
+    margin: 0.1em 0;
+    line-height: 1;
   }
 }
 

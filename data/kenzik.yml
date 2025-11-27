@@ -1,11 +1,10 @@
 web:
-  motd: >
+  motd: |
     # Hi. I'm Dave. 👋
-    
-    ### Cloud-Native Architect | AI Infrastructure & Strategy | 
-    Full-Stack Engineer | Senior Technical Leader
 
-    -------------------------------------------------------------------------------------
+    ### Cloud-Native Architect | AI Infrastructure & Strategy | Full-Stack Engineer | Senior Technical Leader
+
+    --------
 
     ## About Me
 
@@ -22,7 +21,7 @@ web:
     that sit at the intersection of **High-Performance Computing (HPC), Cloud-Native 
     Infrastructure, and Applied AI**.
 
-    -------------------------------------------------------------------------------------
+    --------
 
     ## Technical Arsenal
 
@@ -32,7 +31,7 @@ web:
        - **Languages:** Python, TypeScript, Node.js, Go, Bash 
        - **Leadership:** Solution Architecture, Technical Strategy, Team Mentorship, Agile/Scrum
 
-    -------------------------------------------------------------------------------------
+    --------
 
     ## About this Resume
 
