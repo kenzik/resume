@@ -476,7 +476,7 @@ onUnmounted(() => {
   padding: 0;
   width: 100%;
   display: block;
-  white-space: pre-wrap;
+  white-space: normal;
   line-height: 1.6;
   clear: both;
   
@@ -484,6 +484,7 @@ onUnmounted(() => {
     margin: 0;
     font-family: var(--font-family, monospace);
     line-height: var(--font-line-height, 1.8);
+    white-space: pre-wrap;
   }
   
   :deep(code) {
@@ -504,9 +505,9 @@ onUnmounted(() => {
   }
   
   :deep(p) {
-    margin: 0;
+    margin: .75em 0 .5em 0;
     padding: 0;
-    line-height: 1.5;
+    line-height: 1.4;
   }
   
   :deep(div) {
@@ -520,27 +521,27 @@ onUnmounted(() => {
 
   :deep(h1) {
     font-size: 1.4em;
-    line-height: 1;
+    line-height: 1.6;
     font-weight: normal;
     color: var(--terminal-success, #23d18b);
-    margin: 0.5em 0 0.25em 0;
+    margin: 0.75em 0 0.5em 0;
   }
 
   :deep(h2) {
     font-size: 1em;
-    line-height: 1;
+    line-height: 1.4;
     font-weight: bold;
     color: var(--terminal-success, #23d18b);
-    margin: 0.5em 0 0.25em 0;
+    margin: 0.75em 0 0.5em 0;
   }
 
   :deep(h3) {
-    font-size: 1em;
-    line-height: 1.125;
+    font-size: .75em;
+    line-height: 1.4;
     font-weight: bold;
     color: var(--terminal-info, #29b8db);
     margin: 0.4em 0 0.2em 0;
-    text-transform: uppercase;
+    // text-transform: uppercase;
   }
 
   :deep(h4), :deep(h5), :deep(h6) {
@@ -564,7 +565,7 @@ onUnmounted(() => {
 
   :deep(li) {
     margin: 0.1em 0;
-    line-height: 1;
+    line-height: 1.4;
   }
 }
 

@@ -32,7 +32,7 @@ export interface TerminalColors {
 }
 
 export interface ThemeFont {
-  family: string;
+  family?: string; // Optional - font family is managed by useFont composable
   size: string;
   weight?: string;
   lineHeight: string;
