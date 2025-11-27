@@ -20,7 +20,7 @@
         </div>
       </template>
       
-      <!-- Current input line -->
+      <!-- Current input line - inside scrollable area, follows output naturally -->
       <div class="terminal-line terminal-input-line">
         <div class="terminal-prompt">
           <span class="prompt-user">dave@resume</span>
@@ -43,7 +43,6 @@
         />
           <span 
             class="cursor" 
-            v-if="showCursor"
             :style="{ left: cursorLeft + 'px' }"
           >█</span>
         </div>
@@ -121,10 +120,7 @@ onMounted(async () => {
     await processStartupCommand(command);
   }
   
-  // Blink cursor
-  setInterval(() => {
-    showCursor.value = !showCursor.value;
-  }, 530);
+  // Cursor blinking is handled by CSS animation
   
   // Focus input after startup commands complete
   nextTick(() => {
@@ -289,10 +285,12 @@ const updateCursorPosition = () => {
   });
 };
 
-// Scroll to bottom
+// Scroll to bottom - use scrollIntoView on input for reliability
 const scrollToBottom = () => {
   nextTick(() => {
-    if (outputRef.value) {
+    if (inputRef.value) {
+      inputRef.value.scrollIntoView({ block: 'end', behavior: 'instant' });
+    } else if (outputRef.value) {
       outputRef.value.scrollTop = outputRef.value.scrollHeight;
     }
   });
@@ -367,7 +365,7 @@ onUnmounted(() => {
     inset 0 0 100px rgba(0, 20, 20, 0.3),     // Inner dark vignette
     inset 0 0 50px rgba(0, 150, 120, 0.02);   // Subtle green tint
   
-  // Scanlines overlay
+  // Scanlines overlay - z-index 1 to stay behind content
   &::before {
     content: '';
     position: absolute;
@@ -383,11 +381,11 @@ onUnmounted(() => {
       transparent 3px
     );
     pointer-events: none;
-    z-index: 100;
+    z-index: 1;
     border-radius: 12px;
   }
   
-  // Vignette effect (darker at edges)
+  // Vignette effect (darker at edges) - z-index 0 behind scanlines
   &::after {
     content: '';
     position: absolute;
@@ -401,7 +399,7 @@ onUnmounted(() => {
       rgba(0, 0, 0, 0.25) 100%
     );
     pointer-events: none;
-    z-index: 99;
+    z-index: 0;
     border-radius: 12px;
   }
 }
@@ -411,6 +409,8 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   padding-right: 10px;
+  position: relative;
+  z-index: 10;  // Above scanlines (1) and vignette (0)
   
   // Hide scrollbar but keep scroll functionality
   scrollbar-width: none;  // Firefox
