@@ -21,7 +21,7 @@ export function useTypewriter() {
     options: TypewriterOptions = {}
   ): Promise<string> => {
     const {
-      delay = 10, // Default 10ms per character (fast modem speed)
+      delay = 2, // Default 10ms per character (fast modem speed)
       onChar,
       onComplete,
     } = options;
@@ -56,7 +56,9 @@ export function useTypewriter() {
       }
 
       // Delay between characters (except for ANSI codes)
-      if (i < text.length - 1) {
+      // Skip setTimeout when delay is under 2ms to avoid event loop overhead
+      // This allows very fast typing while still maintaining a slight typewriter effect
+      if (i < text.length - 1 && delay > .1) {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
