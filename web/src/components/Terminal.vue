@@ -1,13 +1,10 @@
 <template>
   <div class="terminal" ref="terminalRef">
     <div class="terminal-output" ref="outputRef">
-      <!-- MOTD -->
-      <div v-if="showMotd" class="motd">{{ formattedMotd }}</div>
-      
       <!-- Command history -->
       <template v-for="(entry, index) in history" :key="index">
-        <!-- Command line -->
-        <div class="terminal-line">
+        <!-- Command line (skip for startup commands - output only) -->
+        <div v-if="!entry.isStartup" class="terminal-line">
           <div class="terminal-prompt">
             <span class="prompt-user">dave@resume</span>
             <span class="prompt-separator">:</span>
@@ -56,11 +53,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
-import { useMotd } from '../composables/useMotd';
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useCommands } from '../composables/useCommands';
 import { useTypewriter } from '../composables/useTypewriter';
 import { ansiToHtml } from '../utils/ansiToHtml';
+
+// Commands to run automatically on startup (single code path for all commands)
+const startupCommands = ['motd'];
 
 const terminalRef = ref<HTMLElement | null>(null);
 const outputRef = ref<HTMLElement | null>(null);
@@ -69,48 +68,60 @@ const inputWrapperRef = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
 
 const currentInput = ref('');
-const history = ref<Array<{ command: string; output: string }>>([]);
+const history = ref<Array<{ command: string; output: string; isStartup?: boolean }>>([]);
 const historyIndex = ref(-1);
 const showCursor = ref(true);
-const motd = ref('');
-const showMotd = ref(true);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
-const { getMotd, loadMotd } = useMotd();
 const { execute: executeCmd } = useCommands();
 const { typeText, isTyping } = useTypewriter();
 
 // Typewriter delay configuration (milliseconds per character)
 const typewriterDelay = ref(2); // Very fast typing speed - configurable
 
-// Format MOTD - plain text, no ANSI colors for old-school terminal vibe
-const formattedMotd = computed(() => {
-  // Plain text, no HTML conversion needed
-  return motd.value;
-});
-
-// Load MOTD on mount with typewriter effect
-onMounted(async () => {
-  // Load MOTD from YAML first
-  await loadMotd();
-  const motdText = getMotd();
+// Process a startup command (output only, no prompt shown)
+const processStartupCommand = async (command: string) => {
+  // Execute command through the same path as user commands
+  const output = await executeCmd(command);
   
-  // Type out MOTD with typewriter effect
-  await typeText(motdText, {
-    delay: typewriterDelay.value,
-    onChar: (typedText) => {
-      motd.value = typedText;
-      scrollToBottom();
-    },
-  });
+  // Add entry with isStartup flag (prompt won't be shown)
+  history.value.push({ command, output: '', isStartup: true });
+  const entryIndex = history.value.length - 1;
+  
+  // Type out output with typewriter effect
+  if (output) {
+    await typeText(output, {
+      delay: typewriterDelay.value,
+      onChar: (text) => {
+        const htmlOutput = text.includes('\x1b[') ? ansiToHtml(text) : text;
+        history.value[entryIndex].output = htmlOutput;
+        scrollToBottom();
+      },
+    });
+    
+    // Final conversion of ANSI codes
+    if (output.includes('\x1b[')) {
+      history.value[entryIndex].output = ansiToHtml(output);
+    }
+  }
+  
+  scrollToBottom();
+};
+
+// Run startup commands on mount
+onMounted(async () => {
+  // Run all startup commands through the standard command path
+  for (const command of startupCommands) {
+    await processStartupCommand(command);
+  }
   
   // Blink cursor
   setInterval(() => {
     showCursor.value = !showCursor.value;
   }, 530);
   
-  // Focus input after MOTD is done
+  // Focus input after startup commands complete
   nextTick(() => {
     inputRef.value?.focus();
     updateCursorPosition();
@@ -284,7 +295,6 @@ const scrollToBottom = () => {
 // Clear terminal
 const clearTerminal = () => {
   history.value = [];
-  showMotd.value = false;
   currentInput.value = '';
   historyIndex.value = -1;
   updateCursorPosition();
@@ -509,20 +519,10 @@ onUnmounted(() => {
 .terminal-output {
   line-height: var(--font-line-height, 1.8);
   
-  // Apply line-height to direct children only, but let specific classes override
-  > .terminal-line,
-  > .motd {
+  // Apply line-height to direct children only
+  > .terminal-line {
     line-height: inherit;
   }
-}
-
-.motd {
-  color: var(--terminal-output, #d4d4d4);
-  white-space: pre-wrap;
-  font-family: var(--font-family, monospace);
-  font-size: var(--font-size, 14px);
-  margin-bottom: 20px;
-  line-height: var(--font-line-height, 1.8);
 }
 </style>
 
