@@ -2,10 +2,7 @@
   <div class="terminal" ref="terminalRef">
     <div class="terminal-output" ref="outputRef">
       <!-- MOTD -->
-      <div v-if="showMotd">
-        <div class="motd motd-banner">{{ formattedMotdBanner }}</div>
-        <div class="motd motd-text">{{ formattedMotdText }}</div>
-      </div>
+      <div v-if="showMotd" class="motd">{{ formattedMotd }}</div>
       
       <!-- Command history -->
       <template v-for="(entry, index) in history" :key="index">
@@ -20,17 +17,7 @@
           <span class="terminal-command">{{ entry.command }}</span>
         </div>
         <!-- Output on new line -->
-        <template v-if="entry.output">
-          <!-- Split output if it contains ASCII art (starts with ╔) -->
-          <template v-if="entry.output.includes('╔') && entry.output.includes('╝')">
-            <!-- Extract ASCII art portion (from ╔ to ╝) -->
-            <div class="motd motd-banner">{{ extractAsciiArt(entry.output) }}</div>
-            <!-- Extract text portion (after ╝) -->
-            <div class="motd motd-text">{{ extractTextAfterArt(entry.output) }}</div>
-          </template>
-          <!-- Regular output without ASCII art -->
-          <div v-else class="terminal-output-text" v-html="entry.output"></div>
-        </template>
+        <div v-if="entry.output" class="terminal-output-text" v-html="entry.output"></div>
         <div v-else-if="isTyping && index === history.length - 1" class="terminal-output-text">
           <span class="typing-indicator">▋</span>
         </div>
@@ -76,8 +63,7 @@ const currentInput = ref('');
 const history = ref<Array<{ command: string; output: string }>>([]);
 const historyIndex = ref(-1);
 const showCursor = ref(true);
-const motdBanner = ref('');
-const motdText = ref('');
+const motd = ref('');
 const showMotd = ref(true);
 
 const { getMotd } = useMotd();
@@ -88,28 +74,20 @@ const { typeText, isTyping } = useTypewriter();
 const typewriterDelay = ref(0.25); // Very fast typing speed - configurable
 
 // Format MOTD - plain text, no ANSI colors for old-school terminal vibe
-const formattedMotdBanner = computed(() => {
+const formattedMotd = computed(() => {
   // Plain text, no HTML conversion needed
-  return motdBanner.value;
-});
-
-const formattedMotdText = computed(() => {
-  // Plain text, no HTML conversion needed
-  return motdText.value;
+  return motd.value;
 });
 
 // Load MOTD on mount with typewriter effect
 onMounted(async () => {
-  const { banner, text } = getMotd();
+  const motdText = getMotd();
   
-  // Type out ASCII art banner first (fast, no delay needed)
-  motdBanner.value = banner;
-  
-  // Type out MOTD text with typewriter effect
-  await typeText(text, {
+  // Type out MOTD with typewriter effect
+  await typeText(motdText, {
     delay: typewriterDelay.value,
     onChar: (typedText) => {
-      motdText.value = typedText;
+      motd.value = typedText;
       scrollToBottom();
     },
   });
@@ -188,39 +166,6 @@ const executeCommand = async () => {
 // Add entry to history
 const addHistoryEntry = (command: string, output: string) => {
   history.value.push({ command, output });
-};
-
-// Extract ASCII art portion from output (from ╔ to ╝)
-const extractAsciiArt = (output: string): string => {
-  const artStart = output.indexOf('╔');
-  const artEnd = output.indexOf('╝');
-  if (artStart !== -1 && artEnd !== -1) {
-    // Include the ╝ character and everything up to the next newline
-    const endOfLine = output.indexOf('\n', artEnd);
-    if (endOfLine !== -1) {
-      return output.substring(artStart, endOfLine + 1);
-    }
-    return output.substring(artStart, artEnd + 1);
-  }
-  return '';
-};
-
-// Extract text portion after ASCII art
-const extractTextAfterArt = (output: string): string => {
-  const artEnd = output.indexOf('╝');
-  if (artEnd !== -1) {
-    // Find the end of the line containing ╝, then get everything after
-    const endOfLine = output.indexOf('\n', artEnd);
-    if (endOfLine !== -1) {
-      // Skip the newline after the art box, and any following newlines
-      let textStart = endOfLine + 1;
-      while (textStart < output.length && output[textStart] === '\n') {
-        textStart++;
-      }
-      return output.substring(textStart);
-    }
-  }
-  return output;
 };
 
 // Navigate command history
@@ -464,7 +409,7 @@ onUnmounted(() => {
   
   // Apply line-height to direct children only, but let specific classes override
   > .terminal-line,
-  > .motd:not(.motd-banner) {
+  > .motd {
     line-height: inherit;
   }
 }
@@ -474,24 +419,8 @@ onUnmounted(() => {
   white-space: pre-wrap;
   font-family: var(--font-family, monospace);
   font-size: var(--font-size, 14px);
-}
-
-// ASCII art banner - tight spacing
-.motd-banner {
   margin-bottom: 20px;
-  margin-top: 0;
-  line-height: 1.0; // Tight spacing for ASCII art
-  
-  // Ensure all children also have tight spacing
-  * {
-    line-height: 1.0;
-  }
-}
-
-// MOTD text content - comfortable spacing
-.motd-text {
-  margin-bottom: 20px;
-  line-height: var(--font-line-height, 1.8); // Comfortable spacing for text
+  line-height: var(--font-line-height, 1.8);
 }
 </style>
 

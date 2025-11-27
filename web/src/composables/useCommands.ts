@@ -58,8 +58,7 @@ Examples:
     motd: async () => {
       const { useMotd } = await import('./useMotd');
       const { getMotd } = useMotd();
-      const { banner, text } = getMotd();
-      return `${banner}\n\n${text}`;
+      return getMotd();
     },
 
     theme: async () => {

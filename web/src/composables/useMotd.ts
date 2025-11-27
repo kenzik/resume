@@ -1,51 +1,11 @@
 /**
  * MOTD (Message of the Day) composable
- * Returns plain text terminal-style MOTD with ANSI art
+ * Returns plain text terminal-style MOTD
  */
 
-// ANSI color codes
-const ANSI = {
-  reset: '\x1b[0m',
-  bright: '\x1b[1m',
-  dim: '\x1b[2m',
-  red: '\x1b[31m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-  blue: '\x1b[34m',
-  magenta: '\x1b[35m',
-  cyan: '\x1b[36m',
-  white: '\x1b[37m',
-};
-
 export function useMotd() {
-  const getMotd = (): { banner: string; text: string } => {
-    // Art content (without ANSI codes) - all padded to 72 chars for consistent rectangular box
-    const artLines = [
-      '██║  ██╗███████╗███╗   ██╗███████╗██╗██╗  ██╗',  // 45 chars
-      '██║ ██╔╝██╔════╝████╗  ██║╚══███╔╝██║██║ ██╔╝',  // 45 chars
-      '█████╔╝ █████╗  ██╔██╗ ██║  ███╔╝ ██║█████╔╝',   // 44 chars
-      '██╔═██╗ ██╔══╝  ██║╚██╗██║ ███╔╝  ██║██╔═██╗',   // 44 chars
-      '██║  ██╗███████╗██║ ╚████║███████╗██║██║  ██╗',  // 45 chars
-      '╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝╚══════╝╚═╝╚═╝  ╚═╝'   // 45 chars
-    ];
-    
-    // Pad all art lines to 72 characters (consistent width)
-    const paddedArt = artLines.map(line => line.padEnd(72, ' '));
-    
-    const banner = `
-╔═══════════════════════════════════════════════════════════════════════════╗
-║                                                                           ║
-║  ${paddedArt[0]} ║
-║  ${paddedArt[1]} ║
-║  ${paddedArt[2]} ║
-║  ${paddedArt[3]} ║
-║  ${paddedArt[4]} ║
-║  ${paddedArt[5]} ║
-║                                                                           ║
-╚═══════════════════════════════════════════════════════════════════════════╝
-`.trim();
-
-    const text = `
+  const getMotd = (): string => {
+    return `
 Hi. I'm Dave.
 
 Cloud-Native Architect | AI Infrastructure & Strategy | Full-Stack Engineer | Senior Technical Leader
@@ -91,8 +51,6 @@ About This Resume:
   Type help to see available commands.
 
 `.trim();
-
-    return { banner, text };
   };
 
   return {
