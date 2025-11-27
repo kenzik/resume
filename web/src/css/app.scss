@@ -7,6 +7,15 @@
 // Global CSS variables are set by the theme system via useTheme composable
 // They are applied to :root in the composable
 
+// =============================================================================
+// CRT Terminal Dimensions
+// Change these to adjust the terminal size and aspect ratio
+// =============================================================================
+:root {
+  --terminal-max-width: 1200px;
+  --terminal-max-height: 900px;  // 1200 * 3/4 for 4:3 ratio
+}
+
 // Base terminal styling
 * {
   box-sizing: border-box;
@@ -15,19 +24,29 @@
 html {
   margin: 0;
   padding: 0;
-  height: 100%;
   width: 100%;
+  height: 100vh;
   overflow: hidden;
   background-color: #080808; // Dark outer background
+  
+  // Center the terminal both horizontally and vertically
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 body {
-  margin: 20px auto;
+  // Fixed 4:3 dimensions - explicit width and height
+  // Using !important to override any framework defaults
+  width: min(90vw, var(--terminal-max-width)) !important;
+  height: min(85vh, var(--terminal-max-height)) !important;
+  min-height: 0 !important;  // Override any min-height
+  max-height: min(85vh, var(--terminal-max-height)) !important;
+  
+  margin: 0;  // Flexbox on html handles centering
   padding: 0;
-  height: calc(100% - 40px);
-  width: 90%;
-  max-width: 1200px;
   overflow: hidden;
+  
   font-family: var(--font-family, monospace);
   font-size: var(--font-size, 14px);
   font-weight: var(--font-weight, 400);
@@ -45,7 +64,7 @@ body {
 }
 
 #q-app {
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
 }
 
