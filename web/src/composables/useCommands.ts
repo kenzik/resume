@@ -12,23 +12,25 @@ export interface CommandResult {
 export function useCommands() {
   const commands: Record<string, (args: string[]) => Promise<string>> = {
     help: async () => {
-      return `Available commands:
-  <strong>help</strong>              - Show this help message
-  <strong>clear</strong>              - Clear the terminal
-  <strong>resume</strong>             - Display full resume
-  <strong>skills</strong>            - List technical skills
-  <strong>experience</strong>        - Show work experience
-  <strong>experience [company]</strong> - Show experience for specific company
-  <strong>contact</strong>           - Display contact information
-  <strong>motd</strong>              - Show message of the day
-  <strong>theme</strong>             - List and change themes
-  <strong>font</strong>              - Show available fonts or change font
-  <strong>font [name]</strong>       - Change terminal font
+      return `**Available commands:**
+
+- **help** - Show this help message
+- **clear** - Clear the terminal
+- **resume** - Display full resume
+- **skills** - List technical skills
+- **experience** - Show work experience
+- **experience [company]** - Show experience for specific company
+- **contact** - Display contact information
+- **motd** - Show message of the day
+- **theme** - List and change themes
+- **font** - Show available fonts or change font
 
 Commands support regex patterns and are case-insensitive.
-Examples:
-  <code>experience /five9/i</code>  - Find experience matching "five9" (case-insensitive)
-  <code>skills /gcp/i</code>        - Find skills matching "gcp"`;
+
+**Examples:**
+
+- \`experience /five9/i\` - Find experience matching "five9"
+- \`skills /gcp/i\` - Find skills matching "gcp"`;
     },
 
     clear: async () => {
@@ -94,28 +96,31 @@ Examples:
         const current = theme.currentThemeName.value;
         const themeList = Object.entries(themes).map(([key, themeData]) => {
           const isCurrent = current === key || (current === 'auto' && key === (theme.systemPrefersDark.value ? 'dark' : 'light'));
-          const marker = isCurrent ? '<strong>*</strong> ' : '  ';
-          return `${marker}<strong>${key}</strong> - ${themeData.displayName}`;
+          const marker = isCurrent ? '- **\\*** ' : '- ';
+          return `${marker}**${key}** - ${themeData.displayName}`;
         });
         
         // Add 'auto' option
-        const autoMarker = current === 'auto' ? '<strong>*</strong> ' : '  ';
-        themeList.unshift(`${autoMarker}<strong>auto</strong> - Follow system preference (currently: ${theme.systemPrefersDark.value ? 'dark' : 'light'})`);
+        const autoMarker = current === 'auto' ? '- **\\*** ' : '- ';
+        themeList.unshift(`${autoMarker}**auto** - Follow system preference (currently: ${theme.systemPrefersDark.value ? 'dark' : 'light'})`);
         
-        return `Current theme: <strong>${current === 'auto' ? `auto (${theme.systemPrefersDark.value ? 'dark' : 'light'})` : current}</strong>
+        return `Current theme: **${current === 'auto' ? `auto (${theme.systemPrefersDark.value ? 'dark' : 'light'})` : current}**
 
-Available themes:
+**Available themes:**
+
 ${themeList.join('\n')}
 
-Usage:
-  <code>theme &lt;name&gt;</code>  - Switch to a theme (dark, light, or auto)
-  <code>theme toggle</code>      - Toggle between dark and light
-  
-Examples:
-  <code>theme dark</code>
-  <code>theme light</code>
-  <code>theme auto</code>
-  <code>theme toggle</code>`;
+**Usage:**
+
+- \`theme <name>\` - Switch to a theme (dark, light, or auto)
+- \`theme toggle\` - Toggle between dark and light
+
+**Examples:**
+
+- \`theme dark\`
+- \`theme light\`
+- \`theme auto\`
+- \`theme toggle\``;
       }
       
       // Handle toggle command
@@ -125,7 +130,7 @@ Examples:
         const displayName = newTheme === 'auto'
           ? `auto (${theme.systemPrefersDark.value ? 'dark' : 'light'})`
           : themes[newTheme]?.displayName || newTheme;
-        return `Theme toggled to: <strong>${displayName}</strong>`;
+        return `Theme toggled to: **${displayName}**`;
       }
       
       // Handle theme name
@@ -135,9 +140,9 @@ Examples:
         const displayName = themeName === 'auto' 
           ? `auto (${theme.systemPrefersDark.value ? 'dark' : 'light'})`
           : themes[themeName]?.displayName || themeName;
-        return `Theme changed to: <strong>${displayName}</strong>`;
+        return `Theme changed to: **${displayName}**`;
       } else {
-        return `Invalid theme: "${args[0]}". Available themes: dark, light, auto. Type <code>theme</code> to see details.`;
+        return `Invalid theme: "${args[0]}". Available themes: dark, light, auto. Type \`theme\` to see details.`;
       }
     },
 
@@ -151,19 +156,25 @@ Examples:
         const current = font.getCurrentFont();
         const lineHeight = font.getLineHeight();
         
-        return `Current font: <strong>${current}</strong>
-Current line height: <strong>${lineHeight}</strong>
+        const fontList = fonts.map(f => f === current ? `- **\\*** **${f}**` : `- ${f}`);
+        
+        return `Current font: **${current}**
 
-Available fonts:
-${fonts.map(f => `  ${f === current ? `<strong>* ${f}</strong>` : `  ${f}`}`).join('\n')}
+Current line height: **${lineHeight}**
 
-Usage:
-  <code>font &lt;name&gt;</code>           - Change font (immediate visual feedback)
-  <code>font spacing &lt;value&gt;</code> - Change line height (0.5 - 3.0)
-  
-Examples:
-  <code>font "JetBrains Mono"</code>
-  <code>font spacing 2.0</code>`;
+**Available fonts:**
+
+${fontList.join('\n')}
+
+**Usage:**
+
+- \`font <name>\` - Change font (immediate visual feedback)
+- \`font spacing <value>\` - Change line height (0.5 - 3.0)
+
+**Examples:**
+
+- \`font "JetBrains Mono"\`
+- \`font spacing 2.0\``;
       }
       
       // Handle spacing command
@@ -174,7 +185,7 @@ Examples:
         }
         const result = font.setLineHeight(lineHeight);
         if (result) {
-          return `Line height changed to: <strong>${font.getLineHeight()}</strong>`;
+          return `Line height changed to: **${font.getLineHeight()}**`;
         }
         return `Failed to set line height.`;
       }
@@ -183,9 +194,9 @@ Examples:
       const fontName = args.join(' ');
       const result = font.setFont(fontName);
       if (result) {
-        return `Font changed to: <strong>${font.getCurrentFont()}</strong>`;
+        return `Font changed to: **${font.getCurrentFont()}**`;
       } else {
-        return `Font not found: "${fontName}". Type <code>font</code> to see available fonts.`;
+        return `Font not found: "${fontName}". Type \`font\` to see available fonts.`;
       }
     },
   };
@@ -211,15 +222,9 @@ Examples:
     if (commandKey) {
       try {
         const result = await commands[commandKey](args);
-        // If result already contains HTML tags, don't process with markdown
-        if (result.includes('<strong>') || result.includes('<code>') || result.includes('<em>') || result.includes('<p>')) {
-          return result;
-        }
-        // Convert markdown to HTML if needed
-        if (result.includes('**') || result.includes('`') || result.includes('#')) {
-          return await marked(result, { breaks: false, gfm: true }) as string;
-        }
-        return result;
+        if (!result) return '';
+        // Process all output through marked for consistent rendering
+        return await marked(result, { breaks: false, gfm: true }) as string;
       } catch (error) {
         return `Error executing command: ${error instanceof Error ? error.message : String(error)}`;
       }

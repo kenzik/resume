@@ -16,11 +16,11 @@ import {
 import type { ResumeData, Experience } from '../types/resume';
 
 // Section titles
-const SECTION_PROFILE = "PROFILE";
-const SECTION_COMPETENCIES = "CORE COMPETENCIES";
-const SECTION_EXPERIENCE = "PROFESSIONAL EXPERIENCE";
-const SECTION_EARLIER = "EARLIER ROLES";
-const SECTION_CERTS_EDU = "CERTIFICATIONS & EDUCATION";
+const SECTION_PROFILE = "## PROFILE";
+const SECTION_COMPETENCIES = "## CORE COMPETENCIES";
+const SECTION_EXPERIENCE = "## PROFESSIONAL EXPERIENCE";
+const SECTION_EARLIER = "## EARLIER ROLES";
+const SECTION_CERTS_EDU = "## CERTIFICATIONS & EDUCATION";
 
 // Reactive state
 const resumeData = ref<ResumeData | null>(null);
