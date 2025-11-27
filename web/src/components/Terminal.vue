@@ -31,18 +31,25 @@
           <span class="prompt-path">~</span>
           <span class="prompt-separator">$</span>
         </div>
-        <input
-          ref="inputRef"
-          v-model="currentInput"
-          @keydown.enter="executeCommand"
-          @keydown.up="navigateHistory(-1)"
-          @keydown.down="navigateHistory(1)"
-          class="terminal-input"
-          type="text"
-          autofocus
-          spellcheck="false"
+        <div class="input-wrapper" ref="inputWrapperRef">
+          <input
+            ref="inputRef"
+            v-model="currentInput"
+            @input="updateCursorPosition"
+            @keydown.enter="executeCommand"
+            @keydown.up="navigateHistory(-1)"
+            @keydown.down="navigateHistory(1)"
+            class="terminal-input"
+            type="text"
+            autofocus
+            spellcheck="false"
         />
-        <span class="cursor" v-if="showCursor">█</span>
+          <span 
+            class="cursor" 
+            v-if="showCursor"
+            :style="{ left: cursorLeft + 'px' }"
+          >█</span>
+        </div>
       </div>
     </div>
   </div>
@@ -58,6 +65,8 @@ import { ansiToHtml } from '../utils/ansiToHtml';
 const terminalRef = ref<HTMLElement | null>(null);
 const outputRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
+const inputWrapperRef = ref<HTMLElement | null>(null);
+const cursorLeft = ref(0);
 
 const currentInput = ref('');
 const history = ref<Array<{ command: string; output: string }>>([]);
@@ -100,6 +109,7 @@ onMounted(async () => {
   // Focus input after MOTD is done
   nextTick(() => {
     inputRef.value?.focus();
+    updateCursorPosition();
   });
 });
 
@@ -109,6 +119,7 @@ const executeCommand = async () => {
   if (!command) {
     addHistoryEntry('', '');
     currentInput.value = '';
+    updateCursorPosition();
     scrollToBottom();
     return;
   }
@@ -124,6 +135,12 @@ const executeCommand = async () => {
   
   // Add command to history first (without output)
   addHistoryEntry(command, '');
+  
+  // Clear input immediately after adding to history (before typewriter effect)
+  // This prevents the command from appearing duplicated during output
+  currentInput.value = '';
+  historyIndex.value = -1;
+  updateCursorPosition();
   
   // Type out output with typewriter effect
   if (output) {
@@ -149,10 +166,6 @@ const executeCommand = async () => {
       history.value[history.value.length - 1].output = ansiToHtml(typedOutput);
     }
   }
-  
-  // Clear input and reset history navigation
-  currentInput.value = '';
-  historyIndex.value = -1;
   
   // Scroll to bottom
   scrollToBottom();
@@ -184,6 +197,45 @@ const navigateHistory = (direction: number) => {
   if (historyIndex.value >= 0) {
     currentInput.value = history.value[history.value.length - 1 - historyIndex.value].command;
   }
+  nextTick(() => {
+    updateCursorPosition();
+  });
+};
+
+// Update cursor position based on input text width
+const updateCursorPosition = () => {
+  nextTick(() => {
+    if (inputRef.value && inputWrapperRef.value) {
+      // Try Canvas API first for accurate measurement
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      
+      if (context && inputRef.value) {
+        const styles = window.getComputedStyle(inputRef.value);
+        context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+        const textWidth = context.measureText(inputRef.value.value).width;
+        cursorLeft.value = textWidth;
+        return;
+      }
+      
+      // Fallback: use hidden span to measure text width
+      const measureSpan = document.createElement('span');
+      measureSpan.style.visibility = 'hidden';
+      measureSpan.style.position = 'absolute';
+      measureSpan.style.whiteSpace = 'pre';
+      measureSpan.style.fontFamily = window.getComputedStyle(inputRef.value).fontFamily;
+      measureSpan.style.fontSize = window.getComputedStyle(inputRef.value).fontSize;
+      measureSpan.style.fontWeight = window.getComputedStyle(inputRef.value).fontWeight;
+      measureSpan.style.fontStyle = window.getComputedStyle(inputRef.value).fontStyle;
+      measureSpan.textContent = inputRef.value.value || '';
+      
+      document.body.appendChild(measureSpan);
+      cursorLeft.value = measureSpan.offsetWidth;
+      document.body.removeChild(measureSpan);
+    } else {
+      cursorLeft.value = 0;
+    }
+  });
 };
 
 // Scroll to bottom
@@ -201,6 +253,7 @@ const clearTerminal = () => {
   showMotd.value = false;
   currentInput.value = '';
   historyIndex.value = -1;
+  updateCursorPosition();
   nextTick(() => {
     inputRef.value?.focus();
     scrollToBottom();
@@ -224,6 +277,11 @@ watch(() => terminalRef.value, (el) => {
     });
   }
 }, { immediate: true });
+
+// Watch input changes to update cursor position
+watch(currentInput, () => {
+  updateCursorPosition();
+});
 
 // Add global keyboard event listener for Ctrl+L
 onMounted(() => {
@@ -321,8 +379,16 @@ onUnmounted(() => {
   margin-bottom: 0 !important;
 }
 
+.input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
 .terminal-input {
   flex: 1;
+  width: 100%;
   background: transparent;
   border: none;
   outline: none;
@@ -332,7 +398,7 @@ onUnmounted(() => {
   line-height: var(--font-line-height, 1.6);
   padding: 0;
   margin: 0;
-  width: 100%;
+  caret-color: transparent; // Hide native input caret
   
   &::placeholder {
     color: var(--color-brightBlack, #666666);
@@ -340,9 +406,11 @@ onUnmounted(() => {
 }
 
 .cursor {
+  position: absolute;
   color: var(--color-cursor, #aeafad);
   animation: blink 1s infinite;
-  margin-left: 2px;
+  pointer-events: none;
+  flex-shrink: 0;
 }
 
 @keyframes blink {
