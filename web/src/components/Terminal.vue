@@ -5,12 +5,7 @@
       <template v-for="(entry, index) in history" :key="index">
         <!-- Command line (skip for startup commands - output only) -->
         <div v-if="!entry.isStartup" class="terminal-line">
-          <div class="terminal-prompt">
-            <span class="prompt-user">dave@resume</span>
-            <span class="prompt-separator">:</span>
-            <span class="prompt-path">~</span>
-            <span class="prompt-separator">$</span>
-          </div>
+          <TerminalPrompt />
           <span class="terminal-command">{{ entry.command }}</span>
         </div>
         <!-- Output on new line -->
@@ -22,12 +17,7 @@
       
       <!-- Current input line -->
       <div class="terminal-line terminal-input-line">
-        <div class="terminal-prompt">
-          <span class="prompt-user">dave@resume</span>
-          <span class="prompt-separator">:</span>
-          <span class="prompt-path">~</span>
-          <span class="prompt-separator">$</span>
-        </div>
+        <TerminalPrompt />
         <div class="input-wrapper" ref="inputWrapperRef">
           <input
             ref="inputRef"
@@ -66,8 +56,9 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useCommands } from '../composables/useCommands';
 import { useTypewriter } from '../composables/useTypewriter';
-import { usePipeline, hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
+import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
 import { ansiToHtml } from '../utils/ansiToHtml';
+import TerminalPrompt from './TerminalPrompt.vue';
 import { PAGER_CONFIG, formatPagerProgress } from '../config';
 
 // Commands to run automatically on startup (single code path for all commands)
@@ -101,6 +92,13 @@ const pagerContentRef = ref<HTMLElement | null>(null);
 const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
 const { typeText, isTyping, stopTyping } = useTypewriter();
 
+// Click handler stored at module level for proper cleanup
+let terminalClickHandler: (() => void) | null = null;
+
+// Cached canvas for text measurement (performance optimization)
+let measureCanvas: HTMLCanvasElement | null = null;
+let measureContext: CanvasRenderingContext2D | null = null;
+
 // Typewriter speed configuration
 // Speed = charsPerTick / delay (chars per ms)
 const typewriterConfig = ref({
@@ -112,6 +110,37 @@ const typewriterConfig = ref({
 const pagerTypewriterConfig = {
   delay: 2,
   charsPerTick: 50, // Much faster for paging
+};
+
+/**
+ * Helper to type output into a history entry with ANSI conversion
+ * Consolidates the repeated typewriter logic across processCommand, processPipeline, etc.
+ */
+const typeOutputToHistory = async (
+  entryIndex: number,
+  output: string,
+  config: { delay: number; charsPerTick: number } = typewriterConfig.value
+) => {
+  if (!output) return;
+  
+  // Pre-detect ANSI codes once for efficiency
+  const hasAnsi = output.includes('\x1b[');
+  
+  await typeText(output, {
+    delay: config.delay,
+    charsPerTick: config.charsPerTick,
+    onChar: (text) => {
+      // Only run conversion if we know there are ANSI codes
+      const htmlOutput = hasAnsi ? ansiToHtml(text) : text;
+      history.value[entryIndex].output = htmlOutput;
+      scrollToBottom();
+    },
+  });
+  
+  // Final ANSI conversion to ensure complete processing
+  if (hasAnsi) {
+    history.value[entryIndex].output = ansiToHtml(output);
+  }
 };
 
 // Compute pager prompt text based on scroll position
@@ -220,23 +249,7 @@ const processStartupCommand = async (command: string) => {
   const entryIndex = history.value.length - 1;
   
   // Type out output with typewriter effect
-  if (output) {
-    await typeText(output, {
-      delay: typewriterConfig.value.delay,
-      charsPerTick: typewriterConfig.value.charsPerTick,
-      onChar: (text) => {
-        const htmlOutput = text.includes('\x1b[') ? ansiToHtml(text) : text;
-        history.value[entryIndex].output = htmlOutput;
-        scrollToBottom();
-      },
-    });
-    
-    // Final conversion of ANSI codes
-    if (output.includes('\x1b[')) {
-      history.value[entryIndex].output = ansiToHtml(output);
-    }
-  }
-  
+  await typeOutputToHistory(entryIndex, output);
   scrollToBottom();
 };
 
@@ -301,34 +314,10 @@ const processCommand = async (command: string) => {
   
   // Add command to history first (without output)
   addHistoryEntry(command, '');
+  const entryIndex = history.value.length - 1;
   
   // Type out output with typewriter effect
-  if (output) {
-    let typedOutput = '';
-    await typeText(output, {
-      delay: typewriterConfig.value.delay,
-      charsPerTick: typewriterConfig.value.charsPerTick,
-      onChar: (text) => {
-        typedOutput = text;
-        // Update the last history entry with current output
-        if (history.value.length > 0) {
-          // Convert ANSI to HTML for display
-          const htmlOutput = typedOutput.includes('\x1b[') 
-            ? ansiToHtml(typedOutput) 
-            : typedOutput;
-          history.value[history.value.length - 1].output = htmlOutput;
-        }
-        scrollToBottom();
-      },
-    });
-    
-    // Final conversion of ANSI codes to HTML
-    if (typedOutput.includes('\x1b[')) {
-      history.value[history.value.length - 1].output = ansiToHtml(typedOutput);
-    }
-  }
-  
-  // Scroll to bottom
+  await typeOutputToHistory(entryIndex, output);
   scrollToBottom();
 };
 
@@ -352,30 +341,10 @@ const processPipeline = async (command: string) => {
   
   // Add command to history
   addHistoryEntry(command, '');
+  const entryIndex = history.value.length - 1;
   
   // Type out output with typewriter effect
-  if (output) {
-    let typedOutput = '';
-    await typeText(output, {
-      delay: typewriterConfig.value.delay,
-      charsPerTick: typewriterConfig.value.charsPerTick,
-      onChar: (text) => {
-        typedOutput = text;
-        if (history.value.length > 0) {
-          const htmlOutput = typedOutput.includes('\x1b[') 
-            ? ansiToHtml(typedOutput) 
-            : typedOutput;
-          history.value[history.value.length - 1].output = htmlOutput;
-        }
-        scrollToBottom();
-      },
-    });
-    
-    if (typedOutput.includes('\x1b[')) {
-      history.value[history.value.length - 1].output = ansiToHtml(typedOutput);
-    }
-  }
-  
+  await typeOutputToHistory(entryIndex, output);
   scrollToBottom();
 };
 
@@ -489,14 +458,17 @@ const navigateHistory = (direction: number) => {
 const updateCursorPosition = () => {
   nextTick(() => {
     if (inputRef.value && inputWrapperRef.value) {
-      // Try Canvas API first for accurate measurement
-      const canvas = document.createElement('canvas');
-      const context = canvas.getContext('2d');
+      // Initialize canvas cache on first use
+      if (!measureCanvas) {
+        measureCanvas = document.createElement('canvas');
+        measureContext = measureCanvas.getContext('2d');
+      }
       
-      if (context && inputRef.value) {
+      // Try cached Canvas API first for accurate measurement
+      if (measureContext && inputRef.value) {
         const styles = window.getComputedStyle(inputRef.value);
-        context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
-        const textWidth = context.measureText(inputRef.value.value).width;
+        measureContext.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+        const textWidth = measureContext.measureText(inputRef.value.value).width;
         cursorLeft.value = textWidth;
         return;
       }
@@ -588,13 +560,20 @@ const handleKeyDown = (e: KeyboardEvent) => {
 };
 
 // Watch for terminal focus to refocus input
-watch(() => terminalRef.value, (el) => {
-  if (el) {
-    el.addEventListener('click', () => {
+watch(() => terminalRef.value, (newEl, oldEl) => {
+  // Cleanup old listener
+  if (oldEl && terminalClickHandler) {
+    oldEl.removeEventListener('click', terminalClickHandler);
+  }
+  
+  // Add new listener
+  if (newEl) {
+    terminalClickHandler = () => {
       if (!pagerMode.value) {
         inputRef.value?.focus();
       }
-    });
+    };
+    newEl.addEventListener('click', terminalClickHandler);
   }
 }, { immediate: true });
 
@@ -611,6 +590,10 @@ onMounted(() => {
 // Cleanup
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
+  if (terminalRef.value && terminalClickHandler) {
+    terminalRef.value.removeEventListener('click', terminalClickHandler);
+    terminalClickHandler = null;
+  }
 });
 </script>
 
@@ -701,27 +684,6 @@ onUnmounted(() => {
   min-height: 1.6em;
   word-wrap: break-word;
   white-space: pre-wrap;
-}
-
-.terminal-prompt {
-  display: inline-flex;
-  align-items: center;
-  margin-right: 8px;
-  flex-shrink: 0;
-  
-  .prompt-user {
-    color: var(--terminal-prompt, #0dbc79);
-    font-weight: 500;
-  }
-  
-  .prompt-separator {
-    color: var(--color-foreground, #d4d4d4);
-    margin: 0 2px;
-  }
-  
-  .prompt-path {
-    color: var(--terminal-info, #29b8db);
-  }
 }
 
 .terminal-command {

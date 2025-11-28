@@ -10,6 +10,7 @@ const systemPrefersDark = ref(false);
 
 // Media query watcher
 let mediaQuery: MediaQueryList | null = null;
+let mediaQueryHandler: ((e: MediaQueryListEvent) => void) | null = null;
 
 function detectSystemPreference(): boolean {
   if (typeof window === 'undefined') return false;
@@ -22,22 +23,27 @@ function setupMediaQueryWatcher() {
   mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   systemPrefersDark.value = mediaQuery.matches;
 
-  const handleChange = (e: MediaQueryListEvent) => {
+  mediaQueryHandler = (e: MediaQueryListEvent) => {
     systemPrefersDark.value = e.matches;
   };
 
   // Modern browsers
   if (mediaQuery.addEventListener) {
-    mediaQuery.addEventListener('change', handleChange);
+    mediaQuery.addEventListener('change', mediaQueryHandler);
   } else {
     // Fallback for older browsers
-    mediaQuery.addListener(handleChange);
+    mediaQuery.addListener(mediaQueryHandler);
   }
 }
 
 function cleanupMediaQueryWatcher() {
-  if (mediaQuery && mediaQuery.removeEventListener) {
-    mediaQuery.removeEventListener('change', () => {});
+  if (mediaQuery && mediaQueryHandler) {
+    if (mediaQuery.removeEventListener) {
+      mediaQuery.removeEventListener('change', mediaQueryHandler);
+    } else {
+      mediaQuery.removeListener(mediaQueryHandler);
+    }
+    mediaQueryHandler = null;
   }
 }
 
