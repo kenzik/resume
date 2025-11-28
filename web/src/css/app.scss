@@ -14,6 +14,16 @@
 :root {
   --terminal-max-width: 1200px;
   --terminal-max-height: 900px;  // 1200 * 3/4 for 4:3 ratio
+  
+  // Mobile-responsive values (overridden in media query)
+  --terminal-width: min(90vw, var(--terminal-max-width));
+  --terminal-height: min(85vh, var(--terminal-max-height));
+  --terminal-border-radius: 16px;
+  --terminal-bezel-shadow: 
+    0 0 0 3px #1a1a1a,
+    0 0 0 6px #0d0d0d,
+    0 0 40px rgba(0, 0, 0, 0.8),
+    inset 0 0 80px rgba(0, 0, 0, 0.3);
 }
 
 // Base terminal styling
@@ -36,12 +46,12 @@ html {
 }
 
 body {
-  // Fixed 4:3 dimensions - explicit width and height
+  // Responsive dimensions using CSS variables
   // Using !important to override any framework defaults
-  width: min(90vw, var(--terminal-max-width)) !important;
-  height: min(85vh, var(--terminal-max-height)) !important;
+  width: var(--terminal-width) !important;
+  height: var(--terminal-height) !important;
   min-height: 0 !important;  // Override any min-height
-  max-height: min(85vh, var(--terminal-max-height)) !important;
+  max-height: var(--terminal-height) !important;
   
   margin: 0;  // Flexbox on html handles centering
   padding: 0;
@@ -54,13 +64,9 @@ body {
   background-color: var(--color-background, #1e1e1e);
   color: var(--color-foreground, #d4d4d4);
   
-  // CRT bezel effect
-  border-radius: 16px;
-  box-shadow: 
-    0 0 0 3px #1a1a1a,             // Inner bezel
-    0 0 0 6px #0d0d0d,             // Outer bezel  
-    0 0 40px rgba(0, 0, 0, 0.8),   // Soft shadow
-    inset 0 0 80px rgba(0, 0, 0, 0.3); // Inner shadow for depth
+  // CRT bezel effect (responsive)
+  border-radius: var(--terminal-border-radius);
+  box-shadow: var(--terminal-bezel-shadow);
 }
 
 a {
@@ -118,6 +124,46 @@ a {
 
   &:hover {
     background: var(--color-white, #e5e5e5);
+  }
+}
+
+// =============================================================================
+// Mobile Responsive Styles
+// Optimize the CRT terminal for smaller screens while keeping retro aesthetic
+// =============================================================================
+@media (max-width: 768px) {
+  :root {
+    // Expand terminal to use more screen real estate
+    --terminal-width: 96vw;
+    --terminal-height: 92vh;
+    
+    // Smaller border radius for tighter fit
+    --terminal-border-radius: 10px;
+    
+    // Simplified bezel - less heavy, more subtle
+    --terminal-bezel-shadow: 
+      0 0 0 2px #1a1a1a,
+      0 0 0 4px #0d0d0d,
+      0 0 20px rgba(0, 0, 0, 0.6),
+      inset 0 0 40px rgba(0, 0, 0, 0.2);
+  }
+}
+
+// Extra small screens (phones in portrait)
+@media (max-width: 480px) {
+  :root {
+    // Near full-screen on very small devices
+    --terminal-width: 98vw;
+    --terminal-height: 94vh;
+    
+    // Even smaller radius
+    --terminal-border-radius: 8px;
+    
+    // Minimal bezel for maximum content
+    --terminal-bezel-shadow: 
+      0 0 0 1px #1a1a1a,
+      0 0 0 2px #0d0d0d,
+      inset 0 0 30px rgba(0, 0, 0, 0.15);
   }
 }
 
