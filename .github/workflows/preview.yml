@@ -9,10 +9,13 @@ on:
     paths:
       - 'web/**'
       - 'data/**'
+      - 'python/**'
       - '.github/workflows/preview.yml'
 
 env:
   NODE_VERSION: '22'
+  PYTHON_VERSION: '3.11'
+  RESUME_FILENAME_BASE: 'kenzik-resume'
 
 jobs:
   preview:
@@ -27,6 +30,49 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       
+      # ========================================
+      # Python: Build Resume Documents
+      # ========================================
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: python/requirements.txt
+      
+      - name: Install Python dependencies
+        working-directory: python
+        run: pip install -r requirements.txt
+      
+      - name: Build resume documents
+        working-directory: python
+        env:
+          # Use secrets if available, otherwise use placeholder values for preview
+          RESUME_NAME: ${{ secrets.RESUME_NAME || 'Preview Name' }}
+          RESUME_CITY_STATE: ${{ secrets.RESUME_CITY_STATE || 'City, State' }}
+          RESUME_PHONE: ${{ secrets.RESUME_PHONE || '555-555-5555' }}
+          RESUME_EMAIL: ${{ secrets.RESUME_EMAIL || 'preview@example.com' }}
+          RESUME_LINKEDIN: ${{ secrets.RESUME_LINKEDIN || 'linkedin.com/in/user' }}
+        run: |
+          python build_resume.py \
+            --format all \
+            --reveal-pii \
+            --name "${{ env.RESUME_FILENAME_BASE }}" \
+            --source ../data/kenzik.yml
+      
+      - name: Copy resume files to web public folder
+        run: |
+          mkdir -p web/public/downloads
+          cp python/${{ env.RESUME_FILENAME_BASE }}.pdf web/public/downloads/
+          cp python/${{ env.RESUME_FILENAME_BASE }}.docx web/public/downloads/
+          cp python/${{ env.RESUME_FILENAME_BASE }}.md web/public/downloads/
+          cp python/${{ env.RESUME_FILENAME_BASE }}.rtf web/public/downloads/
+          echo "Resume files copied to web/public/downloads/"
+          ls -la web/public/downloads/
+      
+      # ========================================
+      # Node.js: Build Web Application
+      # ========================================
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -46,8 +92,12 @@ jobs:
           VITE_RESUME_CITY_STATE: ${{ secrets.VITE_RESUME_CITY_STATE || 'City, State' }}
           VITE_RESUME_LINKEDIN: ${{ secrets.VITE_RESUME_LINKEDIN || 'linkedin.com/in/user' }}
           VITE_RESUME_GITHUB: ${{ secrets.VITE_RESUME_GITHUB || 'github.com/user' }}
+          VITE_RESUME_FILENAME_BASE: ${{ env.RESUME_FILENAME_BASE }}
         run: yarn build
       
+      # ========================================
+      # Deploy Preview to Cloudflare Pages
+      # ========================================
       - name: Deploy Preview to Cloudflare Pages
         id: deploy
         uses: cloudflare/pages-action@v1
@@ -69,6 +119,11 @@ jobs:
             const shortSha = sha.substring(0, 7);
             const body = `## 🚀 Preview Deployment Ready!\n\n` +
               `**Preview URL:** ${url}\n\n` +
+              `**Resume Downloads:**\n` +
+              `- [PDF](${url}/downloads/${{ env.RESUME_FILENAME_BASE }}.pdf)\n` +
+              `- [DOCX](${url}/downloads/${{ env.RESUME_FILENAME_BASE }}.docx)\n` +
+              `- [Markdown](${url}/downloads/${{ env.RESUME_FILENAME_BASE }}.md)\n` +
+              `- [RTF](${url}/downloads/${{ env.RESUME_FILENAME_BASE }}.rtf)\n\n` +
               `This preview was built from commit \`${shortSha}\``;
             
             // Find existing comment
@@ -98,4 +153,3 @@ jobs:
                 body: body
               });
             }
-
