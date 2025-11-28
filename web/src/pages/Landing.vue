@@ -337,5 +337,40 @@ onUnmounted(() => {
     filter: brightness(1) saturate(1);
   }
 }
+
+// =============================================================================
+// Mobile Responsive Styles
+// =============================================================================
+@media (max-width: 768px) {
+  .crt-container {
+    border-radius: 8px;
+  }
+  
+  .scanlines, .vignette {
+    border-radius: 8px;
+  }
+  
+  .startup-cursor {
+    top: 14px;
+    left: 14px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .crt-container {
+    border-radius: 6px;
+  }
+  
+  .scanlines, .vignette {
+    border-radius: 6px;
+  }
+  
+  .startup-cursor {
+    top: 10px;
+    left: 10px;
+    font-size: 14px;
+  }
+}
 </style>
 
