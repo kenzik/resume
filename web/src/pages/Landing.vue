@@ -33,6 +33,9 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const animationClass = ref('power-off');
 
+// Power-on delay from env variable (default 6000ms)
+const powerOnDelayMs = Number(import.meta.env.VITE_POWER_ON_DELAY_MS) || 6000;
+
 let redirectTimeout: ReturnType<typeof setTimeout> | null = null;
 let animationTimeout: ReturnType<typeof setTimeout> | null = null;
 let poweredOnTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -48,10 +51,10 @@ onMounted(() => {
     animationClass.value = 'powered-on';
   }, 3500);
   
-  // Redirect to /resume after 10 seconds
+  // Redirect to /resume after power-on delay
   redirectTimeout = setTimeout(() => {
     router.push('/resume');
-  }, 10000);
+  }, powerOnDelayMs);
 });
 
 onUnmounted(() => {
