@@ -37,7 +37,6 @@ export function useCommands() {
 - **experience [company]** - Show experience for specific company
 - **contact** - Display contact information
 - **motd** - Show message of the day
-- **theme** - List and change themes
 - **font** - Show available fonts or change font
 
 #### Pipe commands (use with \`|\`)
