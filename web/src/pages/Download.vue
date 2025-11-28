@@ -119,10 +119,10 @@ onMounted(() => {
     return;
   }
   
-  // Small delay for UX, then trigger download
+  // Wait for page transition to complete before triggering download
   setTimeout(() => {
     triggerDownload();
-  }, 500);
+  }, 2000);
 });
 
 function triggerDownload() {
