@@ -130,7 +130,29 @@ const checkPagerAtEnd = () => {
 const pagerPageDown = () => {
   if (pagerContentRef.value) {
     const el = pagerContentRef.value;
-    const pageHeight = el.clientHeight - 40; // Leave some overlap
+    
+    // Get the inner content element for accurate line-height measurement
+    const contentEl = el.querySelector('.terminal-output-text');
+    let overlap = 150; // Default fallback
+    
+    if (contentEl) {
+      const computedStyle = window.getComputedStyle(contentEl);
+      const fontSize = parseFloat(computedStyle.fontSize) || 14;
+      const lineHeightStr = computedStyle.lineHeight;
+      
+      // Calculate actual line height in pixels
+      let lineHeight: number;
+      if (lineHeightStr === 'normal') {
+        lineHeight = fontSize * 1.6;
+      } else {
+        lineHeight = parseFloat(lineHeightStr) || fontSize * 1.6;
+      }
+      
+      // Keep 5-6 lines of overlap to ensure no content is lost
+      overlap = Math.max(lineHeight * 6, 150);
+    }
+    
+    const pageHeight = Math.max(el.clientHeight - overlap, 50); // Ensure we scroll at least 50px
     el.scrollBy({ top: pageHeight, behavior: 'instant' });
     
     // Check if we've reached the end after scrolling
@@ -801,6 +823,7 @@ onUnmounted(() => {
 // Pager styles - wrapper takes remaining space, prompt at top
 .pager-wrapper {
   flex: 1;
+  width: 100%;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -828,6 +851,7 @@ onUnmounted(() => {
 
 .pager-prompt {
   flex-shrink: 0;
+  width: 100%;
   color: var(--terminal-info, #29b8db);
   background: var(--color-background, #1e1e1e);
   padding: 0.5rem 0;
@@ -835,6 +859,8 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--color-brightBlack, #444);
   z-index: 10;
   margin-bottom: 0.5rem;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 // Default line-height for all terminal text
