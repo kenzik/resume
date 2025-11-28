@@ -59,7 +59,7 @@ import { useTypewriter } from '../composables/useTypewriter';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
 import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
-import { PAGER_CONFIG, formatPagerProgress } from '../config';
+import { PAGER_CONFIG } from '../config';
 
 // Commands to run automatically on startup (single code path for all commands)
 const startupCommands = ['motd'];
@@ -72,7 +72,6 @@ const cursorLeft = ref(0);
 
 const currentInput = ref('');
 const history = ref<Array<{ command: string; output: string; isStartup?: boolean }>>([]);
-const showCursor = ref(true);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
