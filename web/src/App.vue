@@ -32,12 +32,13 @@ body, html {
   line-height: var(--font-line-height, 1.6);
   background-color: var(--color-background, #1e1e1e);
   color: var(--color-foreground, #d4d4d4);
-  min-height: 100vh;
+  // Height constraints are set in app.scss - don't override with min-height
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 #q-app {
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
 }
 </style>
 
