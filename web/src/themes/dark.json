@@ -24,8 +24,8 @@
     "brightWhite": "#e5e5e5"
   },
   "terminal": {
-    "prompt": "#0dbc79",
-    "command": "#3b8eea",
+    "prompt": "#929292", 
+    "command": "#929292",
     "output": "#d4d4d4",
     "error": "#f14c4c",
     "success": "#23d18b",
@@ -35,7 +35,7 @@
   "font": {
     "size": "18px",
     "weight": "400",
-    "lineHeight": "1.8"
+    "lineHeight": "1.4"
   },
   "spacing": {
     "padding": "20px"
