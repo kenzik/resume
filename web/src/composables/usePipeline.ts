@@ -144,15 +144,3 @@ export async function executePipeline(
   return { output: currentOutput };
 }
 
-/**
- * Main pipeline composable hook
- */
-export function usePipeline() {
-  return {
-    parsePipeline,
-    executePipeline,
-    hasPipe,
-    isPagerCommand
-  };
-}
-

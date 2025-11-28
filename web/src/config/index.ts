@@ -1,5 +1,8 @@
 import fontsConfig from './fonts.json';
 
+// Re-export CSS defaults
+export * from './cssDefaults';
+
 // =============================================================================
 // Pager Configuration (for `more` and `less` commands)
 // =============================================================================

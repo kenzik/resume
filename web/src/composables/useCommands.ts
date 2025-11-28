@@ -18,6 +18,25 @@ export interface CommandContext {
  */
 type CommandHandler = (ctx: CommandContext) => Promise<string>;
 
+// Cache the resume module to avoid repeated dynamic imports
+let resumeModule: typeof import('./useResume') | null = null;
+
+/**
+ * Helper to execute a function with a loaded resume
+ * Handles loading and error checking with caching
+ */
+async function withResume<T>(fn: (resume: ReturnType<typeof import('./useResume').useResume>) => T): Promise<T | string> {
+  if (!resumeModule) {
+    resumeModule = await import('./useResume');
+  }
+  const resume = resumeModule.useResume();
+  await resume.loadResume();
+  if (resume.error.value) {
+    return `Error: ${resume.error.value}`;
+  }
+  return fn(resume);
+}
+
 /**
  * Command system composable
  * Handles command execution with regex and case-insensitive matching
@@ -66,46 +85,16 @@ Commands support regex patterns and are case-insensitive.
       return '';
     },
 
-    resume: async () => {
-      const { useResume } = await import('./useResume');
-      const resume = useResume();
-      await resume.loadResume();
-      if (resume.error.value) {
-        return `Error: ${resume.error.value}`;
-      }
-      return resume.getFullResume();
-    },
+    resume: async () => withResume(r => r.getFullResume()),
 
-    skills: async () => {
-      const { useResume } = await import('./useResume');
-      const resume = useResume();
-      await resume.loadResume();
-      if (resume.error.value) {
-        return `Error: ${resume.error.value}`;
-      }
-      return resume.getSkills();
-    },
+    skills: async () => withResume(r => r.getSkills()),
 
     experience: async (ctx: CommandContext) => {
-      const { useResume } = await import('./useResume');
-      const resume = useResume();
-      await resume.loadResume();
-      if (resume.error.value) {
-        return `Error: ${resume.error.value}`;
-      }
       const filter = ctx.args.length > 0 ? ctx.args.join(' ') : undefined;
-      return resume.getExperience(filter);
+      return withResume(r => r.getExperience(filter));
     },
 
-    contact: async () => {
-      const { useResume } = await import('./useResume');
-      const resume = useResume();
-      await resume.loadResume();
-      if (resume.error.value) {
-        return `Error: ${resume.error.value}`;
-      }
-      return resume.getContact();
-    },
+    contact: async () => withResume(r => r.getContact()),
 
     motd: async () => {
       const { useMotd } = await import('./useMotd');
