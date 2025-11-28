@@ -1,0 +1,51 @@
+/* JuliaMono - Self-hosted webfont */
+/* https://github.com/cormullion/juliamono */
+
+@font-face {
+  font-family: 'JuliaMono';
+  src: url('/fonts/JuliaMono-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JuliaMono';
+  src: url('/fonts/JuliaMono-RegularItalic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JuliaMono';
+  src: url('/fonts/JuliaMono-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JuliaMono';
+  src: url('/fonts/JuliaMono-MediumItalic.woff2') format('woff2');
+  font-weight: 500;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JuliaMono';
+  src: url('/fonts/JuliaMono-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'JuliaMono';
+  src: url('/fonts/JuliaMono-BoldItalic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+

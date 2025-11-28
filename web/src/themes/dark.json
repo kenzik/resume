@@ -1,0 +1,44 @@
+{
+  "name": "dark",
+  "displayName": "Dark",
+  "colors": {
+    "background": "#1e1e1e",
+    "foreground": "#d4d4d4",
+    "cursor": "#aeafad",
+    "selection": "#264f78",
+    "black": "#000000",
+    "red": "#cd3131",
+    "green": "#0dbc79",
+    "yellow": "#e5e510",
+    "blue": "#2472c8",
+    "magenta": "#bc3fbc",
+    "cyan": "#11a8cd",
+    "white": "#e5e5e5",
+    "brightBlack": "#333333",
+    "brightRed": "#f14c4c",
+    "brightGreen": "#23d18b",
+    "brightYellow": "#f5f543",
+    "brightBlue": "#3b8eea",
+    "brightMagenta": "#d670d6",
+    "brightCyan": "#29b8db",
+    "brightWhite": "#e5e5e5"
+  },
+  "terminal": {
+    "prompt": "#929292", 
+    "command": "#929292",
+    "output": "#d4d4d4",
+    "error": "#f14c4c",
+    "success": "#23d18b",
+    "warning": "#f5f543",
+    "info": "#29b8db"
+  },
+  "font": {
+    "size": "18px",
+    "weight": "400",
+    "lineHeight": "1.4"
+  },
+  "spacing": {
+    "padding": "20px"
+  }
+}
+

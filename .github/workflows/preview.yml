@@ -1,0 +1,98 @@
+name: Preview Deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+      - 'feature/**'
+    paths:
+      - 'web/**'
+      - 'data/**'
+      - '.github/workflows/preview.yml'
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  preview:
+    name: Build & Deploy Preview
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write  # To comment preview URL on PR
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+          cache-dependency-path: web/yarn.lock
+      
+      - name: Install dependencies
+        working-directory: web
+        run: yarn install --frozen-lockfile
+      
+      - name: Build application
+        working-directory: web
+        env:
+          # Use placeholder values for preview builds
+          VITE_RESUME_NAME: ${{ secrets.VITE_RESUME_NAME || 'Preview Build' }}
+          VITE_RESUME_CITY_STATE: ${{ secrets.VITE_RESUME_CITY_STATE || 'City, State' }}
+          VITE_RESUME_LINKEDIN: ${{ secrets.VITE_RESUME_LINKEDIN || 'linkedin.com/in/user' }}
+          VITE_RESUME_GITHUB: ${{ secrets.VITE_RESUME_GITHUB || 'github.com/user' }}
+        run: yarn build
+      
+      - name: Deploy Preview to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'kenzik-resume' }}
+          directory: web/dist/spa
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          # Preview deployment uses branch name
+          branch: ${{ github.head_ref }}
+      
+      - name: Comment Preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.url }}';
+            const body = `## 🚀 Preview Deployment Ready!\n\n` +
+              `**Preview URL:** ${url}\n\n` +
+              `This preview was built from commit \`${{ github.event.pull_request.head.sha.substring(0, 7) }}\``;
+            
+            // Find existing comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('Preview Deployment Ready')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
+            }
+
