@@ -896,4 +896,55 @@ onUnmounted(() => {
     line-height: inherit;
   }
 }
+
+// =============================================================================
+// Mobile Responsive Styles
+// =============================================================================
+@media (max-width: 768px) {
+  .terminal {
+    padding: 14px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+  
+  .terminal-output-text {
+    :deep(h1) {
+      font-size: 1.2em;
+    }
+    
+    :deep(h2) {
+      font-size: 0.95em;
+    }
+    
+    :deep(h3) {
+      font-size: 0.7em;
+    }
+  }
+}
+
+// Extra small screens
+@media (max-width: 480px) {
+  .terminal {
+    padding: 10px;
+    font-size: 14px;
+    border-radius: 6px;
+    line-height: 1.4;
+  }
+  
+  .terminal-line {
+    margin-bottom: 0.35rem;
+  }
+  
+  .terminal-output-text {
+    margin-bottom: 0.5rem;
+    
+    :deep(p) {
+      margin: 0.5em 0 0.35em 0;
+    }
+    
+    :deep(ul), :deep(ol) {
+      padding-left: 1.2em;
+    }
+  }
+}
 </style>
