@@ -81,10 +81,15 @@ const cursorLeft = ref(0);
 
 const currentInput = ref('');
 const history = ref<Array<{ command: string; output: string; isStartup?: boolean }>>([]);
-const historyIndex = ref(-1);
 const showCursor = ref(true);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
+
+// Command history settings (for up/down arrow navigation)
+const COMMAND_HISTORY_MAX_LENGTH = 50;
+const commandHistory = ref<string[]>([]);
+const commandHistoryIndex = ref(-1);
+const savedInput = ref(''); // Saves current input when starting to navigate
 
 // Pager mode state
 const pagerMode = ref(false);
@@ -251,11 +256,36 @@ onMounted(async () => {
   });
 });
 
+// Process the history command - outputs command history and pipes to more
+const processHistoryCommand = async () => {
+  if (commandHistory.value.length === 0) {
+    addHistoryEntry('history', '');
+    const output = await renderForDisplay('*No commands in history*');
+    history.value[history.value.length - 1].output = output;
+    scrollToBottom();
+    return;
+  }
+
+  // Format history like bash: numbered list
+  const historyOutput = commandHistory.value
+    .map((cmd, index) => `  ${String(index + 1).padStart(4)}  ${cmd}`)
+    .join('\n');
+
+  // Pipe to more (enter pager mode)
+  await enterPagerMode('history', '```\n' + historyOutput + '\n```');
+};
+
 // Process a single command (may be a pipeline)
 const processCommand = async (command: string) => {
   // Handle clear command specially
   if (command.toLowerCase() === 'clear') {
     clearTerminal();
+    return;
+  }
+
+  // Handle history command specially (needs access to commandHistory state)
+  if (command.toLowerCase() === 'history') {
+    await processHistoryCommand();
     return;
   }
 
@@ -383,9 +413,19 @@ const executeCommand = async () => {
     return;
   }
 
+  // Add to command history (avoid duplicating the last command)
+  if (commandHistory.value[commandHistory.value.length - 1] !== command) {
+    commandHistory.value.push(command);
+    // Trim to max length
+    if (commandHistory.value.length > COMMAND_HISTORY_MAX_LENGTH) {
+      commandHistory.value.shift();
+    }
+  }
+
   // Clear input immediately
   currentInput.value = '';
-  historyIndex.value = -1;
+  commandHistoryIndex.value = -1;
+  savedInput.value = '';
   updateCursorPosition();
 
   // If a command is currently executing, queue this one
@@ -404,24 +444,44 @@ const addHistoryEntry = (command: string, output: string) => {
   history.value.push({ command, output });
 };
 
-// Navigate command history
+// Navigate command history (up/down arrows - shell-like behavior)
 const navigateHistory = (direction: number) => {
-  if (history.value.length === 0) return;
+  if (commandHistory.value.length === 0) return;
   
-  historyIndex.value += direction;
-  
-  if (historyIndex.value < -1) {
-    historyIndex.value = -1;
-    currentInput.value = '';
-  } else if (historyIndex.value >= history.value.length) {
-    historyIndex.value = history.value.length - 1;
+  // Save current input when starting to navigate
+  if (commandHistoryIndex.value === -1 && direction === -1) {
+    savedInput.value = currentInput.value;
   }
   
-  if (historyIndex.value >= 0) {
-    currentInput.value = history.value[history.value.length - 1 - historyIndex.value].command;
+  // Calculate new index
+  // direction -1 = up (older), direction 1 = down (newer)
+  const newIndex = commandHistoryIndex.value - direction;
+  
+  if (newIndex < -1) {
+    // Past the newest entry - stay at current input
+    return;
+  } else if (newIndex >= commandHistory.value.length) {
+    // Past the oldest entry - stay at oldest
+    return;
   }
+  
+  commandHistoryIndex.value = newIndex;
+  
+  if (commandHistoryIndex.value === -1) {
+    // Back to current input (not in history)
+    currentInput.value = savedInput.value;
+  } else {
+    // Show command from history (most recent is at end of array)
+    currentInput.value = commandHistory.value[commandHistory.value.length - 1 - commandHistoryIndex.value];
+  }
+  
   nextTick(() => {
     updateCursorPosition();
+    // Move cursor to end of input
+    if (inputRef.value) {
+      inputRef.value.selectionStart = inputRef.value.value.length;
+      inputRef.value.selectionEnd = inputRef.value.value.length;
+    }
   });
 };
 
@@ -474,7 +534,9 @@ const scrollToBottom = () => {
 const clearTerminal = () => {
   history.value = [];
   currentInput.value = '';
-  historyIndex.value = -1;
+  commandHistoryIndex.value = -1;
+  savedInput.value = '';
+  // Note: commandHistory is preserved across clears (like a real shell)
   
   // Exit pager mode if active
   if (pagerMode.value) {
