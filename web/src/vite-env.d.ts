@@ -13,6 +13,7 @@ interface ImportMetaEnv {
   readonly VITE_RESUME_LINKEDIN?: string;
   readonly VITE_RESUME_GITHUB?: string;
   readonly VITE_POWER_ON_DELAY_MS?: string;
+  readonly VITE_RESUME_FILENAME_BASE?: string;
 }
 
 interface ImportMeta {
