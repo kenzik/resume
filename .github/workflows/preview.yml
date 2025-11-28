@@ -64,9 +64,11 @@ jobs:
         with:
           script: |
             const url = '${{ steps.deploy.outputs.url }}';
+            const sha = '${{ github.event.pull_request.head.sha }}';
+            const shortSha = sha.substring(0, 7);
             const body = `## 🚀 Preview Deployment Ready!\n\n` +
               `**Preview URL:** ${url}\n\n` +
-              `This preview was built from commit \`${{ github.event.pull_request.head.sha.substring(0, 7) }}\``;
+              `This preview was built from commit \`${shortSha}\``;
             
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
