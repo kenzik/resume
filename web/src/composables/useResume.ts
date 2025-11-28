@@ -44,7 +44,7 @@ export async function loadResume(): Promise<void> {
     // Inject header from environment
     data.header = {
       name: import.meta.env.VITE_RESUME_NAME || "Your Name",
-      contact: formatContactString(false), // Default: redacted PII
+      contact: formatContactString(), 
     };
     
     resumeData.value = data;
