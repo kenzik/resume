@@ -16,7 +16,7 @@ const SEPARATOR_SKILLS = " • ";
  * Format section header (markdown h2)
  */
 export function formatSectionHeader(title: string): string {
-  return `${title}\n\n`;
+  return `\n${title}\n\n`;
 }
 
 /**
@@ -71,6 +71,7 @@ export function formatExperienceEntry(job: Experience, showOnlyRelevant: boolean
   const lines: string[] = [];
   
   // Company | Title (markdown bold)
+  lines.push(`___`);
   lines.push(`**${job.company}**${SEPARATOR_JOB}**${job.title}**`);
   lines.push('');
   

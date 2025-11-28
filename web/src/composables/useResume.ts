@@ -141,7 +141,7 @@ export function getEarlierRoles(): string {
   
   const header = formatSectionHeader(SECTION_EARLIER);
   const roles = formatEarlierRoles(resumeData.value.earlier);
-  return `${header}${roles}\n`;
+  return `${header}---\n${roles}\n`;
 }
 
 /**
@@ -155,7 +155,7 @@ export function getCertsAndEducation(): string {
     resumeData.value.certs,
     resumeData.value.education
   );
-  return `${header}${content}\n`;
+  return `${header}---\n${content}\n`;
 }
 
 /**

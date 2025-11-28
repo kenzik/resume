@@ -28,6 +28,7 @@ web:
        - **Languages:** Python, TypeScript, Node.js, Go, Bash 
        - **Leadership:** Solution Architecture, Technical Strategy, Team Mentorship, Agile/Scrum
 
+    Type `help` for available commands.
 resume:
   profile: >
     Cloud-native architect and technical leader with 25+ years building production systems 
