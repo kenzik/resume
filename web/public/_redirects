@@ -1,0 +1,4 @@
+# SPA fallback for Cloudflare Pages history mode
+# All routes should serve index.html and let Vue Router handle routing
+/* /index.html 200
+
