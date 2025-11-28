@@ -5,7 +5,7 @@ import fontsConfig from './fonts.json';
 // =============================================================================
 export const PAGER_CONFIG = {
   // Message shown when more content is available
-  morePrompt: '-- Press SPACE for next page, q to quit --',
+  morePrompt: '-- Press a key for next page or scroll with mouse/trackpad/pgup/pgdn, q to quit --',
   
   // Message shown at the end of content
   endPrompt: '(END) Press any key to exit',
