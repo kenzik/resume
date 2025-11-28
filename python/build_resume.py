@@ -485,22 +485,28 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # 2. CHECK ENV: Look for .env.local or .env
+    # 2. CHECK ENV: Look for .env.local or .env (optional - system env vars also work)
     env_local = ".env.local"
     env_default = ".env"
-    env_loaded = False
 
     if os.path.exists(env_local):
         load_dotenv(env_local, override=True)
         print(f"[+] Loaded configuration from {env_local}")
-        env_loaded = True
     elif os.path.exists(env_default):
         load_dotenv(env_default)
         print(f"[+] Loaded configuration from {env_default}")
-        env_loaded = True
     else:
-        print(f"[-] Warning: No {env_local} or {env_default} found.")
-        print("    PII (Name, Phone, etc.) will use system defaults or be redacted.")
+        print(f"[*] No .env file found - using system environment variables")
+    
+    # Debug: Show which PII env vars are available (without revealing values)
+    pii_vars = ["RESUME_NAME", "RESUME_CITY_STATE", "RESUME_PHONE", "RESUME_EMAIL", "RESUME_LINKEDIN"]
+    found_vars = [v for v in pii_vars if os.getenv(v)]
+    missing_vars = [v for v in pii_vars if not os.getenv(v)]
+    
+    if found_vars:
+        print(f"[+] Found environment variables: {', '.join(found_vars)}")
+    if missing_vars:
+        print(f"[-] Missing environment variables: {', '.join(missing_vars)}")
 
     # 3. LOAD YAML
     if not os.path.exists(args.source):

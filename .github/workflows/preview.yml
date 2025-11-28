@@ -11,6 +11,13 @@ on:
       - 'data/**'
       - 'python/**'
       - '.github/workflows/preview.yml'
+  
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+    inputs:
+      branch:
+        description: 'Branch to deploy (defaults to current branch)'
+        required: false
+        type: string
 
 env:
   NODE_VERSION: '22'
@@ -44,15 +51,23 @@ jobs:
         working-directory: python
         run: pip install -r requirements.txt
       
+      - name: Debug - Check secrets availability
+        run: |
+          echo "Checking if secrets are available (will show 'set' or 'not set'):"
+          if [ -n "${{ secrets.RESUME_NAME }}" ]; then echo "RESUME_NAME: set"; else echo "RESUME_NAME: not set"; fi
+          if [ -n "${{ secrets.RESUME_EMAIL }}" ]; then echo "RESUME_EMAIL: set"; else echo "RESUME_EMAIL: not set"; fi
+          if [ -n "${{ secrets.RESUME_PHONE }}" ]; then echo "RESUME_PHONE: set"; else echo "RESUME_PHONE: not set"; fi
+          if [ -n "${{ secrets.RESUME_CITY_STATE }}" ]; then echo "RESUME_CITY_STATE: set"; else echo "RESUME_CITY_STATE: not set"; fi
+          if [ -n "${{ secrets.RESUME_LINKEDIN }}" ]; then echo "RESUME_LINKEDIN: set"; else echo "RESUME_LINKEDIN: not set"; fi
+      
       - name: Build resume documents
         working-directory: python
         env:
-          # Use secrets if available, otherwise use placeholder values for preview
-          RESUME_NAME: ${{ secrets.RESUME_NAME || 'Preview Name' }}
-          RESUME_CITY_STATE: ${{ secrets.RESUME_CITY_STATE || 'City, State' }}
-          RESUME_PHONE: ${{ secrets.RESUME_PHONE || '555-555-5555' }}
-          RESUME_EMAIL: ${{ secrets.RESUME_EMAIL || 'preview@example.com' }}
-          RESUME_LINKEDIN: ${{ secrets.RESUME_LINKEDIN || 'linkedin.com/in/user' }}
+          RESUME_NAME: ${{ secrets.RESUME_NAME }}
+          RESUME_CITY_STATE: ${{ secrets.RESUME_CITY_STATE }}
+          RESUME_PHONE: ${{ secrets.RESUME_PHONE }}
+          RESUME_EMAIL: ${{ secrets.RESUME_EMAIL }}
+          RESUME_LINKEDIN: ${{ secrets.RESUME_LINKEDIN }}
         run: |
           python build_resume.py \
             --format all \
@@ -87,11 +102,10 @@ jobs:
       - name: Build application
         working-directory: web
         env:
-          # Use placeholder values for preview builds
-          VITE_RESUME_NAME: ${{ secrets.VITE_RESUME_NAME || 'Preview Build' }}
-          VITE_RESUME_CITY_STATE: ${{ secrets.VITE_RESUME_CITY_STATE || 'City, State' }}
-          VITE_RESUME_LINKEDIN: ${{ secrets.VITE_RESUME_LINKEDIN || 'linkedin.com/in/user' }}
-          VITE_RESUME_GITHUB: ${{ secrets.VITE_RESUME_GITHUB || 'github.com/user' }}
+          VITE_RESUME_NAME: ${{ secrets.VITE_RESUME_NAME }}
+          VITE_RESUME_CITY_STATE: ${{ secrets.VITE_RESUME_CITY_STATE }}
+          VITE_RESUME_LINKEDIN: ${{ secrets.VITE_RESUME_LINKEDIN }}
+          VITE_RESUME_GITHUB: ${{ secrets.VITE_RESUME_GITHUB }}
           VITE_RESUME_FILENAME_BASE: ${{ env.RESUME_FILENAME_BASE }}
         run: yarn build
       
@@ -107,10 +121,24 @@ jobs:
           projectName: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'kenzik-resume' }}
           directory: web/dist/spa
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          # Preview deployment uses branch name
-          branch: ${{ github.head_ref }}
+          # Preview deployment uses branch name (PR head_ref or manual input or current ref)
+          branch: ${{ github.head_ref || inputs.branch || github.ref_name }}
+      
+      - name: Print Preview URL (Manual Dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "## 🚀 Preview Deployment Ready!"
+          echo ""
+          echo "**Preview URL:** ${{ steps.deploy.outputs.url }}"
+          echo ""
+          echo "**Resume Downloads:**"
+          echo "- PDF: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.pdf"
+          echo "- DOCX: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.docx"
+          echo "- Markdown: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.md"
+          echo "- RTF: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.rtf"
       
       - name: Comment Preview URL on PR
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
