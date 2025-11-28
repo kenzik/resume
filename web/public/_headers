@@ -20,3 +20,9 @@
 /data/*
   Cache-Control: no-cache, must-revalidate
 
+# Resume downloads - force download with proper Content-Disposition
+/downloads/*
+  Content-Disposition: attachment
+  Cache-Control: public, max-age=3600
+  X-Content-Type-Options: nosniff
+

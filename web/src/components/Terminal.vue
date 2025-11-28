@@ -54,12 +54,18 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { useCommands } from '../composables/useCommands';
 import { useTypewriter } from '../composables/useTypewriter';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
 import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
 import { PAGER_CONFIG } from '../config';
+
+// Navigation prefix for commands that trigger page navigation
+const NAV_PREFIX = '__NAV__';
+
+const router = useRouter();
 
 // Commands to run automatically on startup (single code path for all commands)
 const startupCommands = ['motd'];
@@ -309,6 +315,23 @@ const processCommand = async (command: string) => {
 
   // Single command - execute and display
   const rawOutput = await executeCmd(command);
+  
+  // Check if this is a navigation command
+  if (rawOutput.startsWith(NAV_PREFIX)) {
+    const targetPath = rawOutput.slice(NAV_PREFIX.length);
+    // Add command to history with navigation message
+    addHistoryEntry(command, '');
+    const entryIndex = history.value.length - 1;
+    const navMessage = await renderForDisplay(`Navigating to **${targetPath}**...`);
+    history.value[entryIndex].output = navMessage;
+    
+    // Navigate after a brief delay for visual feedback
+    setTimeout(() => {
+      router.push(targetPath);
+    }, 500);
+    return;
+  }
+  
   const output = await renderForDisplay(rawOutput);
   
   // Add command to history first (without output)
