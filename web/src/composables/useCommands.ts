@@ -41,6 +41,9 @@ async function withResume<T>(fn: (resume: ReturnType<typeof import('./useResume'
  * Command system composable
  * Handles command execution with regex and case-insensitive matching
  * Supports piped input (stdin) for pipeline operations
+ * 
+ * - **download [format]** - Download resume (pdf, docx, md, rtf)
+ *
  */
 export function useCommands() {
   const commands: Record<string, CommandHandler> = {
@@ -72,7 +75,7 @@ Commands support regex patterns and are case-insensitive.
 - \`experience /five9/i\` - Find experience matching "five9"
 - \`skills /gcp/i\` - Find skills matching "gcp"
 - \`resume | more\` - Page through full resume
-- \`experience | grep kubernetes\` - Filter experience for kubernetes`;
+- \`download pdf\` - Download resume as PDF`;
     },
 
     clear: async () => {
@@ -324,6 +327,24 @@ ${fontList.join('\n')}
      */
     less: async (ctx: CommandContext) => {
       return ctx.stdin || 'Usage: command | less';
+    },
+
+    /**
+     * download - Download resume in specified format
+     * Usage: download [format]
+     * Formats: pdf, docx, md, rtf (default: pdf)
+     */
+    download: async (ctx: CommandContext) => {
+      const validFormats = ['pdf', 'docx', 'md', 'rtf'];
+      const format = ctx.args[0]?.toLowerCase() || 'pdf';
+      
+      if (!validFormats.includes(format)) {
+        return `Invalid format: "${ctx.args[0]}"\n\nAvailable formats: ${validFormats.join(', ')}\n\nUsage: \`download [format]\`\nExample: \`download pdf\``;
+      }
+      
+      // Return special navigation marker
+      // Terminal.vue will detect this and navigate
+      return `__NAV__/resume/download/${format}`;
     },
   };
 
