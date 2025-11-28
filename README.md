@@ -42,7 +42,7 @@ This repository demonstrates my approach to a simple engineering problem:
 2.  **Logic Layer (`build_resume.py`):** A Python engine that ingests the data and handles the specific formatting rules for different outputs.
 3.  **Presentation Layer:** The script generates consistent artifacts in **PDF**, **DOCX**, **Markdown**, and **RTF** formats automatically.
 
-### How to Build My Resume
+### Building the Resume
 
 If you'd like to see the code in action:
 
@@ -58,11 +58,18 @@ cd python
 pip install -r requirements.txt
 
 # 3. Build all formats (PDF, DOCX, MD, RTF)
-python build_resume.py --format all
+python build_resume.py --format all  
 ```
 
-Some of my contact details are redacted from this, but you'll get the point (if you are looking at this then you probably already know me.)
+Some of my contact details are redacted from this, but you'll get the point. And, if you are looking at this then you probably already know me.
 
 When I generate a PDF or DOCX for any opportunity and distribute outside of this repo, it will indeed have my full contact information.
+
+
+### The Website
+
+My evolving interactive website is available at [https://kenzik.com](https://kenzik.com) and the source code is in the [web](./web/) folder. 
+
+More details on its features, how to build, etc. are available in the [README.md](./web/README.md).
 
 Have a nice day. 😄
