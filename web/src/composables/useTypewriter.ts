@@ -21,6 +21,16 @@ export interface TypewriterOptions {
 export function useTypewriter() {
   const isTyping = ref(false);
   
+  // Cancel token for stopping typewriter mid-animation
+  let cancelRequested = false;
+  
+  /**
+   * Stop the current typewriter animation
+   */
+  const stopTyping = () => {
+    cancelRequested = true;
+  };
+  
   /**
    * Type out text with batched character output
    */
@@ -28,6 +38,8 @@ export function useTypewriter() {
     text: string,
     options: TypewriterOptions = {}
   ): Promise<string> => {
+    // Reset cancel flag at start of new animation
+    cancelRequested = false;
     const {
       delay = 4, // Minimum practical delay (browser clamps to ~4ms anyway)
       charsPerTick = 5, // Characters per tick - increase for faster output
@@ -52,6 +64,12 @@ export function useTypewriter() {
     let i = 0;
 
     while (i < text.length) {
+      // Check for cancellation
+      if (cancelRequested) {
+        isTyping.value = false;
+        return text.substring(0, i);
+      }
+      
       // Calculate end of this chunk
       let chunkEnd = Math.min(i + charsPerTick, text.length);
       
@@ -101,6 +119,7 @@ export function useTypewriter() {
   return {
     typeText,
     isTyping,
+    stopTyping,
   };
 }
 

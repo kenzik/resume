@@ -13,7 +13,7 @@ import {
   formatEarlierRoles,
   formatCertsAndEducation,
 } from '../utils/resumeFormatter';
-import type { ResumeData, Experience } from '../types/resume';
+import type { ResumeData } from '../types/resume';
 
 // Section titles
 const SECTION_PROFILE = "## PROFILE";
@@ -22,10 +22,15 @@ const SECTION_EXPERIENCE = "## PROFESSIONAL EXPERIENCE";
 const SECTION_EARLIER = "## EARLIER ROLES";
 const SECTION_CERTS_EDU = "## CERTIFICATIONS & EDUCATION";
 
-// Reactive state
+// Reactive state (module-level singletons)
 const resumeData = ref<ResumeData | null>(null);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
+
+// Computed wrappers created once at module level (not on every useResume() call)
+const resumeDataComputed = computed(() => resumeData.value);
+const isLoadingComputed = computed(() => isLoading.value);
+const errorComputed = computed(() => error.value);
 
 /**
  * Load resume data from YAML
@@ -197,12 +202,13 @@ export function getFullResume(): string {
 
 /**
  * Composable export
+ * Returns module-level singletons - safe to call multiple times
  */
 export function useResume() {
   return {
-    resumeData: computed(() => resumeData.value),
-    isLoading: computed(() => isLoading.value),
-    error: computed(() => error.value),
+    resumeData: resumeDataComputed,
+    isLoading: isLoadingComputed,
+    error: errorComputed,
     loadResume,
     getProfile,
     getSkills,
