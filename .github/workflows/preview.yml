@@ -51,15 +51,23 @@ jobs:
         working-directory: python
         run: pip install -r requirements.txt
       
+      - name: Debug - Check secrets availability
+        run: |
+          echo "Checking if secrets are available (will show 'set' or 'not set'):"
+          if [ -n "${{ secrets.RESUME_NAME }}" ]; then echo "RESUME_NAME: set"; else echo "RESUME_NAME: not set"; fi
+          if [ -n "${{ secrets.RESUME_EMAIL }}" ]; then echo "RESUME_EMAIL: set"; else echo "RESUME_EMAIL: not set"; fi
+          if [ -n "${{ secrets.RESUME_PHONE }}" ]; then echo "RESUME_PHONE: set"; else echo "RESUME_PHONE: not set"; fi
+          if [ -n "${{ secrets.RESUME_CITY_STATE }}" ]; then echo "RESUME_CITY_STATE: set"; else echo "RESUME_CITY_STATE: not set"; fi
+          if [ -n "${{ secrets.RESUME_LINKEDIN }}" ]; then echo "RESUME_LINKEDIN: set"; else echo "RESUME_LINKEDIN: not set"; fi
+      
       - name: Build resume documents
         working-directory: python
         env:
-          # Use secrets if available, otherwise use placeholder values for preview
-          RESUME_NAME: ${{ secrets.RESUME_NAME || 'Preview Name' }}
-          RESUME_CITY_STATE: ${{ secrets.RESUME_CITY_STATE || 'City, State' }}
-          RESUME_PHONE: ${{ secrets.RESUME_PHONE || '555-555-5555' }}
-          RESUME_EMAIL: ${{ secrets.RESUME_EMAIL || 'preview@example.com' }}
-          RESUME_LINKEDIN: ${{ secrets.RESUME_LINKEDIN || 'linkedin.com/in/user' }}
+          RESUME_NAME: ${{ secrets.RESUME_NAME }}
+          RESUME_CITY_STATE: ${{ secrets.RESUME_CITY_STATE }}
+          RESUME_PHONE: ${{ secrets.RESUME_PHONE }}
+          RESUME_EMAIL: ${{ secrets.RESUME_EMAIL }}
+          RESUME_LINKEDIN: ${{ secrets.RESUME_LINKEDIN }}
         run: |
           python build_resume.py \
             --format all \
@@ -94,11 +102,10 @@ jobs:
       - name: Build application
         working-directory: web
         env:
-          # Use placeholder values for preview builds
-          VITE_RESUME_NAME: ${{ secrets.VITE_RESUME_NAME || 'Preview Build' }}
-          VITE_RESUME_CITY_STATE: ${{ secrets.VITE_RESUME_CITY_STATE || 'City, State' }}
-          VITE_RESUME_LINKEDIN: ${{ secrets.VITE_RESUME_LINKEDIN || 'linkedin.com/in/user' }}
-          VITE_RESUME_GITHUB: ${{ secrets.VITE_RESUME_GITHUB || 'github.com/user' }}
+          VITE_RESUME_NAME: ${{ secrets.VITE_RESUME_NAME }}
+          VITE_RESUME_CITY_STATE: ${{ secrets.VITE_RESUME_CITY_STATE }}
+          VITE_RESUME_LINKEDIN: ${{ secrets.VITE_RESUME_LINKEDIN }}
+          VITE_RESUME_GITHUB: ${{ secrets.VITE_RESUME_GITHUB }}
           VITE_RESUME_FILENAME_BASE: ${{ env.RESUME_FILENAME_BASE }}
         run: yarn build
       
