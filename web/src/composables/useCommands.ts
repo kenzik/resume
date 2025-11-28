@@ -30,6 +30,7 @@ export function useCommands() {
 
 - **help** - Show this help message
 - **clear** - Clear the terminal
+- **history** - Show command history
 - **resume** - Display full resume
 - **skills** - List technical skills
 - **experience** - Show work experience
@@ -58,6 +59,11 @@ Commands support regex patterns and are case-insensitive.
 
     clear: async () => {
       // This will be handled by the component
+      return '';
+    },
+
+    history: async () => {
+      // This will be handled by the component (needs access to command history state)
       return '';
     },
 
