@@ -11,6 +11,13 @@ on:
       - 'data/**'
       - 'python/**'
       - '.github/workflows/preview.yml'
+  
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+    inputs:
+      branch:
+        description: 'Branch to deploy (defaults to current branch)'
+        required: false
+        type: string
 
 env:
   NODE_VERSION: '22'
@@ -107,10 +114,24 @@ jobs:
           projectName: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'kenzik-resume' }}
           directory: web/dist/spa
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          # Preview deployment uses branch name
-          branch: ${{ github.head_ref }}
+          # Preview deployment uses branch name (PR head_ref or manual input or current ref)
+          branch: ${{ github.head_ref || inputs.branch || github.ref_name }}
+      
+      - name: Print Preview URL (Manual Dispatch)
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "## 🚀 Preview Deployment Ready!"
+          echo ""
+          echo "**Preview URL:** ${{ steps.deploy.outputs.url }}"
+          echo ""
+          echo "**Resume Downloads:**"
+          echo "- PDF: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.pdf"
+          echo "- DOCX: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.docx"
+          echo "- Markdown: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.md"
+          echo "- RTF: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.rtf"
       
       - name: Comment Preview URL on PR
+        if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
