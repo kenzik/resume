@@ -9,6 +9,10 @@ const routes: RouteRecordRaw[] = [
     path: '/resume',
     component: () => import('pages/Index.vue'),
   },
+  {
+    path: '/resume/download/:format?',
+    component: () => import('pages/Download.vue'),
+  },
 ];
 
 export default routes;
