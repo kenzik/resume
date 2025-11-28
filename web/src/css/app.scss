@@ -63,6 +63,15 @@ body {
     inset 0 0 80px rgba(0, 0, 0, 0.3); // Inner shadow for depth
 }
 
+a {
+  color: var(--color-white, #e5e5e5);
+  text-decoration: underline;
+  cursor: pointer;
+  &:hover {
+    color: var(--color-brightYellow, #f5f543);
+  }
+}
+
 #q-app {
   height: 100%;
   overflow: hidden;
