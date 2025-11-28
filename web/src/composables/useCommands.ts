@@ -26,7 +26,7 @@ type CommandHandler = (ctx: CommandContext) => Promise<string>;
 export function useCommands() {
   const commands: Record<string, CommandHandler> = {
     help: async () => {
-      return `**Available commands:**
+      return `#### Available commands
 
 - **help** - Show this help message
 - **clear** - Clear the terminal
@@ -39,7 +39,7 @@ export function useCommands() {
 - **theme** - List and change themes
 - **font** - Show available fonts or change font
 
-**Pipe commands** (use with |):
+#### Pipe commands (use with \`|\`)
 
 - **more** - Page through output (e.g., \`resume | more\`)
 - **grep <pattern>** - Filter lines matching pattern
@@ -48,7 +48,7 @@ export function useCommands() {
 
 Commands support regex patterns and are case-insensitive.
 
-**Examples:**
+#### Examples:
 
 - \`experience /five9/i\` - Find experience matching "five9"
 - \`skills /gcp/i\` - Find skills matching "gcp"
