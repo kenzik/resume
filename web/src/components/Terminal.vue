@@ -814,7 +814,7 @@ onUnmounted(() => {
   :deep(h1) {
     font-size: 1.4em;
     line-height: 1.6;
-    font-weight: normal;
+    font-weight: bold;
     color: var(--terminal-success, #23d18b);
     margin: 0.75em 0 0.5em 0;
   }
