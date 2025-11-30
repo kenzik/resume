@@ -35,6 +35,7 @@ module.exports = configure(function (ctx) {
     // app boot file (/src/boot)
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
     boot: [
+      'theme'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#Property%3A-css
@@ -58,6 +59,12 @@ module.exports = configure(function (ctx) {
     framework: {
       config: {
         dark: 'auto', // Let Quasar handle dark mode, but we'll override with our theme system
+        notify: {
+          position: 'top',
+          timeout: 2500,
+          textColor: 'white',
+          classes: 'terminal-notify'
+        }
       },
 
       // iconSet: 'material-icons', // Quasar icon set
@@ -71,7 +78,12 @@ module.exports = configure(function (ctx) {
       // directives: [],
 
       // Quasar plugins
-      plugins: []
+      plugins: [
+        'Meta',
+        'LocalStorage',
+        'SessionStorage',
+        'Notify'
+      ]
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#Property%3A-devServer

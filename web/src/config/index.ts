@@ -8,10 +8,10 @@ export * from './cssDefaults';
 // =============================================================================
 export const PAGER_CONFIG = {
   // Message shown when more content is available
-  morePrompt: '-- Press a key for next page or scroll with mouse/trackpad/pgup/pgdn, q to quit --',
+  morePrompt: '-- Press a key for next page, d to download, q to quit --',
   
   // Message shown at the end of content
-  endPrompt: '(END) Press any key to exit',
+  endPrompt: '(END) d to download, any other key to exit',
   
   // Format string for progress (use {current} and {total} placeholders)
   progressFormat: '({current}/{total} lines)',
