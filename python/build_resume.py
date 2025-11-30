@@ -354,7 +354,7 @@ def render_pdf(data, filename):
     pdf.ln(2)
     pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
     for role in data["earlier"]:
-        pdf.multi_cell(width, 5, clean_pdf(role))
+        pdf.multi_cell(width, 5, clean_pdf(role), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
 
     if pdf.get_y() > PDF_PAGE_BREAK_Y:
@@ -365,7 +365,7 @@ def render_pdf(data, filename):
     for item in data["certs"] + data["education"]:
         is_bold = STRING_IN_PROGRESS in item or STRING_UNIVERSITY in item
         pdf.set_font(PDF_FONT_FAMILY, "B" if is_bold else "", PDF_BODY_FONT_SIZE)
-        pdf.multi_cell(width, 6, clean_pdf(item))
+        pdf.multi_cell(width, 6, clean_pdf(item), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     pdf.output(filename)
 
