@@ -57,7 +57,6 @@ export function useCommands() {
 - **skills** - List technical skills
 - **experience** - Show work experience
 - **experience [company]** - Show experience for specific company
-- **contact** - Display contact information
 - **motd** - Show message of the day
 - **font** - Show available fonts or change font
 
@@ -97,7 +96,7 @@ Commands support regex patterns and are case-insensitive.
       return withResume(r => r.getExperience(filter));
     },
 
-    contact: async () => withResume(r => r.getContact()),
+    // contact: async () => withResume(r => r.getContact()),
 
     motd: async () => {
       const { useMotd } = await import('./useMotd');
