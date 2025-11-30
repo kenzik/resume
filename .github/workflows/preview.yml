@@ -45,6 +45,8 @@ jobs:
           mkdir -p data
           echo "${{ secrets.RESUME_YAML_B64 }}" | base64 -d > data/kenzik.yml
           echo "Resume data file created from secret"
+          echo "File size: $(wc -c < data/kenzik.yml) bytes"
+          echo "First line: $(head -1 data/kenzik.yml)"
       
       # ========================================
       # Python: Build Resume Documents
