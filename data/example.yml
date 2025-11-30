@@ -18,7 +18,7 @@ resume:
   experience:
     - company: "Tech Solutions Inc."
       title: "Senior Software Engineer"
-      date: "January 2020 – Present"
+      date: "January 2020 - Present"
       summary: >
         Lead development of customer-facing web applications and internal tooling. 
         Architected microservices infrastructure supporting millions of daily active users.
@@ -37,7 +37,7 @@ resume:
 
     - company: "StartupCo"
       title: "Full-Stack Developer"
-      date: "June 2017 – December 2019"
+      date: "June 2017 - December 2019"
       sections:
         - title: "Product Development"
           bullets:
@@ -48,7 +48,7 @@ resume:
 
     - company: "Digital Agency"
       title: "Web Developer"
-      date: "August 2015 – May 2017"
+      date: "August 2015 - May 2017"
       sections:
         - title: "Highlights"
           bullets:
@@ -58,11 +58,11 @@ resume:
       tech: "HTML, CSS, JavaScript, WordPress, PHP"
 
   earlier:
-    - "Junior Developer — Web Design Studio (2013–2015)"
-    - "Intern — Software Development Company (2012–2013)"
+    - "Junior Developer — Web Design Studio (2013-2015)"
+    - "Intern — Software Development Company (2012-2013)"
 
   certs:
-    - "AWS Certified Solutions Architect – Associate"
+    - "AWS Certified Solutions Architect - Associate"
     - "Kubernetes Administrator (CKA) (In Progress)"
 
   education:

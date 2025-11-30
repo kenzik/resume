@@ -38,6 +38,15 @@ jobs:
         uses: actions/checkout@v4
       
       # ========================================
+      # Create Private Resume Data from Secret
+      # ========================================
+      - name: Create resume data file
+        run: |
+          mkdir -p data
+          echo "${{ secrets.RESUME_YAML_B64 }}" | base64 -d > data/kenzik.yml
+          echo "Resume data file created from secret"
+      
+      # ========================================
       # Python: Build Resume Documents
       # ========================================
       - name: Setup Python
