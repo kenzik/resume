@@ -6,6 +6,7 @@
 [![Email](https://img.shields.io/badge/Email-Me-red?style=flat&logo=gmail)](mailto:david@kenzik.com)
 [![Website](https://img.shields.io/badge/View-Live%20Site-purple?style=flat&logo=vercel)](https://kenzik.com)
 [![Status](https://img.shields.io/badge/Status-Open%20to%20Work-green?style=flat)]()
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 
 ---
 
