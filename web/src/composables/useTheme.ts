@@ -1,24 +1,22 @@
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { LocalStorage } from 'quasar';
 import { getTheme, type Theme, type ThemeName } from '../themes';
 
 const STORAGE_KEY = 'kenzik-resume-theme';
 const DEFAULT_THEME: ThemeName = 'auto';
 
-// Reactive state
+// Singleton reactive state (shared across all uses)
 const currentThemeName = ref<ThemeName>(DEFAULT_THEME);
 const systemPrefersDark = ref(false);
+const isInitialized = ref(false);
 
 // Media query watcher
 let mediaQuery: MediaQueryList | null = null;
 let mediaQueryHandler: ((e: MediaQueryListEvent) => void) | null = null;
 
-function detectSystemPreference(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
-}
-
 function setupMediaQueryWatcher() {
-  if (typeof window === 'undefined') return;
+  // Prevent duplicate setup
+  if (typeof window === 'undefined' || mediaQuery) return;
 
   mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
   systemPrefersDark.value = mediaQuery.matches;
@@ -36,32 +34,21 @@ function setupMediaQueryWatcher() {
   }
 }
 
-function cleanupMediaQueryWatcher() {
-  if (mediaQuery && mediaQueryHandler) {
-    if (mediaQuery.removeEventListener) {
-      mediaQuery.removeEventListener('change', mediaQueryHandler);
-    } else {
-      mediaQuery.removeListener(mediaQueryHandler);
-    }
-    mediaQueryHandler = null;
-  }
-}
-
-// Load theme preference from localStorage
+// Load theme preference from Quasar LocalStorage
 function loadThemePreference(): ThemeName {
   if (typeof window === 'undefined') return DEFAULT_THEME;
   
-  const stored = localStorage.getItem(STORAGE_KEY);
+  const stored = LocalStorage.getItem<string>(STORAGE_KEY);
   if (stored === 'dark' || stored === 'light' || stored === 'auto') {
     return stored as ThemeName;
   }
   return DEFAULT_THEME;
 }
 
-// Save theme preference to localStorage
+// Save theme preference to Quasar LocalStorage
 function saveThemePreference(theme: ThemeName) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY, theme);
+  LocalStorage.set(STORAGE_KEY, theme);
 }
 
 // Apply theme to document
@@ -87,7 +74,7 @@ function applyTheme(theme: Theme) {
   
   // Only apply theme line-height if no custom preference
   const customLineHeight = typeof window !== 'undefined'
-    ? localStorage.getItem('kenzik-resume-line-height')
+    ? LocalStorage.getItem<string>('kenzik-resume-line-height')
     : null;
   if (!customLineHeight) {
     root.style.setProperty('--font-line-height', theme.font.lineHeight);
@@ -114,16 +101,20 @@ watch(activeTheme, (theme) => {
   applyTheme(theme);
 }, { immediate: true });
 
-export function useTheme() {
-  // Initialize on mount
-  onMounted(() => {
+// Initialize theme system (idempotent - safe to call multiple times)
+function initializeTheme() {
+  if (isInitialized.value) return;
+  
+  if (typeof window !== 'undefined') {
     currentThemeName.value = loadThemePreference();
     setupMediaQueryWatcher();
-  });
+    isInitialized.value = true;
+  }
+}
 
-  onUnmounted(() => {
-    cleanupMediaQueryWatcher();
-  });
+export function useTheme() {
+  // Ensure initialization (idempotent - works in boot files and components)
+  initializeTheme();
 
   // Set theme manually
   const setTheme = (theme: ThemeName) => {
@@ -157,4 +148,3 @@ export function useTheme() {
     isAuto: computed(() => currentThemeName.value === 'auto'),
   };
 }
-

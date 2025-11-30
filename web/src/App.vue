@@ -11,25 +11,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { useTheme } from './composables/useTheme';
+import { inject } from 'vue';
 import { useFont } from './composables/useFont';
 import CRTFrame from './components/CRTFrame.vue';
 
-// Initialize theme system
-const theme = useTheme();
+// Theme is initialized via boot/theme.ts and provided to the app
+// Access via inject if needed for reactive references
+const theme = inject('theme') as ReturnType<typeof import('./composables/useTheme').useTheme> | undefined;
 
 // Initialize font system
 useFont();
 
-// Debug theme initialization
-onMounted(() => {
-  console.log('Theme initialized:', {
-    currentTheme: theme.currentTheme.value.name,
-    themeName: theme.currentThemeName.value,
-    isAuto: theme.isAuto.value
-  });
-});
+// Theme debug logging now happens in boot/theme.ts
 </script>
 
 <style lang="scss">

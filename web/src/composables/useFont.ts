@@ -1,4 +1,5 @@
 import { ref, computed, onMounted, nextTick, getCurrentInstance } from 'vue';
+import { LocalStorage } from 'quasar';
 import { fonts, getFont, getDefaultFont, getDefaultLineHeight, loadWebFont, preloadWebFonts, type FontConfig } from '../config';
 
 const STORAGE_KEY_FONT = 'kenzik-resume-font';
@@ -9,11 +10,11 @@ const currentFont = ref<string>(getDefaultFont());
 const currentLineHeight = ref<number>(getDefaultLineHeight());
 const hasCustomFont = ref<boolean>(false); // Track if user manually changed font
 
-// Load font preference from localStorage
+// Load font preference from Quasar LocalStorage
 function loadFontPreference(): string {
   if (typeof window === 'undefined') return getDefaultFont();
   
-  const stored = localStorage.getItem(STORAGE_KEY_FONT);
+  const stored = LocalStorage.getItem<string>(STORAGE_KEY_FONT);
   if (stored && getFont(stored)) {
     hasCustomFont.value = true; // User has a custom preference
     return stored;
@@ -21,11 +22,11 @@ function loadFontPreference(): string {
   return getDefaultFont();
 }
 
-// Load line height preference from localStorage
+// Load line height preference from Quasar LocalStorage
 function loadLineHeightPreference(): number {
   if (typeof window === 'undefined') return getDefaultLineHeight();
   
-  const stored = localStorage.getItem(STORAGE_KEY_LINE_HEIGHT);
+  const stored = LocalStorage.getItem<string>(STORAGE_KEY_LINE_HEIGHT);
   if (stored) {
     const parsed = parseFloat(stored);
     if (!isNaN(parsed) && parsed > 0 && parsed <= 3) {
@@ -35,17 +36,17 @@ function loadLineHeightPreference(): number {
   return getDefaultLineHeight();
 }
 
-// Save font preference to localStorage
+// Save font preference to Quasar LocalStorage
 function saveFontPreference(font: string) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY_FONT, font);
+  LocalStorage.set(STORAGE_KEY_FONT, font);
   hasCustomFont.value = true; // Mark as custom
 }
 
-// Save line height preference to localStorage
+// Save line height preference to Quasar LocalStorage
 function saveLineHeightPreference(lineHeight: number) {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY_LINE_HEIGHT, lineHeight.toString());
+  LocalStorage.set(STORAGE_KEY_LINE_HEIGHT, lineHeight.toString());
 }
 
 // Apply font to document - IMMEDIATE application
