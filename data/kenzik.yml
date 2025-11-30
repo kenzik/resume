@@ -15,9 +15,9 @@ web:
     want to *use* models; I want to architect the high-performance compute, RAG pipelines, 
     and scalable cloud systems that power them.
 
-    I am actively pursuing **NVIDIA architecture certifications** and am looking for roles 
-    that sit at the intersection of **High-Performance Computing (HPC), Cloud-Native 
-    Infrastructure, and Applied AI**.
+    I am actively pursuing **NVIDIA architecture certifications** while looking for future  
+    opportunities/connections that sit at the intersection of **High-Performance Computing (HPC), 
+    Cloud-Native Infrastructure, and Applied AI**.
 
     --------
 
@@ -56,6 +56,8 @@ resume:
         Services organization, architecting bespoke, high-scale systems that bridge the gap between 
         unique enterprise requirements and core product capabilities. Design production-ready MVPs 
         that introduce novel solution patterns often preceding roadmap adoption.
+
+        Highlights of some of the projects I have worked on:
       sections:
         - title: "AI & Intelligent Search"
           bullets:
@@ -74,7 +76,11 @@ resume:
             - "Designed a Saferoom Platform: a reusable secure multi-tenant data transfer platform processing terabytes daily based on requirements from a Fortune 50 financial services firm."
             - "Implemented CMEK encryption with isolated keyrings across boundaries and enforced Service Account authentication and API ingress controls using VPC Service Controls."
             - "Leading initiative to migrate 75% of 70+ GCP projects from manual provisioning to Terraform IaC modules."
+        - title: "Other Projects"
+          bullets:
             - "Built a rapidly deployable Functions Framework for governed Cloud Functions deployment with automated CI/CD pipeline generation."
+            - "Designed and developed a JsonLogic expression engine API for complex business rules processing."
+            - "Facilitated the centralization of our teams custom libraries employing a private npm registry."
       tech: "GCP, NestJS, Node.js, Terraform, Redis, Langchain, Pinecone, Vertex AI, Python, VueJS, Bash, BitBucket"
     - company: "Insight / Cardinal Solutions"
       title: "Principal Engineer (Apps/Infrastructure)"
@@ -120,7 +126,7 @@ resume:
       tech: "Java EE, Tomcat, SAP/ERP, PeopleSoft, Data Warehousing, ETL, SOX Compliance"
   earlier:
     - "Mindscape / Headland Digital Media / The Learning Network (Pearson) — Webmaster, Sr. Architect, Enterprise Security Director (1997-2000)"
-    - "OneNet Communications, Inc. — Founder & Chief Technology Officer (1993-1997)"
+    - "OneNet Communications, Inc. — Founder & Chief Technology Officer (1993-1997)"  
   certs:
     - "NVIDIA Certified Associate: AI in the Data Center (In Progress)"
   education:

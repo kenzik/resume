@@ -159,7 +159,9 @@ def render_docx(data, filename):
     # Header
     h1 = doc.add_heading(data["header"]["name"], 0)
     h1.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    doc.add_paragraph(data["header"]["contact"]).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    contact_p = doc.add_paragraph()
+    contact_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    contact_p.add_run(data["header"]["contact"]).bold = True
 
     # Sections
     doc.add_heading(SECTION_PROFILE, level=1)
@@ -275,7 +277,7 @@ def render_pdf(data, filename):
         new_y=YPos.NEXT,
         align="C",
     )
-    pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
+    pdf.set_font(PDF_FONT_FAMILY, "B", PDF_BODY_FONT_SIZE)  # Bold contact info
     pdf.cell(
         width,
         10,
@@ -352,7 +354,7 @@ def render_pdf(data, filename):
     pdf.ln(2)
     pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
     for role in data["earlier"]:
-        pdf.multi_cell(width, 5, clean_pdf(role))
+        pdf.multi_cell(width, 5, clean_pdf(role), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.ln(4)
 
     if pdf.get_y() > PDF_PAGE_BREAK_Y:
@@ -363,7 +365,7 @@ def render_pdf(data, filename):
     for item in data["certs"] + data["education"]:
         is_bold = STRING_IN_PROGRESS in item or STRING_UNIVERSITY in item
         pdf.set_font(PDF_FONT_FAMILY, "B" if is_bold else "", PDF_BODY_FONT_SIZE)
-        pdf.multi_cell(width, 6, clean_pdf(item))
+        pdf.multi_cell(width, 6, clean_pdf(item), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
     pdf.output(filename)
 
@@ -388,7 +390,7 @@ def render_rtf(data, filename):
 
     # Header
     rtf.append(r"\qc\b\fs32 " + clean_rtf(data["header"]["name"]) + r"\par")
-    rtf.append(r"\fs22\b0 " + clean_rtf(data["header"]["contact"]) + r"\par\par")
+    rtf.append(r"\fs22\b " + clean_rtf(data["header"]["contact"]) + r"\b0\par\par")
 
     line(SECTION_PROFILE, bold=True, ul=True)
     line(data["profile"])
