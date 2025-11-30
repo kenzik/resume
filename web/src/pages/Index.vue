@@ -13,7 +13,7 @@ import { useMeta } from 'quasar';
 import Terminal from '../components/Terminal.vue';
 
 useMeta({
-  title: 'Dave Kenzik - Terminal Resume',
+  title: 'Dave Kenzik - Resume',
   meta: {
     description: { name: 'description', content: 'Interactive terminal-style resume for Dave Kenzik - Cloud-Native Architect, AI Infrastructure & Strategy, Full-Stack Engineer' },
     ogTitle: { property: 'og:title', content: 'Dave Kenzik - Terminal Resume' },
