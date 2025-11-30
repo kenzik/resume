@@ -532,20 +532,13 @@ const updateCursorPosition = () => {
   });
 };
 
-// Scroll to bottom using QScrollArea's API with Chrome-iOS fallback
+// Scroll to bottom - uses scrollIntoView for reliable mobile support
 const scrollToBottom = () => {
   nextTick(() => {
-    if (scrollAreaRef.value) {
-      const scrollTarget = scrollAreaRef.value.getScrollTarget();
-      
-      // Primary: QScrollArea method (works in Safari, desktop)
-      scrollAreaRef.value.setScrollPosition('vertical', scrollTarget.scrollHeight, 0);
-      
-      // Chrome-iOS fallback: use native scrollTop after a microtask
-      // Chrome on iOS sometimes ignores setScrollPosition during rapid updates
-      queueMicrotask(() => {
-        scrollTarget.scrollTop = scrollTarget.scrollHeight;
-      });
+    // Primary: scrollIntoView on the input line (most reliable on mobile)
+    // This works because the input line is always at the bottom of the content
+    if (inputRef.value) {
+      inputRef.value.scrollIntoView({ behavior: 'instant', block: 'end' });
     }
   });
 };
