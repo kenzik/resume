@@ -155,12 +155,22 @@ const typeOutputToHistory = async (
   }
 };
 
-// Compute pager prompt text based on scroll position
+// Check if pager is showing resume content (for download shortcut)
+const pagerShowingResume = computed(() => {
+  const cmd = pagerCommand.value.toLowerCase();
+  // Match "resume" command or "resume | more" pipeline
+  return cmd === 'resume' || cmd.startsWith('resume |') || cmd.startsWith('resume|');
+});
+
+// Compute pager prompt text based on scroll position and content
 const pagerPromptText = computed(() => {
+  const downloadHint = pagerShowingResume.value ? ', d to download' : '';
   if (pagerAtEnd.value) {
-    return PAGER_CONFIG.endPrompt;
+    return pagerShowingResume.value 
+      ? '(END) d to download, any other key to exit'
+      : '(END) Press any key to exit';
   }
-  return PAGER_CONFIG.morePrompt;
+  return `-- Press a key for next page${downloadHint}, q to quit --`;
 });
 
 // Check if pager is at the end (can't scroll further)
@@ -561,8 +571,8 @@ const handleKeyDown = (e: KeyboardEvent) => {
   if (pagerMode.value) {
     e.preventDefault();
     
-    // Check for download key (d) - works at any scroll position
-    if (e.key === 'd' || e.key === 'D') {
+    // Check for download key (d) - only when viewing resume
+    if ((e.key === 'd' || e.key === 'D') && pagerShowingResume.value) {
       exitPager();
       router.push('/resume/download/pdf');
       return;
