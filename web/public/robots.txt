@@ -1,0 +1,15 @@
+# robots.txt for kenzik.com
+# https://kenzik.com/
+
+User-agent: *
+Allow: /
+
+# Block resume download files from indexing
+Disallow: /downloads/
+
+# Block any API or data endpoints
+Disallow: /api/
+Disallow: /data/*.yml
+
+# Sitemap (uncomment when available)
+# Sitemap: https://kenzik.com/sitemap.xml
