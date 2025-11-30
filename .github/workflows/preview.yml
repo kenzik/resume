@@ -43,7 +43,7 @@ jobs:
       - name: Create resume data file
         run: |
           mkdir -p data
-          echo "${{ secrets.RESUME_YAML }}" > data/kenzik.yml
+          echo "${{ secrets.RESUME_YAML_B64 }}" | base64 -d > data/kenzik.yml
           echo "Resume data file created from secret"
       
       # ========================================
