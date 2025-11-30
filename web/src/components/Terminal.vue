@@ -1,27 +1,25 @@
 <template>
   <div class="terminal" :class="{ 'pager-active': pagerMode }" ref="terminalRef">
     <!-- Normal terminal output - hidden during pager mode -->
+    <!-- Desktop: Use QScrollArea for smooth scrolling -->
     <q-scroll-area 
-      v-show="!pagerMode" 
+      v-if="!isMobile && !pagerMode" 
       class="terminal-output"
       ref="scrollAreaRef"
       :thumb-style="{ display: 'none' }"
       :bar-style="{ display: 'none' }"
     >
       <template v-for="(entry, index) in history" :key="index">
-        <!-- Command line (skip for startup commands - output only) -->
         <div v-if="!entry.isStartup" class="terminal-line">
           <TerminalPrompt />
           <span class="terminal-command">{{ entry.command }}</span>
         </div>
-        <!-- Output on new line -->
         <div v-if="entry.output" class="terminal-output-text" v-html="entry.output"></div>
         <div v-else-if="isTyping && index === history.length - 1" class="terminal-output-text">
           <span class="typing-indicator">▋</span>
         </div>
       </template>
       
-      <!-- Current input line -->
       <div class="terminal-line terminal-input-line">
         <TerminalPrompt />
         <div class="input-wrapper" ref="inputWrapperRef">
@@ -44,6 +42,46 @@
         </div>
       </div>
     </q-scroll-area>
+    
+    <!-- Mobile: Use native scroll for better iOS Chrome compatibility -->
+    <div 
+      v-if="isMobile && !pagerMode" 
+      class="terminal-output terminal-output-native"
+      ref="nativeScrollRef"
+    >
+      <template v-for="(entry, index) in history" :key="'m-' + index">
+        <div v-if="!entry.isStartup" class="terminal-line">
+          <TerminalPrompt />
+          <span class="terminal-command">{{ entry.command }}</span>
+        </div>
+        <div v-if="entry.output" class="terminal-output-text" v-html="entry.output"></div>
+        <div v-else-if="isTyping && index === history.length - 1" class="terminal-output-text">
+          <span class="typing-indicator">▋</span>
+        </div>
+      </template>
+      
+      <div class="terminal-line terminal-input-line">
+        <TerminalPrompt />
+        <div class="input-wrapper" ref="inputWrapperRefMobile">
+          <input
+            ref="inputRefMobile"
+            v-model="currentInput"
+            @input="updateCursorPosition"
+            @keydown.enter="executeCommand"
+            @keydown.up="navigateHistory(-1)"
+            @keydown.down="navigateHistory(1)"
+            class="terminal-input"
+            type="text"
+            autofocus
+            spellcheck="false"
+        />
+          <span 
+            class="cursor" 
+            :style="{ left: cursorLeft + 'px' }"
+          >█</span>
+        </div>
+      </div>
+    </div>
     
     <!-- Pager mode - separate scrollable area with fixed prompt at bottom -->
     <div v-show="pagerMode" class="pager-wrapper">
@@ -79,9 +117,21 @@ const startupCommands = ['motd'];
 
 const terminalRef = ref<HTMLElement | null>(null);
 const scrollAreaRef = ref<InstanceType<typeof QScrollArea> | null>(null);
+const nativeScrollRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
+const inputRefMobile = ref<HTMLInputElement | null>(null);
 const inputWrapperRef = ref<HTMLElement | null>(null);
+const inputWrapperRefMobile = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
+
+// Mobile detection for native scroll fallback (Chrome iOS has issues with QScrollArea)
+const MOBILE_BREAKPOINT = 768;
+const isMobile = ref(false);
+
+// Detect mobile on mount and window resize
+const updateMobileDetection = () => {
+  isMobile.value = typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT;
+};
 
 const currentInput = ref('');
 const history = ref<Array<{ command: string; output: string; isStartup?: boolean }>>([]);
@@ -277,6 +327,10 @@ const processStartupCommand = async (command: string) => {
 
 // Run startup commands on mount
 onMounted(async () => {
+  // Detect mobile for native scroll fallback
+  updateMobileDetection();
+  window.addEventListener('resize', updateMobileDetection);
+  
   // Run all startup commands through the standard command path
   for (const command of startupCommands) {
     await processStartupCommand(command);
@@ -286,7 +340,9 @@ onMounted(async () => {
   
   // Focus input after startup commands complete
   nextTick(() => {
-    inputRef.value?.focus();
+    // Focus the appropriate input based on mobile detection
+    const input = isMobile.value ? inputRefMobile.value : inputRef.value;
+    input?.focus();
     updateCursorPosition();
   });
 });
@@ -496,7 +552,11 @@ const navigateHistory = (direction: number) => {
 // Update cursor position based on input text width
 const updateCursorPosition = () => {
   nextTick(() => {
-    if (inputRef.value && inputWrapperRef.value) {
+    // Get the appropriate input ref based on mobile detection
+    const currentInput = isMobile.value ? inputRefMobile.value : inputRef.value;
+    const currentWrapper = isMobile.value ? inputWrapperRefMobile.value : inputWrapperRef.value;
+    
+    if (currentInput && currentWrapper) {
       // Initialize canvas cache on first use
       if (!measureCanvas) {
         measureCanvas = document.createElement('canvas');
@@ -504,10 +564,10 @@ const updateCursorPosition = () => {
       }
       
       // Try cached Canvas API first for accurate measurement
-      if (measureContext && inputRef.value) {
-        const styles = window.getComputedStyle(inputRef.value);
+      if (measureContext && currentInput) {
+        const styles = window.getComputedStyle(currentInput);
         measureContext.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
-        const textWidth = measureContext.measureText(inputRef.value.value).width;
+        const textWidth = measureContext.measureText(currentInput.value).width;
         cursorLeft.value = textWidth;
         return;
       }
@@ -517,11 +577,11 @@ const updateCursorPosition = () => {
       measureSpan.style.visibility = 'hidden';
       measureSpan.style.position = 'absolute';
       measureSpan.style.whiteSpace = 'pre';
-      measureSpan.style.fontFamily = window.getComputedStyle(inputRef.value).fontFamily;
-      measureSpan.style.fontSize = window.getComputedStyle(inputRef.value).fontSize;
-      measureSpan.style.fontWeight = window.getComputedStyle(inputRef.value).fontWeight;
-      measureSpan.style.fontStyle = window.getComputedStyle(inputRef.value).fontStyle;
-      measureSpan.textContent = inputRef.value.value || '';
+      measureSpan.style.fontFamily = window.getComputedStyle(currentInput).fontFamily;
+      measureSpan.style.fontSize = window.getComputedStyle(currentInput).fontSize;
+      measureSpan.style.fontWeight = window.getComputedStyle(currentInput).fontWeight;
+      measureSpan.style.fontStyle = window.getComputedStyle(currentInput).fontStyle;
+      measureSpan.textContent = currentInput.value || '';
       
       document.body.appendChild(measureSpan);
       cursorLeft.value = measureSpan.offsetWidth;
@@ -532,12 +592,33 @@ const updateCursorPosition = () => {
   });
 };
 
-// Scroll to bottom using QScrollArea's API
+// Scroll to bottom - different strategies for desktop vs mobile
 const scrollToBottom = () => {
   nextTick(() => {
-    if (scrollAreaRef.value) {
-      const scrollTarget = scrollAreaRef.value.getScrollTarget();
-      scrollAreaRef.value.setScrollPosition('vertical', scrollTarget.scrollHeight, 0);
+    if (isMobile.value) {
+      // Mobile: More aggressive scrolling for Chrome iOS compatibility
+      // Use requestAnimationFrame to ensure DOM is painted before scrolling
+      requestAnimationFrame(() => {
+        if (nativeScrollRef.value) {
+          nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+        }
+        // Double RAF for Chrome iOS - ensures scroll happens after paint
+        requestAnimationFrame(() => {
+          if (nativeScrollRef.value) {
+            nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+          }
+          // scrollIntoView as final fallback
+          if (inputRefMobile.value) {
+            inputRefMobile.value.scrollIntoView({ behavior: 'instant', block: 'end' });
+          }
+        });
+      });
+    } else {
+      // Desktop: Use QScrollArea API
+      if (scrollAreaRef.value) {
+        const scrollTarget = scrollAreaRef.value.getScrollTarget();
+        scrollAreaRef.value.setScrollPosition('vertical', scrollTarget.scrollHeight, 0);
+      }
     }
   });
 };
@@ -617,7 +698,9 @@ watch(() => terminalRef.value, (newEl, oldEl) => {
   if (newEl) {
     terminalClickHandler = () => {
       if (!pagerMode.value) {
-        inputRef.value?.focus();
+        // Focus the appropriate input based on mobile detection
+        const input = isMobile.value ? inputRefMobile.value : inputRef.value;
+        input?.focus();
       }
     };
     newEl.addEventListener('click', terminalClickHandler);
@@ -637,6 +720,7 @@ onMounted(() => {
 // Cleanup
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
+  window.removeEventListener('resize', updateMobileDetection);
   if (terminalRef.value && terminalClickHandler) {
     terminalRef.value.removeEventListener('click', terminalClickHandler);
     terminalClickHandler = null;
@@ -715,6 +799,21 @@ onUnmounted(() => {
   min-height: 0; // Allow flex shrinking
   
   // QScrollArea handles scrollbar hiding via thumb-style and bar-style props
+}
+
+// Native scroll variant for mobile (Chrome iOS compatibility)
+.terminal-output-native {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
+  
+  // Hide scrollbar but keep scroll functionality
+  scrollbar-width: none;  // Firefox
+  -ms-overflow-style: none;  // IE/Edge
+  
+  &::-webkit-scrollbar {
+    display: none;  // Chrome/Safari/Opera
+  }
 }
 
 .terminal-line {
