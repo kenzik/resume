@@ -29,6 +29,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { useMeta } from 'quasar';
+
+useMeta({
+  title: 'Dave Kenzik - Resume',
+  meta: {
+    description: { name: 'description', content: 'Dave Kenzik - Cloud-Native Architect & Senior Technical Leader' },
+  }
+});
 
 const router = useRouter();
 const animationClass = ref('power-off');

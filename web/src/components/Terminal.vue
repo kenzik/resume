@@ -1,7 +1,13 @@
 <template>
   <div class="terminal" :class="{ 'pager-active': pagerMode }" ref="terminalRef">
     <!-- Normal terminal output - hidden during pager mode -->
-    <div v-show="!pagerMode" class="terminal-output" ref="outputRef">
+    <q-scroll-area 
+      v-show="!pagerMode" 
+      class="terminal-output"
+      ref="scrollAreaRef"
+      :thumb-style="{ display: 'none' }"
+      :bar-style="{ display: 'none' }"
+    >
       <template v-for="(entry, index) in history" :key="index">
         <!-- Command line (skip for startup commands - output only) -->
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -37,7 +43,7 @@
           >█</span>
         </div>
       </div>
-    </div>
+    </q-scroll-area>
     
     <!-- Pager mode - separate scrollable area with fixed prompt at bottom -->
     <div v-show="pagerMode" class="pager-wrapper">
@@ -55,6 +61,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { QScrollArea } from 'quasar';
 import { useCommands } from '../composables/useCommands';
 import { useTypewriter } from '../composables/useTypewriter';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
@@ -71,7 +78,7 @@ const router = useRouter();
 const startupCommands = ['motd'];
 
 const terminalRef = ref<HTMLElement | null>(null);
-const outputRef = ref<HTMLElement | null>(null);
+const scrollAreaRef = ref<InstanceType<typeof QScrollArea> | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const inputWrapperRef = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
@@ -515,11 +522,12 @@ const updateCursorPosition = () => {
   });
 };
 
-// Scroll to bottom - use scrollIntoView on input for reliability
+// Scroll to bottom using QScrollArea's API
 const scrollToBottom = () => {
   nextTick(() => {
-    if (outputRef.value) {
-      outputRef.value.scrollTop = outputRef.value.scrollHeight;
+    if (scrollAreaRef.value) {
+      const scrollTarget = scrollAreaRef.value.getScrollTarget();
+      scrollAreaRef.value.setScrollPosition('vertical', scrollTarget.scrollHeight, 0);
     }
   });
 };
@@ -552,6 +560,13 @@ const handleKeyDown = (e: KeyboardEvent) => {
   // Pager mode key handling
   if (pagerMode.value) {
     e.preventDefault();
+    
+    // Check for download key (d) - works at any scroll position
+    if (e.key === 'd' || e.key === 'D') {
+      exitPager();
+      router.push('/resume/download/pdf');
+      return;
+    }
     
     // At end of content - any key exits
     if (pagerAtEnd.value) {
@@ -683,20 +698,13 @@ onUnmounted(() => {
 
 .terminal-output {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden; // QScrollArea handles overflow internally
   padding-right: 10px;
   position: relative;
   z-index: 10;  // Above scanlines (1) and vignette (0)
   min-height: 0; // Allow flex shrinking
   
-  // Hide scrollbar but keep scroll functionality
-  scrollbar-width: none;  // Firefox
-  -ms-overflow-style: none;  // IE/Edge
-  
-  &::-webkit-scrollbar {
-    display: none;  // Chrome/Safari/Opera
-  }
+  // QScrollArea handles scrollbar hiding via thumb-style and bar-style props
 }
 
 .terminal-line {
