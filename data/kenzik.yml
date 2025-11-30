@@ -1,0 +1,133 @@
+web:
+  motd: |
+    # Hi. I'm Dave. 👋
+    ### Cloud-Native Architect | AI Infrastructure & Strategy | Full-Stack Engineer | Senior Technical Leader
+
+    --------
+    ## About Me
+
+    I am a Senior Technologist with over **25 years of experience** bridging the gap 
+    between executive business strategy and deep-tech engineering. My career has spanned 
+    roles from **Founder/CTO** to **Senior Principal Architect** for all size companies, 
+    including my recent position working with Fortune 50 enterprises.
+
+    Currently, I am pivoting deeper into the **AI/ML Infrastructure** space. I don't just 
+    want to *use* models; I want to architect the high-performance compute, RAG pipelines, 
+    and scalable cloud systems that power them.
+
+    I am actively pursuing **NVIDIA architecture certifications** while looking for future  
+    opportunities/connections that sit at the intersection of **High-Performance Computing (HPC), 
+    Cloud-Native Infrastructure, and Applied AI**.
+
+    --------
+
+    ## Technical Arsenal
+       - **AI & ML:** LangChain, RAG, Vertex AI, Pinecone, Redis Vector, Prompt Engineering
+       - **Cloud & Infra:** Google Cloud Platform (GCP), Terraform (IaC), Docker
+       - **High Scale:** Redis Streams/Cluster, WebSockets, Distributed Systems (Sub-20ms latency at scale)
+       - **Languages:** Python, TypeScript, Node.js, Go, Bash 
+       - **Leadership:** Solution Architecture, Technical Strategy, Team Mentorship, Agile/Scrum
+
+    Type `help` for available commands.
+resume:
+  profile: >
+    Cloud-native architect and technical leader with 25+ years building production systems 
+    across enterprise verticals. Currently designing and delivering AI-enabled solutions, 
+    real-time data platforms, and scalable infrastructure for numerous customers including 
+    Fortune 5 and Fortune 50 organizations. Deep expertise in GCP, infrastructure-as-code, 
+    and full-stack development with a track record of creating foundational platforms that 
+    accelerate team delivery. Seeking to deepen focus on AI/ML infrastructure and 
+    GPU-accelerated computing.
+  skills:
+    - "Google Cloud Platform (GCP)"
+    - "Terraform / IaC"
+    - "AI/ML Integration (RAG, LLMs, Vertex AI)"
+    - "Real-Time Data Systems"
+    - "Full-Stack (Node.js, NestJS, VueJS, Quasar, React)"
+    - "System Prompts & AI Guardrails"
+    - "Solution Design"
+    - "Enterprise Integration"
+  experience:
+    - company: "Five9, Inc."
+      title: "Sr. Principal Architect, Professional Services - Custom Solutions"
+      date: "December 2019 - Present"
+      summary: >
+        Serve as the technical innovation lead for the Custom Solutions group in the Professional
+        Services organization, architecting bespoke, high-scale systems that bridge the gap between 
+        unique enterprise requirements and core product capabilities. Design production-ready MVPs 
+        that introduce novel solution patterns often preceding roadmap adoption.
+
+        Highlights of some of the projects I have worked on:
+      sections:
+        - title: "AI & Intelligent Search"
+          bullets:
+            - "Architected an enterprise RAG platform using Langchain, Pinecone, and Redis Vector (GCP Memorystore) enabling secure, project-scoped REST APIs. This was done months before RAG was mainstream."
+            - "Designed a hierarchical prompt engineering architecture: established immutable system-level guardrails for governance while enabling customer-configurable templates for dynamic variable injection."
+            - "Integrated OpenAI for embeddings and completions with Vertex AI integration points; built management UI for prompt templates and document ingestion."
+            - "Optimized context window utilization via automated token aggregation to strictly adhere to upstream API constraints."
+            - "Delivered MVPs for hospitality and enterprise knowledge management use cases, creating solutions that predated product engineering's released equivalents."
+        - title: "Real-Time Data Services at Scale"
+          bullets:
+            - "Built Stats Snapshot Service providing near real-time call center metrics via REST/WebSockets—architected for 1,000 req/s sustained load, achieving consistent sub-20ms latency while processing millions of requests daily."
+            - "Designed NestJS microservices architecture: WebSocket event stream consumption, Redis Streams for pub/sub, and Redis Cluster for structured storage."
+            - "Created multi-tenant Ephemeral Data Store supporting high-write/high-read workloads with advanced Redis types and LUA functions which outperformed later \"official\" product offerings."
+        - title: "Secure Data Orchestration & Platform Engineering"
+          bullets:
+            - "Designed a Saferoom Platform: a reusable secure multi-tenant data transfer platform processing terabytes daily based on requirements from a Fortune 50 financial services firm."
+            - "Implemented CMEK encryption with isolated keyrings across boundaries and enforced Service Account authentication and API ingress controls using VPC Service Controls."
+            - "Leading initiative to migrate 75% of 70+ GCP projects from manual provisioning to Terraform IaC modules."
+        - title: "Other Projects"
+          bullets:
+            - "Built a rapidly deployable Functions Framework for governed Cloud Functions deployment with automated CI/CD pipeline generation."
+            - "Designed and developed a JsonLogic expression engine API for complex business rules processing."
+            - "Facilitated the centralization of our teams custom libraries employing a private npm registry."
+      tech: "GCP, NestJS, Node.js, Terraform, Redis, Langchain, Pinecone, Vertex AI, Python, VueJS, Bash, BitBucket"
+    - company: "Insight / Cardinal Solutions"
+      title: "Principal Engineer (Apps/Infrastructure)"
+      date: "April 2019 - December 2019"
+      sections:
+        - title: "Project Highlights"
+          bullets:
+            - "Architected front-end Angular application for hospital staff scheduling; integrated ML-powered predictive analysis for resource planning."
+            - "Developed predictive dosing front-end application presenting current and AI-driven analytics to medical professionals."
+      tech: "Azure, Docker, TypeScript, Angular, .NET, EPIC, MS-SQL"
+    - company: "Zanestone Consulting, LLC"
+      title: "Principal & Owner"
+      date: "1998 - Present"
+      summary: >
+        Independent consultancy delivering architecture, development, and systems 
+        integration across healthcare, non-profit, and enterprise clients.
+      sections:
+        - title: "Key Projects"
+          bullets:
+            - "Startup: Built medical recommendations conversational bot using NLP (LUIS) and ML/AI services (IBM Watson) for patient condition assessment."
+            - "Startup: Architected high-value asset tracking platform for Fortune 500 financial services: real-time GPS tracking with custom hardware/firmware integration, Google Maps, and MongoDB."
+            - "Startup: Designed and developed interactive children's learning platform with bespoke DRM, custom e-commerce, and content authoring tools."
+      tech: "React, Vue, Node.js, MongoDB, Twilio, Watson, NLP, Go, Linux, WordPress"
+    - company: "NetCrafters Interactive"
+      title: "Technical Director & Architect"
+      date: "2012 - 2018"
+      sections:
+        - title: "Highlights"
+          bullets:
+            - "Led agency-wide cloud transformation: lift-and-shift of all client websites/apps to AWS with source control enforcement and DRP."
+            - "Built industrial solutions application with custom PDF generation and Salesforce/Pardot integration."
+            - "Modernized legacy systems and consolidated technical debt across agency portfolio."
+      tech: "AWS, GCP, PHP, MySQL, Bash, Perl, WordPress"
+    - company: "Education Loan Source (CIT Group)"
+      title: "Sr. VP / VP, Software Engineering"
+      date: "2000 - 2012"
+      sections:
+        - title: "Highlights"
+          bullets:
+            - "Built bespoke private-loan origination platform with TransUnion identity verification and federal-compliant e-signatures."
+            - "Designed servicing architecture with custom integrations to third-party loan servicers using industry standards (ELM)."
+            - "Delivered private scholarship platform for global religious organization managing worldwide scholarship requests."
+      tech: "Java EE, Tomcat, SAP/ERP, PeopleSoft, Data Warehousing, ETL, SOX Compliance"
+  earlier:
+    - "Mindscape / Headland Digital Media / The Learning Network (Pearson) — Webmaster, Sr. Architect, Enterprise Security Director (1997-2000)"
+    - "OneNet Communications, Inc. — Founder & Chief Technology Officer (1993-1997)"  
+  certs:
+    - "NVIDIA Certified Associate: AI in the Data Center (In Progress)"
+  education:
+    - "University of Cincinnati — Electrical Engineering & Business Administration"
