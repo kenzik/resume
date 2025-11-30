@@ -33,7 +33,7 @@
               <div class="download-icon">⬇</div>
               <h1 class="download-title">Downloading Resume</h1>
               <p class="download-format">{{ formatLabel }} format</p>
-              <div class="download-spinner"></div>
+              <q-spinner-dots color="positive" size="40px" class="q-my-md" />
               <p class="download-fallback">
                 If the download doesn't start automatically,
                 <a :href="downloadUrl" :download="filename">click here</a>.
@@ -74,6 +74,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
+import { useMeta } from 'quasar';
 
 const route = useRoute();
 
@@ -111,6 +112,14 @@ const downloadComplete = ref(false);
 const filename = computed(() => `${filenameBase}.${format.value}`);
 const downloadUrl = computed(() => `/downloads/${filename.value}`);
 const formatLabel = computed(() => formatConfig.value?.label || format.value.toUpperCase());
+
+// Dynamic meta tags based on format
+useMeta(() => ({
+  title: `Download Resume - ${formatLabel.value}`,
+  meta: {
+    robots: { name: 'robots', content: 'noindex' } // Don't index download pages
+  }
+}));
 
 // Trigger download on mount
 onMounted(() => {
@@ -246,20 +255,6 @@ function triggerDownload() {
   color: var(--terminal-info, #29b8db);
   font-size: 1rem;
   margin: 0 0 1.5rem 0;
-}
-
-.download-spinner {
-  width: 40px;
-  height: 40px;
-  margin: 0 auto 1.5rem;
-  border: 3px solid var(--color-brightBlack, #666);
-  border-top-color: var(--terminal-success, #23d18b);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 .download-fallback {

@@ -1,7 +1,13 @@
 <template>
   <div class="terminal" :class="{ 'pager-active': pagerMode }" ref="terminalRef">
     <!-- Normal terminal output - hidden during pager mode -->
-    <div v-show="!pagerMode" class="terminal-output" ref="outputRef">
+    <q-scroll-area 
+      v-show="!pagerMode" 
+      class="terminal-output"
+      ref="scrollAreaRef"
+      :thumb-style="{ display: 'none' }"
+      :bar-style="{ display: 'none' }"
+    >
       <template v-for="(entry, index) in history" :key="index">
         <!-- Command line (skip for startup commands - output only) -->
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -37,7 +43,7 @@
           >█</span>
         </div>
       </div>
-    </div>
+    </q-scroll-area>
     
     <!-- Pager mode - separate scrollable area with fixed prompt at bottom -->
     <div v-show="pagerMode" class="pager-wrapper">
@@ -55,6 +61,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { QScrollArea } from 'quasar';
 import { useCommands } from '../composables/useCommands';
 import { useTypewriter } from '../composables/useTypewriter';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
@@ -71,7 +78,7 @@ const router = useRouter();
 const startupCommands = ['motd'];
 
 const terminalRef = ref<HTMLElement | null>(null);
-const outputRef = ref<HTMLElement | null>(null);
+const scrollAreaRef = ref<InstanceType<typeof QScrollArea> | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const inputWrapperRef = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
@@ -148,12 +155,22 @@ const typeOutputToHistory = async (
   }
 };
 
-// Compute pager prompt text based on scroll position
+// Check if pager is showing resume content (for download shortcut)
+const pagerShowingResume = computed(() => {
+  const cmd = pagerCommand.value.toLowerCase();
+  // Match "resume" command or "resume | more" pipeline
+  return cmd === 'resume' || cmd.startsWith('resume |') || cmd.startsWith('resume|');
+});
+
+// Compute pager prompt text based on scroll position and content
 const pagerPromptText = computed(() => {
+  const downloadHint = pagerShowingResume.value ? ', d to download' : '';
   if (pagerAtEnd.value) {
-    return PAGER_CONFIG.endPrompt;
+    return pagerShowingResume.value 
+      ? '(END) d to download, any other key to exit'
+      : '(END) Press any key to exit';
   }
-  return PAGER_CONFIG.morePrompt;
+  return `-- Press a key for next page${downloadHint}, q to quit --`;
 });
 
 // Check if pager is at the end (can't scroll further)
@@ -515,11 +532,12 @@ const updateCursorPosition = () => {
   });
 };
 
-// Scroll to bottom - use scrollIntoView on input for reliability
+// Scroll to bottom using QScrollArea's API
 const scrollToBottom = () => {
   nextTick(() => {
-    if (outputRef.value) {
-      outputRef.value.scrollTop = outputRef.value.scrollHeight;
+    if (scrollAreaRef.value) {
+      const scrollTarget = scrollAreaRef.value.getScrollTarget();
+      scrollAreaRef.value.setScrollPosition('vertical', scrollTarget.scrollHeight, 0);
     }
   });
 };
@@ -552,6 +570,13 @@ const handleKeyDown = (e: KeyboardEvent) => {
   // Pager mode key handling
   if (pagerMode.value) {
     e.preventDefault();
+    
+    // Check for download key (d) - only when viewing resume
+    if ((e.key === 'd' || e.key === 'D') && pagerShowingResume.value) {
+      exitPager();
+      router.push('/resume/download/pdf');
+      return;
+    }
     
     // At end of content - any key exits
     if (pagerAtEnd.value) {
@@ -683,20 +708,13 @@ onUnmounted(() => {
 
 .terminal-output {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden; // QScrollArea handles overflow internally
   padding-right: 10px;
   position: relative;
   z-index: 10;  // Above scanlines (1) and vignette (0)
   min-height: 0; // Allow flex shrinking
   
-  // Hide scrollbar but keep scroll functionality
-  scrollbar-width: none;  // Firefox
-  -ms-overflow-style: none;  // IE/Edge
-  
-  &::-webkit-scrollbar {
-    display: none;  // Chrome/Safari/Opera
-  }
+  // QScrollArea handles scrollbar hiding via thumb-style and bar-style props
 }
 
 .terminal-line {

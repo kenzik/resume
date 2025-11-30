@@ -9,7 +9,19 @@
 </template>
 
 <script setup lang="ts">
+import { useMeta } from 'quasar';
 import Terminal from '../components/Terminal.vue';
+
+useMeta({
+  title: 'Dave Kenzik - Terminal Resume',
+  meta: {
+    description: { name: 'description', content: 'Interactive terminal-style resume for Dave Kenzik - Cloud-Native Architect, AI Infrastructure & Strategy, Full-Stack Engineer' },
+    ogTitle: { property: 'og:title', content: 'Dave Kenzik - Terminal Resume' },
+    ogDescription: { property: 'og:description', content: 'Explore my resume through an interactive retro terminal interface' },
+    ogImage: { property: 'og:image', content: '/og-image.png' },
+    ogType: { property: 'og:type', content: 'website' },
+  }
+});
 </script>
 
 <style lang="scss" scoped>
