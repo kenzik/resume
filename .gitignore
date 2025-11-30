@@ -1,0 +1,13 @@
+# Private resume data (stored as GitHub secret)
+data/kenzik.yml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
