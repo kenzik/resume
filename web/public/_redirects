@@ -1,4 +1,6 @@
-# SPA fallback for Cloudflare Pages history mode
-# All routes should serve index.html and let Vue Router handle routing
-/* /index.html 200
+# Cloudflare Pages redirects
+# https://developers.cloudflare.com/pages/configuration/redirects/
 
+# Static assets are served automatically before these rules
+# This SPA fallback only applies to routes that don't match static files
+/*  /index.html  200
