@@ -346,6 +346,28 @@ ${fontList.join('\n')}
       // Terminal.vue will detect this and navigate
       return `__NAV__/resume/download/${format}`;
     },
+
+    // =========================================================================
+    // Hidden Easter Egg Commands
+    // =========================================================================
+
+    /**
+     * xyzzy - Classic IF magic word, launches Zork
+     * Hidden command - not shown in help
+     */
+    xyzzy: async () => {
+      // Return special marker that Terminal.vue will detect
+      // Format: __ZORK__<game_id>
+      return '__ZORK__zork1';
+    },
+
+    /**
+     * plugh - Another classic IF magic word
+     * Hidden command - alias for xyzzy
+     */
+    plugh: async () => {
+      return '__ZORK__zork1';
+    },
   };
 
   /**

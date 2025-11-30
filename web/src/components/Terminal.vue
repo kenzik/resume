@@ -1,9 +1,16 @@
 <template>
-  <div class="terminal" :class="{ 'pager-active': pagerMode }" ref="terminalRef">
-    <!-- Normal terminal output - hidden during pager mode -->
+  <div class="terminal" :class="{ 'pager-active': pagerMode, 'zork-active': zorkMode }" ref="terminalRef">
+    <!-- Zork Quit Confirmation Modal -->
+    <ZorkQuitModal 
+      v-model="showZorkQuitModal"
+      @confirm="confirmZorkQuit"
+      @cancel="cancelZorkQuit"
+    />
+    
+    <!-- Normal terminal output - hidden during pager mode or zork mode -->
     <!-- Desktop: Use QScrollArea for smooth scrolling -->
     <q-scroll-area 
-      v-if="!isMobile && !pagerMode" 
+      v-if="!isMobile && !pagerMode && !zorkMode" 
       class="terminal-output"
       ref="scrollAreaRef"
       :thumb-style="{ display: 'none' }"
@@ -45,7 +52,7 @@
     
     <!-- Mobile: Use native scroll for better iOS Chrome compatibility -->
     <div 
-      v-if="isMobile && !pagerMode" 
+      v-if="isMobile && !pagerMode && !zorkMode" 
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
     >
@@ -93,6 +100,41 @@
         <div class="terminal-output-text pager-content" v-html="pagerContent"></div>
       </div>
     </div>
+    
+    <!-- Zork mode - full terminal takeover for game -->
+    <div v-show="zorkMode" class="zork-wrapper">
+      <div class="zork-header">
+        <span class="zork-title">ZORK I</span>
+        <span class="zork-hint">Type 'quit' to exit</span>
+      </div>
+      <div class="zork-output-area" ref="zorkScrollRef">
+        <div 
+          v-for="(line, index) in zorkOutput" 
+          :key="index" 
+          class="zork-line"
+          :class="{ 'zork-input-line': line.startsWith('>') }"
+        >{{ line }}</div>
+      </div>
+      <div class="zork-input-line terminal-line">
+        <span class="zork-prompt">&gt;</span>
+        <div class="input-wrapper">
+          <input
+            v-model="currentInput"
+            @input="updateCursorPosition"
+            @keydown.enter="executeCommand"
+            class="terminal-input zork-input"
+            type="text"
+            autofocus
+            spellcheck="false"
+            placeholder="What do you want to do?"
+          />
+          <span 
+            class="cursor" 
+            :style="{ left: cursorLeft + 'px' }"
+          >█</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -102,13 +144,17 @@ import { useRouter } from 'vue-router';
 import { QScrollArea } from 'quasar';
 import { useCommands } from '../composables/useCommands';
 import { useTypewriter } from '../composables/useTypewriter';
+import { useZork } from '../composables/useZork';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
 import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
+import ZorkQuitModal from './ZorkQuitModal.vue';
 import { PAGER_CONFIG } from '../config';
 
 // Navigation prefix for commands that trigger page navigation
 const NAV_PREFIX = '__NAV__';
+// Zork prefix for hidden game commands
+const ZORK_PREFIX = '__ZORK__';
 
 const router = useRouter();
 
@@ -151,7 +197,14 @@ const pagerCommand = ref('');           // The command that triggered pager mode
 const pagerAtEnd = ref(false);          // True when scrolled to bottom
 const pagerContentRef = ref<HTMLElement | null>(null);
 
+// Zork mode state
+const zorkMode = ref(false);
+const zorkOutput = ref<string[]>([]);   // Game output lines
+const showZorkQuitModal = ref(false);   // Quit confirmation modal
+const zorkScrollRef = ref<HTMLElement | null>(null);
+
 const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
+const zork = useZork();
 const { typeText, isTyping, stopTyping } = useTypewriter();
 
 // Click handler stored at module level for proper cleanup
@@ -310,6 +363,139 @@ const enterPagerMode = async (command: string, rawContent: string) => {
   });
 };
 
+// =============================================================================
+// Zork Mode Functions
+// =============================================================================
+
+/**
+ * Enter Zork mode - start the game
+ * Can be called from xyzzy command or other triggers
+ */
+const enterZorkMode = async (gameId: string = 'zork1') => {
+  // Show loading message
+  addHistoryEntry('xyzzy', '');
+  const loadingIdx = history.value.length - 1;
+  history.value[loadingIdx].output = '<em>Loading the Great Underground Empire...</em>';
+  scrollToBottom();
+  
+  // Start the game
+  const success = await zork.startGame(gameId);
+  
+  if (!success) {
+    history.value[loadingIdx].output = `<span style="color: var(--terminal-error)">Failed to load game: ${zork.error.value}</span>`;
+    return;
+  }
+  
+  // Enter zork mode
+  zorkMode.value = true;
+  zorkOutput.value = [];
+  
+  // Clear the loading message
+  history.value[loadingIdx].output = '<em>Entering the Great Underground Empire...</em>';
+  
+  // Focus input
+  nextTick(() => {
+    const input = isMobile.value ? inputRefMobile.value : inputRef.value;
+    input?.focus();
+  });
+};
+
+/**
+ * Exit Zork mode - clean up and return to terminal
+ */
+const exitZorkMode = (showMessage: boolean = true) => {
+  zork.quit();
+  zorkMode.value = false;
+  zorkOutput.value = [];
+  showZorkQuitModal.value = false;
+  
+  if (showMessage) {
+    addHistoryEntry('', '');
+    const idx = history.value.length - 1;
+    history.value[idx].output = '<em>You have left the Great Underground Empire.</em>';
+    history.value[idx].isStartup = true; // Don't show prompt for this line
+  }
+  
+  // Refocus input
+  nextTick(() => {
+    const input = isMobile.value ? inputRefMobile.value : inputRef.value;
+    input?.focus();
+    scrollToBottom();
+  });
+};
+
+/**
+ * Handle Zork quit command - show confirmation
+ */
+const handleZorkQuit = () => {
+  showZorkQuitModal.value = true;
+};
+
+/**
+ * Confirm Zork quit
+ */
+const confirmZorkQuit = () => {
+  exitZorkMode(true);
+};
+
+/**
+ * Cancel Zork quit - return to game
+ */
+const cancelZorkQuit = () => {
+  showZorkQuitModal.value = false;
+  nextTick(() => {
+    const input = isMobile.value ? inputRefMobile.value : inputRef.value;
+    input?.focus();
+  });
+};
+
+/**
+ * Send input to Zork
+ */
+const sendZorkInput = (input: string) => {
+  // Check for quit commands
+  const lowerInput = input.toLowerCase().trim();
+  if (lowerInput === 'quit' || lowerInput === 'q') {
+    handleZorkQuit();
+    return;
+  }
+  
+  // Add input to output display
+  zorkOutput.value.push(`> ${input}`);
+  
+  // Send to game
+  zork.sendInput(input);
+  
+  // Scroll to bottom
+  scrollZorkToBottom();
+};
+
+/**
+ * Scroll Zork output to bottom
+ */
+const scrollZorkToBottom = () => {
+  nextTick(() => {
+    if (zorkScrollRef.value) {
+      zorkScrollRef.value.scrollTop = zorkScrollRef.value.scrollHeight;
+    }
+  });
+};
+
+// Watch Zork output and sync to display
+watch(() => zork.output.value, (newOutput) => {
+  if (zorkMode.value && newOutput.length > 0) {
+    // Get new output (the composable accumulates)
+    const text = zork.getOutputText();
+    if (text) {
+      // Split by newlines and add each line
+      const lines = text.split('\n');
+      zorkOutput.value.push(...lines);
+      zork.clearOutput();
+      scrollZorkToBottom();
+    }
+  }
+}, { deep: true });
+
 // Process a startup command (output only, no prompt shown)
 const processStartupCommand = async (command: string) => {
   // Execute command through the same path as user commands
@@ -405,6 +591,13 @@ const processCommand = async (command: string) => {
     return;
   }
   
+  // Check if this is a Zork command (hidden Easter egg)
+  if (rawOutput.startsWith(ZORK_PREFIX)) {
+    const gameId = rawOutput.slice(ZORK_PREFIX.length);
+    await enterZorkMode(gameId);
+    return;
+  }
+  
   const output = await renderForDisplay(rawOutput);
   
   // Add command to history first (without output)
@@ -469,6 +662,17 @@ const processCommandQueue = async () => {
 // Execute command (entry point - queues if needed)
 const executeCommand = async () => {
   const command = currentInput.value.trim();
+  
+  // If in Zork mode, send input to game instead
+  if (zorkMode.value) {
+    if (command) {
+      sendZorkInput(command);
+    }
+    currentInput.value = '';
+    updateCursorPosition();
+    return;
+  }
+  
   if (!command) {
     addHistoryEntry('', '');
     currentInput.value = '';
@@ -639,6 +843,11 @@ const clearTerminal = () => {
     pagerAtEnd.value = false;
   }
   
+  // Exit zork mode if active
+  if (zorkMode.value) {
+    exitZorkMode(false);
+  }
+  
   updateCursorPosition();
   nextTick(() => {
     inputRef.value?.focus();
@@ -646,8 +855,25 @@ const clearTerminal = () => {
   });
 };
 
-// Handle keyboard shortcuts (including pager mode)
+// Handle keyboard shortcuts (including pager mode and zork mode)
 const handleKeyDown = (e: KeyboardEvent) => {
+  // Zork quit modal is handled by the modal component itself
+  if (showZorkQuitModal.value) {
+    return;
+  }
+  
+  // Zork mode - let normal input through, but handle Ctrl+L
+  if (zorkMode.value) {
+    if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
+      e.preventDefault();
+      // Clear zork output but stay in game
+      zorkOutput.value = [];
+      return;
+    }
+    // Let all other keys go to the input field
+    return;
+  }
+  
   // Pager mode key handling
   if (pagerMode.value) {
     e.preventDefault();
@@ -1024,6 +1250,84 @@ onUnmounted(() => {
   margin-bottom: 0.5rem;
   text-align: center;
   box-sizing: border-box;
+}
+
+// =============================================================================
+// Zork Mode Styles
+// =============================================================================
+.zork-wrapper {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+}
+
+.zork-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-brightBlack, #444);
+  margin-bottom: 0.75rem;
+}
+
+.zork-title {
+  color: var(--terminal-success, #23d18b);
+  font-weight: bold;
+  font-size: 1.1em;
+  letter-spacing: 0.1em;
+}
+
+.zork-hint {
+  color: var(--color-brightBlack, #666);
+  font-size: 0.85em;
+  font-style: italic;
+}
+
+.zork-output-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  padding-right: 10px;
+  
+  // Hide scrollbar
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.zork-line {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.5;
+  margin-bottom: 0.25rem;
+  color: var(--color-foreground, #d4d4d4);
+  
+  &.zork-input-line {
+    color: var(--terminal-command, #3b8eea);
+    font-weight: bold;
+  }
+}
+
+.zork-prompt {
+  color: var(--terminal-success, #23d18b);
+  font-weight: bold;
+  margin-right: 0.5rem;
+}
+
+.zork-input {
+  color: var(--terminal-command, #3b8eea);
+  
+  &::placeholder {
+    color: var(--color-brightBlack, #555);
+    font-style: italic;
+  }
 }
 
 // Default line-height for all terminal text
