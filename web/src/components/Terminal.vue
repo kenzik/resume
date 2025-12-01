@@ -1816,7 +1816,23 @@ onUnmounted(() => {
   flex-direction: column;
   position: relative;
   z-index: 10;
-  overflow-x: hidden; // Explicitly prevent horizontal scroll
+  overflow-x: hidden !important; // Explicitly prevent horizontal scroll
+  overflow: hidden; // Prevent all overflow
+  box-sizing: border-box; // Include padding/border in width calculation
+  
+  // Ensure input line within zork wrapper is properly constrained
+  .terminal-input-line {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100%;
+    overflow: hidden;
+    
+    .input-wrapper {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      overflow: hidden;
+    }
+  }
 }
 
 .zork-header {
@@ -1828,6 +1844,12 @@ onUnmounted(() => {
   margin-bottom: 0.75rem;
   max-width: 100%; // Prevent overflow
   min-width: 0; // Allow flex shrinking
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; // Prevent any overflow
+  flex-shrink: 0; // Don't shrink header
+  
+  // Styles for title and hint are defined separately below
 }
 
 .zork-title {
@@ -1835,23 +1857,42 @@ onUnmounted(() => {
   font-weight: bold;
   font-size: 1.1em;
   letter-spacing: 0.1em;
+  max-width: 50%; // Constrain width to prevent overflow
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1; // Allow shrinking if needed
 }
 
 .zork-hint {
   color: var(--color-brightBlack, #666);
   font-size: 0.85em;
   font-style: italic;
+  max-width: 50%; // Constrain width to prevent overflow
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1; // Allow shrinking if needed
+  text-align: right; // Align hint to the right
 }
 
 .zork-output-area {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: hidden !important; // Force no horizontal scroll
   min-height: 0;
   padding-right: 10px;
+  padding-left: 0; // Ensure no left padding causes overflow
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  
+  // Use CSS containment for better performance and overflow control
+  contain: layout style;
   
   // Scroll containment for mobile
   overscroll-behavior: contain;
+  overscroll-behavior-x: none !important; // Absolutely no horizontal overscroll
   touch-action: pan-y;
   
   // Prevent scroll when child elements get focus
@@ -1864,24 +1905,29 @@ onUnmounted(() => {
     display: none;
   }
   
-  // Ensure all children respect container width
+  // Ensure all children respect container width - use !important to override any inline styles
   > * {
-    max-width: 100%;
-    overflow-wrap: break-word;
-    word-break: break-word;
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important; // Prevent any child overflow
   }
 }
 
 .zork-line {
   white-space: pre-wrap;
-  word-wrap: break-word;
-  word-break: break-word; // Allow breaking long words
-  overflow-wrap: break-word; // Modern property for word breaking
+  word-wrap: break-word !important;
+  word-break: break-word !important; // Allow breaking long words
+  overflow-wrap: break-word !important; // Modern property for word breaking
   line-height: 1.5;
   margin-bottom: 0.25rem;
   color: var(--color-foreground, #d4d4d4);
-  max-width: 100%; // Prevent overflow
+  max-width: 100% !important; // Prevent overflow
   width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; // Prevent any overflow
   
   &.zork-input-line {
     color: var(--terminal-command, #3b8eea);
@@ -1917,7 +1963,12 @@ onUnmounted(() => {
 }
 
 .zork-typing {
-  display: inline;
+  display: block; // Changed from inline to prevent overflow
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  box-sizing: border-box;
 }
 
 .typing-cursor {
