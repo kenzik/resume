@@ -132,7 +132,7 @@
           v-for="(line, index) in zorkOutput" 
           :key="index" 
           class="zork-line"
-          :class="{ 'zork-input-line': line.startsWith('>') }"
+          :class="{ 'zork-command-echo': line.startsWith('>') }"
         >{{ line }}</div>
         <!-- Currently typing line (typewriter effect) -->
         <div v-if="zorkTypingLine" class="zork-line zork-typing">{{ zorkTypingLine }}<span class="typing-cursor">█</span></div>
@@ -495,7 +495,7 @@ const enterZorkMode = async (gameId: string = 'zork1') => {
   
   // Focus Zork input
   nextTick(() => {
-    zorkInputRef.value?.focus();
+    zorkInputRef.value?.focus({ preventScroll: true });
   });
   
   // Get any initial output from game startup and type it out
@@ -507,7 +507,7 @@ const enterZorkMode = async (gameId: string = 'zork1') => {
   
   // Refocus after typing completes and reset cursor
   nextTick(() => {
-    zorkInputRef.value?.focus();
+    zorkInputRef.value?.focus({ preventScroll: true });
     updateCursorPosition();
   });
 };
@@ -528,10 +528,28 @@ const exitZorkMode = (showMessage: boolean = true) => {
     history.value[idx].isStartup = true; // Don't show prompt for this line
   }
   
-  // Refocus input
+  // Refocus input and reset scroll positions
   nextTick(() => {
     const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-    input?.focus();
+    input?.focus({ preventScroll: true });
+    
+    // Reset horizontal scroll position on all scroll containers
+    // This fixes layout issues where containers were scrolled during Zork mode
+    if (nativeScrollRef.value) {
+      nativeScrollRef.value.scrollLeft = 0;
+    }
+    if (scrollAreaRef.value) {
+      const scrollTarget = scrollAreaRef.value.getScrollTarget?.();
+      if (scrollTarget) {
+        scrollTarget.scrollLeft = 0;
+      }
+    }
+    
+    // Also reset on the terminal container itself
+    if (terminalRef.value) {
+      terminalRef.value.scrollLeft = 0;
+    }
+    
     scrollToBottom();
   });
 };
@@ -616,8 +634,11 @@ const typeZorkOutput = async (text: string) => {
       },
     });
     
-    // Move completed line to output array
-    zorkOutput.value.push(line);
+    // Move completed line to output array (skip empty prompts like ">")
+    const isEmptyPrompt = /^>\s*$/.test(line);
+    if (!isEmptyPrompt) {
+      zorkOutput.value.push(line);
+    }
     zorkTypingLine.value = '';
   }
   
@@ -1094,10 +1115,10 @@ watch(() => terminalRef.value, (newEl, oldEl) => {
       if (!pagerMode.value) {
         // Focus the appropriate input based on mode
         if (zorkMode.value) {
-          zorkInputRef.value?.focus();
+          zorkInputRef.value?.focus({ preventScroll: true });
         } else {
           const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-          input?.focus();
+          input?.focus({ preventScroll: true });
         }
       }
     };
@@ -1810,11 +1831,42 @@ onUnmounted(() => {
 .zork-wrapper {
   flex: 1;
   width: 100%;
+  max-width: 100%; // Prevent overflow
   min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 10;
+  overflow-x: hidden !important; // Explicitly prevent horizontal scroll
+  overflow: hidden; // Prevent all overflow
+  box-sizing: border-box; // Include padding/border in width calculation
+  
+  // Active input line - visually separated from output
+  > .zork-input-line.terminal-line {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--terminal-dim, rgba(35, 209, 139, 0.2));
+    position: relative;
+    
+    // Subtle glow effect on the prompt to draw attention
+    .zork-prompt {
+      text-shadow: 0 0 8px var(--terminal-success, #23d18b);
+    }
+  }
+  
+  // Ensure input line within zork wrapper is properly constrained
+  .terminal-input-line {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100%;
+    overflow: hidden;
+    
+    .input-wrapper {
+      min-width: 0 !important;
+      max-width: 100% !important;
+      overflow: hidden;
+    }
+  }
 }
 
 .zork-header {
@@ -1824,6 +1876,14 @@ onUnmounted(() => {
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--color-brightBlack, #444);
   margin-bottom: 0.75rem;
+  max-width: 100%; // Prevent overflow
+  min-width: 0; // Allow flex shrinking
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; // Prevent any overflow
+  flex-shrink: 0; // Don't shrink header
+  
+  // Styles for title and hint are defined separately below
 }
 
 .zork-title {
@@ -1831,24 +1891,46 @@ onUnmounted(() => {
   font-weight: bold;
   font-size: 1.1em;
   letter-spacing: 0.1em;
+  max-width: 50%; // Constrain width to prevent overflow
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1; // Allow shrinking if needed
 }
 
 .zork-hint {
   color: var(--color-brightBlack, #666);
   font-size: 0.85em;
   font-style: italic;
+  max-width: 50%; // Constrain width to prevent overflow
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1; // Allow shrinking if needed
+  text-align: right; // Align hint to the right
 }
 
 .zork-output-area {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: hidden !important; // Force no horizontal scroll
   min-height: 0;
   padding-right: 10px;
+  padding-left: 0; // Ensure no left padding causes overflow
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  
+  // Use CSS containment for better performance and overflow control
+  contain: layout style;
   
   // Scroll containment for mobile
   overscroll-behavior: contain;
+  overscroll-behavior-x: none !important; // Absolutely no horizontal overscroll
   touch-action: pan-y;
+  
+  // Prevent scroll when child elements get focus
+  scroll-padding: 0;
   
   // Hide scrollbar
   scrollbar-width: none;
@@ -1856,18 +1938,45 @@ onUnmounted(() => {
   &::-webkit-scrollbar {
     display: none;
   }
+  
+  // Ensure all children respect container width - use !important to override any inline styles
+  > * {
+    max-width: 100% !important;
+    width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important; // Prevent any child overflow
+  }
 }
 
 .zork-line {
   white-space: pre-wrap;
-  word-wrap: break-word;
+  word-wrap: break-word !important;
+  word-break: break-word !important; // Allow breaking long words
+  overflow-wrap: break-word !important; // Modern property for word breaking
   line-height: 1.5;
   margin-bottom: 0.25rem;
   color: var(--color-foreground, #d4d4d4);
+  max-width: 100% !important; // Prevent overflow
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; // Prevent any overflow
   
   &.zork-input-line {
     color: var(--terminal-command, #3b8eea);
     font-weight: bold;
+  }
+}
+
+// Historical command echoes - visually distinct from active input
+.zork-command-echo {
+  color: var(--terminal-dim, #6a737d);
+  opacity: 0.7;
+  
+  // The » character styling
+  &::first-letter {
+    color: var(--terminal-muted, #555);
   }
 }
 
@@ -1879,9 +1988,13 @@ onUnmounted(() => {
 
 .zork-input {
   color: var(--terminal-command, #3b8eea);
+  max-width: 100%; // Prevent input from exceeding container
   
   // Force lowercase display (consistent with terminal input)
   text-transform: lowercase;
+  
+  // Prevent auto-scroll on focus (mobile browsers)
+  scroll-margin: 0;
   
   &::placeholder {
     color: var(--color-brightBlack, #555);
@@ -1895,7 +2008,12 @@ onUnmounted(() => {
 }
 
 .zork-typing {
-  display: inline;
+  display: block; // Changed from inline to prevent overflow
+  width: 100%;
+  max-width: 100%;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  box-sizing: border-box;
 }
 
 .typing-cursor {
