@@ -84,6 +84,7 @@
             @keydown.enter="executeCommand"
             @keydown.up="navigateHistory(-1)"
             @keydown.down="navigateHistory(1)"
+            @focus="handleMobileInputFocus"
             class="terminal-input"
             type="text"
             autofocus
@@ -250,6 +251,12 @@ const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean
 // Handle scroll events on the native scroll container
 const handleNativeScroll = (event: Event) => {
   const target = event.target as HTMLElement;
+  
+  // Immediately reset any horizontal scroll - this is a safety net
+  if (target.scrollLeft !== 0) {
+    target.scrollLeft = 0;
+  }
+  
   updateScrollIndicators(target);
 };
 
@@ -1127,6 +1134,29 @@ const resetHorizontalScroll = () => {
 };
 
 /**
+ * Handle mobile input focus - aggressively reset horizontal scroll
+ * The browser tends to scroll horizontally when focusing an input on mobile
+ */
+const handleMobileInputFocus = () => {
+  // Immediate reset
+  resetHorizontalScroll();
+  
+  // Reset again after browser has a chance to do its thing
+  requestAnimationFrame(() => {
+    resetHorizontalScroll();
+    // And once more after next paint
+    requestAnimationFrame(() => {
+      resetHorizontalScroll();
+    });
+  });
+  
+  // Also reset after a small delay to catch any delayed browser behavior
+  setTimeout(() => {
+    resetHorizontalScroll();
+  }, 50);
+};
+
+/**
  * Focus input with scroll protection
  * Focuses the appropriate input and resets any horizontal scroll
  */
@@ -1703,6 +1733,12 @@ onUnmounted(() => {
   max-width: 100%; // Prevent overflow
   overflow: hidden !important; // Force hide any overflow
   overflow-x: hidden !important; // Explicitly prevent horizontal scroll
+  
+  // Mobile: Ensure no scroll-into-view behavior
+  @media (max-width: 768px) {
+    // Contain the input to prevent focus scroll
+    contain: layout style;
+  }
 }
 
 .terminal-input {
