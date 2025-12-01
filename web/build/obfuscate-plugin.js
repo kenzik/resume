@@ -39,15 +39,19 @@ function getGitInfo() {
 
 /**
  * Hidden commands configuration
- * Maps trigger -> action identifier
+ * Maps trigger -> game identifier
  * 
  * NOTE: These are encoded at build time. The actual strings
  * never appear in the production bundle.
+ * 
+ * The action values are game IDs that map to Z-machine story files
+ * in the GAMES registry (see useZMachine.ts)
  */
 const HIDDEN_COMMANDS = [
-  { trigger: 'xyzzy', action: 'zork1' },
-  { trigger: 'plugh', action: 'zork1' },
-  // Future: { trigger: 'frotz', action: 'zork2' },
+  { trigger: 'xyzzy', action: 'zork1' },  // Classic IF magic word
+  { trigger: 'plugh', action: 'zork1' },  // Another classic IF magic word
+  // Future games can be added here with different triggers
+  // { trigger: 'frotz', action: 'zork2' },
 ];
 
 /**

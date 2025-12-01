@@ -1,21 +1,22 @@
 <template>
   <div class="terminal" :class="{ 
       'pager-active': pagerMode, 
-      'zork-active': zorkMode,
-      'crt-smack': zorkTransitioning && zorkTransitionType === 'smack',
-      'crt-roll': zorkTransitioning && zorkTransitionType === 'roll'
+      'zmachine-active': zmachineMode,
+      'crt-smack': zmachineTransitioning && zmachineTransitionType === 'smack',
+      'crt-roll': zmachineTransitioning && zmachineTransitionType === 'roll'
     }" ref="terminalRef">
-    <!-- Zork Quit Confirmation Modal -->
-    <ZorkQuitModal 
-      v-model="showZorkQuitModal"
-      @confirm="confirmZorkQuit"
-      @cancel="cancelZorkQuit"
+    <!-- Z-Machine Quit Confirmation Modal -->
+    <ZMachineQuitModal 
+      v-model="showZMachineQuitModal"
+      :game-title="currentGameTitle"
+      @confirm="confirmZMachineQuit"
+      @cancel="cancelZMachineQuit"
     />
     
-    <!-- Normal terminal output - hidden during pager mode or zork mode -->
+    <!-- Normal terminal output - hidden during pager mode or zmachine mode -->
     <!-- Desktop: Use QScrollArea for smooth scrolling -->
     <q-scroll-area 
-      v-if="!isMobile && !pagerMode && !zorkMode" 
+      v-if="!isMobile && !pagerMode && !zmachineMode" 
       class="terminal-output"
       ref="scrollAreaRef"
       :thumb-style="{ display: 'none' }"
@@ -57,7 +58,7 @@
     
     <!-- Mobile: Use native scroll for better iOS Chrome compatibility -->
     <div 
-      v-if="isMobile && !pagerMode && !zorkMode" 
+      v-if="isMobile && !pagerMode && !zmachineMode" 
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
       @scroll="handleNativeScroll"
@@ -98,13 +99,13 @@
     
     <!-- Scroll indicators - show when content extends beyond visible area (mobile only) -->
     <div 
-      v-if="isMobile && !pagerMode && !zorkMode"
+      v-if="isMobile && !pagerMode && !zmachineMode"
       class="scroll-indicator scroll-indicator--top"
       :class="{ 'scroll-indicator--visible': hasScrollableContentAbove }"
       aria-hidden="true"
     />
     <div 
-      v-if="isMobile && !pagerMode && !zorkMode"
+      v-if="isMobile && !pagerMode && !zmachineMode"
       class="scroll-indicator scroll-indicator--bottom"
       :class="{ 'scroll-indicator--visible': hasScrollableContentBelow }"
       aria-hidden="true"
@@ -121,30 +122,30 @@
       </div>
     </div>
     
-    <!-- Zork mode - full terminal takeover for game -->
-    <div v-show="zorkMode" class="zork-wrapper">
-      <div class="zork-header">
-        <span class="zork-title">ZORK I</span>
-        <span class="zork-hint">Type 'quit' to exit</span>
+    <!-- Z-Machine mode - full terminal takeover for game -->
+    <div v-show="zmachineMode" class="zmachine-wrapper">
+      <div class="zmachine-header">
+        <span class="zmachine-title">{{ currentGameTitle }}</span>
+        <span class="zmachine-hint">Type 'quit' to exit</span>
       </div>
-      <div class="zork-output-area" ref="zorkScrollRef">
+      <div class="zmachine-output-area" ref="zmachineScrollRef">
         <div 
-          v-for="(line, index) in zorkOutput" 
+          v-for="(line, index) in zmachineOutput" 
           :key="index" 
-          class="zork-line"
-          :class="{ 'zork-command-echo': line.startsWith('>') }"
+          class="zmachine-line"
+          :class="{ 'zmachine-command-echo': line.startsWith('>') }"
         >{{ line }}</div>
         <!-- Currently typing line (typewriter effect) -->
-        <div v-if="zorkTypingLine" class="zork-line zork-typing">{{ zorkTypingLine }}<span class="typing-cursor">█</span></div>
+        <div v-if="zmachineTypingLine" class="zmachine-line zmachine-typing">{{ zmachineTypingLine }}<span class="typing-cursor">█</span></div>
       </div>
-      <div class="zork-input-line terminal-line">
-        <span class="zork-prompt">&gt;</span>
-        <div class="input-wrapper" ref="zorkInputWrapperRef">
+      <div class="zmachine-input-line terminal-line">
+        <span class="zmachine-prompt">&gt;</span>
+        <div class="input-wrapper" ref="zmachineInputWrapperRef">
           <input
-            ref="zorkInputRef"
+            ref="zmachineInputRef"
             v-model="currentInput"
             @keydown.enter="executeCommand"
-            class="terminal-input zork-input zork-native-caret"
+            class="terminal-input zmachine-input zmachine-native-caret"
             type="text"
             spellcheck="false"
             placeholder="What do you want to do?"
@@ -161,17 +162,17 @@ import { useRouter } from 'vue-router';
 import { QScrollArea } from 'quasar';
 import { useCommands } from '../composables/useCommands';
 import { useTypewriter } from '../composables/useTypewriter';
-import { useZork } from '../composables/useZork';
+import { useZMachine, GAME_TITLES } from '../composables/useZMachine';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
 import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
-import ZorkQuitModal from './ZorkQuitModal.vue';
+import ZMachineQuitModal from './ZMachineQuitModal.vue';
 import { PAGER_CONFIG } from '../config';
 
 // Navigation prefix for commands that trigger page navigation
 const NAV_PREFIX = '__NAV__';
-// Zork prefix for hidden game commands
-const ZORK_PREFIX = '__Z__';
+// Z-Machine prefix for hidden game commands
+const ZMACHINE_PREFIX = '__Z__';
 
 const router = useRouter();
 
@@ -183,8 +184,8 @@ const scrollAreaRef = ref<InstanceType<typeof QScrollArea> | null>(null);
 const nativeScrollRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const inputRefMobile = ref<HTMLInputElement | null>(null);
-const zorkInputRef = ref<HTMLInputElement | null>(null);
-const zorkInputWrapperRef = ref<HTMLElement | null>(null);
+const zmachineInputRef = ref<HTMLInputElement | null>(null);
+const zmachineInputWrapperRef = ref<HTMLElement | null>(null);
 const inputWrapperRef = ref<HTMLElement | null>(null);
 const inputWrapperRefMobile = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
@@ -270,27 +271,33 @@ const pagerCommand = ref('');           // The command that triggered pager mode
 const pagerAtEnd = ref(false);          // True when scrolled to bottom
 const pagerContentRef = ref<HTMLElement | null>(null);
 
-// Zork mode state
-const zorkMode = ref(false);
-const zorkOutput = ref<string[]>([]);   // Game output lines (fully typed)
-const zorkTypingLine = ref('');          // Currently typing line
-const zorkIsTyping = ref(false);         // Whether typewriter is active
-const showZorkQuitModal = ref(false);   // Quit confirmation modal
-const zorkScrollRef = ref<HTMLElement | null>(null);
+// Z-Machine mode state
+const zmachineMode = ref(false);
+const zmachineOutput = ref<string[]>([]);   // Game output lines (fully typed)
+const zmachineTypingLine = ref('');          // Currently typing line
+const zmachineIsTyping = ref(false);         // Whether typewriter is active
+const showZMachineQuitModal = ref(false);   // Quit confirmation modal
+const zmachineScrollRef = ref<HTMLElement | null>(null);
 
-// CRT transition effects for Zork mode
-const zorkTransitioning = ref(false);
-const zorkTransitionType = ref<'smack' | 'roll'>('smack'); // 'smack' = horizontal glitch, 'roll' = vertical roll
+// CRT transition effects for Z-Machine mode
+const zmachineTransitioning = ref(false);
+const zmachineTransitionType = ref<'smack' | 'roll'>('smack'); // 'smack' = horizontal glitch, 'roll' = vertical roll
 
-// Zork typewriter config (slightly faster for game feel)
-const zorkTypewriterConfig = {
+// Z-Machine typewriter config (slightly faster for game feel)
+const zmachineTypewriterConfig = {
   delay: 3,
   charsPerTick: 8,
 };
 
 const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
-const { typeText, isTyping, stopTyping } = useTypewriter();
-const zork = useZork();
+const { typeText, isTyping } = useTypewriter();
+const zmachine = useZMachine();
+
+// Current game title for display
+const currentGameTitle = computed(() => {
+  const gameId = zmachine.currentGame.value;
+  return GAME_TITLES[gameId || ''] || gameId?.toUpperCase() || 'GAME';
+});
 
 // Click handler stored at module level for proper cleanup
 let terminalClickHandler: (() => void) | null = null;
@@ -449,82 +456,82 @@ const enterPagerMode = async (command: string, rawContent: string) => {
 };
 
 // =============================================================================
-// Zork Mode Functions
+// Z-Machine Mode Functions
 // =============================================================================
 
 /**
- * Enter Zork mode - start the game
+ * Enter Z-Machine mode - start the game
  */
-const enterZorkMode = async (gameId: string = 'zork1') => {
+const enterZMachineMode = async (gameId: string = 'zork1') => {
   // Don't add command to history - the magic word just vanishes mysteriously
   history.value.push({ 
     command: '', 
-    output: '<em>Loading the Great Underground Empire...</em>', 
+    output: '<em>Loading game...</em>', 
     isStartup: true 
   });
   const loadingIdx = history.value.length - 1;
   scrollToBottom();
   
   // Start the game
-  const success = await zork.startGame(gameId);
+  const success = await zmachine.startGame(gameId);
   
   if (!success) {
-    history.value[loadingIdx].output = `<span style="color: var(--terminal-error)">Failed to load game: ${zork.error.value}</span>`;
+    history.value[loadingIdx].output = `<span style="color: var(--terminal-error)">Failed to load game: ${zmachine.error.value}</span>`;
     return;
   }
   
   // Clear the loading message
-  history.value[loadingIdx].output = '<em>Entering the Great Underground Empire...</em>';
+  history.value[loadingIdx].output = '<em>Starting game...</em>';
   
   // Randomly choose CRT transition effect
-  zorkTransitionType.value = Math.random() > 0.5 ? 'smack' : 'roll';
+  zmachineTransitionType.value = Math.random() > 0.5 ? 'smack' : 'roll';
   
   // Trigger CRT transition effect
-  zorkTransitioning.value = true;
+  zmachineTransitioning.value = true;
   
-  // Wait for transition, then enter Zork mode
+  // Wait for transition, then enter Z-Machine mode
   // Both effects now have 3 escalating phases totaling ~1.8s
   const transitionDuration = 1800;
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
   
-  // Enter zork mode AFTER transition completes
-  zorkMode.value = true;
-  zorkOutput.value = [];
-  zorkTypingLine.value = '';
-  zorkTransitioning.value = false;
+  // Enter Z-Machine mode AFTER transition completes
+  zmachineMode.value = true;
+  zmachineOutput.value = [];
+  zmachineTypingLine.value = '';
+  zmachineTransitioning.value = false;
   
-  // Focus Zork input
+  // Focus Z-Machine input
   nextTick(() => {
-    zorkInputRef.value?.focus({ preventScroll: true });
+    zmachineInputRef.value?.focus({ preventScroll: true });
   });
   
   // Get any initial output from game startup and type it out
-  const initialOutput = zork.getOutputText();
+  const initialOutput = zmachine.getOutputText();
   if (initialOutput) {
-    zork.clearOutput();
-    await typeZorkOutput(initialOutput);
+    zmachine.clearOutput();
+    await typeZMachineOutput(initialOutput);
   }
   
   // Refocus after typing completes and reset cursor
   nextTick(() => {
-    zorkInputRef.value?.focus({ preventScroll: true });
+    zmachineInputRef.value?.focus({ preventScroll: true });
     updateCursorPosition();
   });
 };
 
 /**
- * Exit Zork mode - clean up and return to terminal
+ * Exit Z-Machine mode - clean up and return to terminal
  */
-const exitZorkMode = (showMessage: boolean = true) => {
-  zork.quit();
-  zorkMode.value = false;
-  zorkOutput.value = [];
-  showZorkQuitModal.value = false;
+const exitZMachineMode = (showMessage: boolean = true) => {
+  zmachine.quit();
+  zmachineMode.value = false;
+  zmachineOutput.value = [];
+  showZMachineQuitModal.value = false;
   
   if (showMessage) {
     addHistoryEntry('', '');
     const idx = history.value.length - 1;
-    history.value[idx].output = '<em>You have left the Great Underground Empire.</em>';
+    history.value[idx].output = '<em>You have left the game.</em>';
     history.value[idx].isStartup = true; // Don't show prompt for this line
   }
   
@@ -534,7 +541,7 @@ const exitZorkMode = (showMessage: boolean = true) => {
     input?.focus({ preventScroll: true });
     
     // Reset horizontal scroll position on all scroll containers
-    // This fixes layout issues where containers were scrolled during Zork mode
+    // This fixes layout issues where containers were scrolled during Z-Machine mode
     if (nativeScrollRef.value) {
       nativeScrollRef.value.scrollLeft = 0;
     }
@@ -555,24 +562,24 @@ const exitZorkMode = (showMessage: boolean = true) => {
 };
 
 /**
- * Handle Zork quit command - show confirmation
+ * Handle Z-Machine quit command - show confirmation
  */
-const handleZorkQuit = () => {
-  showZorkQuitModal.value = true;
+const handleZMachineQuit = () => {
+  showZMachineQuitModal.value = true;
 };
 
 /**
- * Confirm Zork quit
+ * Confirm Z-Machine quit
  */
-const confirmZorkQuit = () => {
-  exitZorkMode(true);
+const confirmZMachineQuit = () => {
+  exitZMachineMode(true);
 };
 
 /**
- * Cancel Zork quit - return to game
+ * Cancel Z-Machine quit - return to game
  */
-const cancelZorkQuit = () => {
-  showZorkQuitModal.value = false;
+const cancelZMachineQuit = () => {
+  showZMachineQuitModal.value = false;
   nextTick(() => {
     const input = isMobile.value ? inputRefMobile.value : inputRef.value;
     input?.focus();
@@ -580,80 +587,80 @@ const cancelZorkQuit = () => {
 };
 
 /**
- * Send input to Zork
+ * Send input to Z-Machine
  */
-const sendZorkInput = (input: string) => {
+const sendZMachineInput = (input: string) => {
   // Check for quit commands
   const lowerInput = input.toLowerCase().trim();
   if (lowerInput === 'quit' || lowerInput === 'q') {
-    handleZorkQuit();
+    handleZMachineQuit();
     return;
   }
   
   // Add input to output display
-  zorkOutput.value.push(`> ${input}`);
+  zmachineOutput.value.push(`> ${input}`);
   
   // Send to game
-  zork.sendInput(input);
+  zmachine.sendInput(input);
   
   // Scroll to bottom
-  scrollZorkToBottom();
+  scrollZMachineToBottom();
 };
 
 /**
- * Scroll Zork output to bottom
+ * Scroll Z-Machine output to bottom
  */
-const scrollZorkToBottom = () => {
+const scrollZMachineToBottom = () => {
   nextTick(() => {
-    if (zorkScrollRef.value) {
-      zorkScrollRef.value.scrollTop = zorkScrollRef.value.scrollHeight;
+    if (zmachineScrollRef.value) {
+      zmachineScrollRef.value.scrollTop = zmachineScrollRef.value.scrollHeight;
     }
   });
 };
 
 /**
- * Type Zork output through the typewriter effect
+ * Type Z-Machine output through the typewriter effect
  */
-const typeZorkOutput = async (text: string) => {
+const typeZMachineOutput = async (text: string) => {
   if (!text) return;
   
-  zorkIsTyping.value = true;
+  zmachineIsTyping.value = true;
   
   // Split into lines and type each one
   const lines = text.split('\n');
   
   for (const line of lines) {
-    if (!zorkMode.value) break; // Exit if user quit during typing
+    if (!zmachineMode.value) break; // Exit if user quit during typing
     
     // Type this line
     await typeText(line, {
-      ...zorkTypewriterConfig,
+      ...zmachineTypewriterConfig,
       onChar: (partialText) => {
-        zorkTypingLine.value = partialText;
-        scrollZorkToBottom();
+        zmachineTypingLine.value = partialText;
+        scrollZMachineToBottom();
       },
     });
     
     // Move completed line to output array (skip empty prompts like ">")
     const isEmptyPrompt = /^>\s*$/.test(line);
     if (!isEmptyPrompt) {
-      zorkOutput.value.push(line);
+      zmachineOutput.value.push(line);
     }
-    zorkTypingLine.value = '';
+    zmachineTypingLine.value = '';
   }
   
-  zorkIsTyping.value = false;
-  scrollZorkToBottom();
+  zmachineIsTyping.value = false;
+  scrollZMachineToBottom();
 };
 
-// Watch Zork output and sync to display with typewriter
-watch(() => zork.output.value, async (newOutput) => {
-  if (zorkMode.value && newOutput.length > 0) {
+// Watch Z-Machine output and sync to display with typewriter
+watch(() => zmachine.output.value, async (newOutput) => {
+  if (zmachineMode.value && newOutput.length > 0) {
     // Get new output (the composable accumulates)
-    const text = zork.getOutputText();
+    const text = zmachine.getOutputText();
     if (text) {
-      zork.clearOutput();
-      await typeZorkOutput(text);
+      zmachine.clearOutput();
+      await typeZMachineOutput(text);
     }
   }
 }, { deep: true });
@@ -760,10 +767,10 @@ const processCommand = async (command: string) => {
     return;
   }
   
-  // Check if this is a Zork command (hidden Easter egg)
-  if (rawOutput.startsWith(ZORK_PREFIX)) {
-    const gameId = rawOutput.slice(ZORK_PREFIX.length);
-    await enterZorkMode(gameId);
+  // Check if this is a Z-Machine command (hidden Easter egg)
+  if (rawOutput.startsWith(ZMACHINE_PREFIX)) {
+    const gameId = rawOutput.slice(ZMACHINE_PREFIX.length);
+    await enterZMachineMode(gameId);
     return;
   }
   
@@ -832,10 +839,10 @@ const processCommandQueue = async () => {
 const executeCommand = async () => {
   const command = currentInput.value.trim();
   
-  // If in Zork mode, send input to game instead
-  if (zorkMode.value) {
+  // If in Z-Machine mode, send input to game instead
+  if (zmachineMode.value) {
     if (command) {
-      sendZorkInput(command);
+      sendZMachineInput(command);
     }
     currentInput.value = '';
     updateCursorPosition();
@@ -929,9 +936,9 @@ const updateCursorPosition = () => {
     let currentInputEl: HTMLInputElement | null;
     let currentWrapper: HTMLElement | null;
     
-    if (zorkMode.value) {
-      currentInputEl = zorkInputRef.value;
-      currentWrapper = zorkInputWrapperRef.value;
+    if (zmachineMode.value) {
+      currentInputEl = zmachineInputRef.value;
+      currentWrapper = zmachineInputWrapperRef.value;
     } else if (isMobile.value) {
       currentInputEl = inputRefMobile.value;
       currentWrapper = inputWrapperRefMobile.value;
@@ -1029,9 +1036,9 @@ const clearTerminal = () => {
     pagerAtEnd.value = false;
   }
   
-  // Exit zork mode if active
-  if (zorkMode.value) {
-    exitZorkMode(false);
+  // Exit Z-Machine mode if active
+  if (zmachineMode.value) {
+    exitZMachineMode(false);
   }
   
   updateCursorPosition();
@@ -1041,24 +1048,24 @@ const clearTerminal = () => {
   });
 };
 
-// Handle keyboard shortcuts (including pager mode and zork mode)
+// Handle keyboard shortcuts (including pager mode and Z-Machine mode)
 const handleKeyDown = (e: KeyboardEvent) => {
-  // Zork quit modal is handled by the modal component itself
-  if (showZorkQuitModal.value) {
+  // Z-Machine quit modal is handled by the modal component itself
+  if (showZMachineQuitModal.value) {
     return;
   }
   
-  // Zork mode - let normal input through, but handle Ctrl+L
-  if (zorkMode.value) {
+  // Z-Machine mode - let normal input through, but handle Ctrl+L
+  if (zmachineMode.value) {
     if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
       e.preventDefault();
-      // Clear zork output but stay in game
-      zorkOutput.value = [];
+      // Clear Z-Machine output but stay in game
+      zmachineOutput.value = [];
       return;
     }
-    // Ensure Zork input is focused for all other keys
-    if (zorkInputRef.value && document.activeElement !== zorkInputRef.value) {
-      zorkInputRef.value.focus();
+    // Ensure Z-Machine input is focused for all other keys
+    if (zmachineInputRef.value && document.activeElement !== zmachineInputRef.value) {
+      zmachineInputRef.value.focus();
     }
     return;
   }
@@ -1114,8 +1121,8 @@ watch(() => terminalRef.value, (newEl, oldEl) => {
     terminalClickHandler = () => {
       if (!pagerMode.value) {
         // Focus the appropriate input based on mode
-        if (zorkMode.value) {
-          zorkInputRef.value?.focus({ preventScroll: true });
+        if (zmachineMode.value) {
+          zmachineInputRef.value?.focus({ preventScroll: true });
         } else {
           const input = isMobile.value ? inputRefMobile.value : inputRef.value;
           input?.focus({ preventScroll: true });
@@ -1807,9 +1814,7 @@ onUnmounted(() => {
   }
 }
 
-.pager-content {
-  // Inherits terminal-output-text styles
-}
+// .pager-content inherits terminal-output-text styles via HTML class
 
 .pager-prompt {
   flex-shrink: 0;
@@ -1826,9 +1831,9 @@ onUnmounted(() => {
 }
 
 // =============================================================================
-// Zork Mode Styles
+// Z-Machine Mode Styles
 // =============================================================================
-.zork-wrapper {
+.zmachine-wrapper {
   flex: 1;
   width: 100%;
   max-width: 100%; // Prevent overflow
@@ -1842,19 +1847,19 @@ onUnmounted(() => {
   box-sizing: border-box; // Include padding/border in width calculation
   
   // Active input line - visually separated from output
-  > .zork-input-line.terminal-line {
+  > .zmachine-input-line.terminal-line {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
     border-top: 1px solid var(--terminal-dim, rgba(35, 209, 139, 0.2));
     position: relative;
     
     // Subtle glow effect on the prompt to draw attention
-    .zork-prompt {
+    .zmachine-prompt {
       text-shadow: 0 0 8px var(--terminal-success, #23d18b);
     }
   }
   
-  // Ensure input line within zork wrapper is properly constrained
+  // Ensure input line within zmachine wrapper is properly constrained
   .terminal-input-line {
     min-width: 0 !important;
     max-width: 100% !important;
@@ -1869,7 +1874,7 @@ onUnmounted(() => {
   }
 }
 
-.zork-header {
+.zmachine-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1886,7 +1891,7 @@ onUnmounted(() => {
   // Styles for title and hint are defined separately below
 }
 
-.zork-title {
+.zmachine-title {
   color: var(--terminal-success, #23d18b);
   font-weight: bold;
   font-size: 1.1em;
@@ -1898,7 +1903,7 @@ onUnmounted(() => {
   flex-shrink: 1; // Allow shrinking if needed
 }
 
-.zork-hint {
+.zmachine-hint {
   color: var(--color-brightBlack, #666);
   font-size: 0.85em;
   font-style: italic;
@@ -1910,7 +1915,7 @@ onUnmounted(() => {
   text-align: right; // Align hint to the right
 }
 
-.zork-output-area {
+.zmachine-output-area {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden !important; // Force no horizontal scroll
@@ -1950,7 +1955,7 @@ onUnmounted(() => {
   }
 }
 
-.zork-line {
+.zmachine-line {
   white-space: pre-wrap;
   word-wrap: break-word !important;
   word-break: break-word !important; // Allow breaking long words
@@ -1963,14 +1968,14 @@ onUnmounted(() => {
   box-sizing: border-box;
   overflow: hidden; // Prevent any overflow
   
-  &.zork-input-line {
+  &.zmachine-input-line {
     color: var(--terminal-command, #3b8eea);
     font-weight: bold;
   }
 }
 
 // Historical command echoes - visually distinct from active input
-.zork-command-echo {
+.zmachine-command-echo {
   color: var(--terminal-dim, #6a737d);
   opacity: 0.7;
   
@@ -1980,13 +1985,13 @@ onUnmounted(() => {
   }
 }
 
-.zork-prompt {
+.zmachine-prompt {
   color: var(--terminal-success, #23d18b);
   font-weight: bold;
   margin-right: 0.5rem;
 }
 
-.zork-input {
+.zmachine-input {
   color: var(--terminal-command, #3b8eea);
   max-width: 100%; // Prevent input from exceeding container
   
@@ -2002,12 +2007,12 @@ onUnmounted(() => {
   }
 }
 
-// Use native browser caret for Zork input (simpler than custom cursor)
-.zork-native-caret {
+// Use native browser caret for Z-Machine input (simpler than custom cursor)
+.zmachine-native-caret {
   caret-color: var(--terminal-success, #23d18b);
 }
 
-.zork-typing {
+.zmachine-typing {
   display: block; // Changed from inline to prevent overflow
   width: 100%;
   max-width: 100%;
