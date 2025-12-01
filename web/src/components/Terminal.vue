@@ -60,6 +60,7 @@
       v-if="isMobile && !pagerMode && !zorkMode" 
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
+      @scroll="handleNativeScroll"
     >
       <template v-for="(entry, index) in history" :key="'m-' + index">
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -94,6 +95,20 @@
         </div>
       </div>
     </div>
+    
+    <!-- Scroll indicators - show when content extends beyond visible area (mobile only) -->
+    <div 
+      v-if="isMobile && !pagerMode && !zorkMode"
+      class="scroll-indicator scroll-indicator--top"
+      :class="{ 'scroll-indicator--visible': hasScrollableContentAbove }"
+      aria-hidden="true"
+    />
+    <div 
+      v-if="isMobile && !pagerMode && !zorkMode"
+      class="scroll-indicator scroll-indicator--bottom"
+      :class="{ 'scroll-indicator--visible': hasScrollableContentBelow }"
+      aria-hidden="true"
+    />
     
     <!-- Pager mode - separate scrollable area with fixed prompt at bottom -->
     <div v-show="pagerMode" class="pager-wrapper">
@@ -181,6 +196,60 @@ const isMobile = ref(false);
 // Detect mobile on mount and window resize
 const updateMobileDetection = () => {
   isMobile.value = typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT;
+};
+
+// =============================================================================
+// Scroll Indicators - show when content extends beyond visible area
+// =============================================================================
+const hasScrollableContentAbove = ref(false);
+const hasScrollableContentBelow = ref(false);
+
+// Debounce scroll indicator updates for performance
+// Uses trailing-edge debounce: always processes the last call after delay
+let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+const SCROLL_DEBOUNCE_MS = 50;
+
+const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean = false) => {
+  if (!scrollEl) return;
+  
+  const doUpdate = () => {
+    if (!scrollEl) return;
+    
+    const { scrollTop, scrollHeight, clientHeight } = scrollEl;
+    const scrollBuffer = 5; // Buffer zone to prevent flickering at edges
+    
+    // Check if content extends above visible area
+    hasScrollableContentAbove.value = scrollTop > scrollBuffer;
+    
+    // Check if content extends below visible area  
+    hasScrollableContentBelow.value = scrollTop + clientHeight < scrollHeight - scrollBuffer;
+  };
+  
+  // Immediate mode skips debounce (used after programmatic scrolls)
+  if (immediate) {
+    if (scrollDebounceTimer) {
+      clearTimeout(scrollDebounceTimer);
+      scrollDebounceTimer = null;
+    }
+    doUpdate();
+    return;
+  }
+  
+  // Debounced mode for scroll events
+  if (scrollDebounceTimer) {
+    clearTimeout(scrollDebounceTimer);
+  }
+  
+  scrollDebounceTimer = setTimeout(() => {
+    scrollDebounceTimer = null;
+    doUpdate();
+  }, SCROLL_DEBOUNCE_MS);
+};
+
+// Handle scroll events on the native scroll container
+const handleNativeScroll = (event: Event) => {
+  const target = event.target as HTMLElement;
+  updateScrollIndicators(target);
 };
 
 const currentInput = ref('');
@@ -602,6 +671,11 @@ onMounted(async () => {
     const input = isMobile.value ? inputRefMobile.value : inputRef.value;
     input?.focus();
     updateCursorPosition();
+    
+    // Initialize scroll indicators on mobile (immediate mode)
+    if (isMobile.value && nativeScrollRef.value) {
+      updateScrollIndicators(nativeScrollRef.value, true);
+    }
   });
 });
 
@@ -893,6 +967,8 @@ const scrollToBottom = () => {
         requestAnimationFrame(() => {
           if (nativeScrollRef.value) {
             nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+            // Update scroll indicators after scrolling completes (immediate mode)
+            updateScrollIndicators(nativeScrollRef.value, true);
           }
           // scrollIntoView as final fallback
           if (inputRefMobile.value) {
@@ -905,6 +981,10 @@ const scrollToBottom = () => {
       if (scrollAreaRef.value) {
         const scrollTarget = scrollAreaRef.value.getScrollTarget();
         scrollAreaRef.value.setScrollPosition('vertical', scrollTarget.scrollHeight, 0);
+        // Update scroll indicators for desktop too
+        requestAnimationFrame(() => {
+          updateScrollIndicators(scrollTarget, true);
+        });
       }
     }
   });
@@ -1028,6 +1108,21 @@ watch(currentInput, () => {
   updateCursorPosition();
 });
 
+// Watch history changes to update scroll indicators
+watch(history, () => {
+  // Debounced update after content changes
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      const scrollEl = isMobile.value 
+        ? nativeScrollRef.value 
+        : scrollAreaRef.value?.getScrollTarget();
+      if (scrollEl) {
+        updateScrollIndicators(scrollEl, true);
+      }
+    });
+  });
+}, { deep: true });
+
 // Add global keyboard event listener
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
@@ -1040,6 +1135,11 @@ onUnmounted(() => {
   if (terminalRef.value && terminalClickHandler) {
     terminalRef.value.removeEventListener('click', terminalClickHandler);
     terminalClickHandler = null;
+  }
+  // Clear scroll debounce timer
+  if (scrollDebounceTimer) {
+    clearTimeout(scrollDebounceTimer);
+    scrollDebounceTimer = null;
   }
 });
 </script>
@@ -1440,6 +1540,15 @@ onUnmounted(() => {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
   
+  // Scroll containment - prevents scroll chaining to parent/page
+  // This stops the "bounce" effect and address bar toggling when hitting scroll boundaries
+  overscroll-behavior: contain;
+  overscroll-behavior-y: contain;
+  
+  // Restrict touch actions to vertical pan only
+  // Prevents accidental horizontal swipes from triggering navigation
+  touch-action: pan-y;
+  
   // Hide scrollbar but keep scroll functionality
   scrollbar-width: none;  // Firefox
   -ms-overflow-style: none;  // IE/Edge
@@ -1633,6 +1742,10 @@ onUnmounted(() => {
   overflow-x: hidden;
   min-height: 0;  // Allow shrinking below content size
   
+  // Scroll containment for mobile
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  
   // Hide scrollbar
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -1701,6 +1814,10 @@ onUnmounted(() => {
   min-height: 0;
   padding-right: 10px;
   
+  // Scroll containment for mobile
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  
   // Hide scrollbar
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -1763,16 +1880,75 @@ onUnmounted(() => {
 }
 
 // =============================================================================
+// Scroll Indicators - visual cue when content extends beyond visible area
+// =============================================================================
+.scroll-indicator {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  height: 28px;
+  pointer-events: none;
+  z-index: 20; // Above content (10), above scanlines on Terminal
+  
+  // Default: hidden, show when content is scrollable
+  // Note: opacity transitions in when hasScrollableContentAbove/Below is true
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  
+  &.scroll-indicator--visible {
+    opacity: 1;
+  }
+}
+
+.scroll-indicator--top {
+  top: 10px;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 150, 120, 0.25) 0%,
+    rgba(0, 100, 80, 0.12) 50%,
+    transparent 100%
+  );
+  border-radius: 6px 6px 0 0;
+  
+  // Subtle top accent line
+  border-top: 2px solid rgba(35, 209, 139, 0.35);
+}
+
+.scroll-indicator--bottom {
+  bottom: 10px;
+  background: linear-gradient(
+    to top,
+    rgba(0, 150, 120, 0.25) 0%,
+    rgba(0, 100, 80, 0.12) 50%,
+    transparent 100%
+  );
+  border-radius: 0 0 6px 6px;
+  
+  // Subtle bottom accent line
+  border-bottom: 2px solid rgba(35, 209, 139, 0.35);
+}
+
+// =============================================================================
 // Mobile Responsive Styles
+// Uses CSS variables from app.scss for row-based sizing
 // =============================================================================
 @media (max-width: 768px) {
   .terminal {
     padding: 14px;
-    font-size: 16px;
+    // Use mobile font variables for consistent row height calculation
+    font-size: var(--mobile-font-size, 15px);
+    line-height: var(--mobile-line-height, 1.5);
     border-radius: 8px;
   }
   
+  .terminal-input {
+    font-size: var(--mobile-font-size, 15px);
+    line-height: var(--mobile-line-height, 1.5);
+  }
+  
   .terminal-output-text {
+    line-height: var(--mobile-line-height, 1.5);
+    
     :deep(h1) {
       font-size: 1.2em;
     }
@@ -1791,9 +1967,15 @@ onUnmounted(() => {
 @media (max-width: 480px) {
   .terminal {
     padding: 10px;
-    font-size: 14px;
+    // Use mobile font variables (overridden in app.scss for 480px)
+    font-size: var(--mobile-font-size, 14px);
+    line-height: var(--mobile-line-height, 1.4);
     border-radius: 6px;
-    line-height: 1.4;
+  }
+  
+  .terminal-input {
+    font-size: var(--mobile-font-size, 14px);
+    line-height: var(--mobile-line-height, 1.4);
   }
   
   .terminal-line {
@@ -1802,6 +1984,7 @@ onUnmounted(() => {
   
   .terminal-output-text {
     margin-bottom: 0.5rem;
+    line-height: var(--mobile-line-height, 1.4);
     
     :deep(p) {
       margin: 0.5em 0 0.35em 0;
