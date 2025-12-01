@@ -1,5 +1,10 @@
 <template>
-  <div class="terminal" :class="{ 'pager-active': pagerMode, 'zork-active': zorkMode }" ref="terminalRef">
+  <div class="terminal" :class="{ 
+      'pager-active': pagerMode, 
+      'zork-active': zorkMode,
+      'crt-smack': zorkTransitioning && zorkTransitionType === 'smack',
+      'crt-roll': zorkTransitioning && zorkTransitionType === 'roll'
+    }" ref="terminalRef">
     <!-- Zork Quit Confirmation Modal -->
     <ZorkQuitModal 
       v-model="showZorkQuitModal"
@@ -204,6 +209,10 @@ const zorkIsTyping = ref(false);         // Whether typewriter is active
 const showZorkQuitModal = ref(false);   // Quit confirmation modal
 const zorkScrollRef = ref<HTMLElement | null>(null);
 
+// CRT transition effects for Zork mode
+const zorkTransitioning = ref(false);
+const zorkTransitionType = ref<'smack' | 'roll'>('smack'); // 'smack' = horizontal glitch, 'roll' = vertical roll
+
 // Zork typewriter config (slightly faster for game feel)
 const zorkTypewriterConfig = {
   delay: 3,
@@ -393,13 +402,25 @@ const enterZorkMode = async (gameId: string = 'zork1') => {
     return;
   }
   
-  // Enter zork mode BEFORE getting output
+  // Clear the loading message
+  history.value[loadingIdx].output = '<em>Entering the Great Underground Empire...</em>';
+  
+  // Randomly choose CRT transition effect
+  zorkTransitionType.value = Math.random() > 0.5 ? 'smack' : 'roll';
+  
+  // Trigger CRT transition effect
+  zorkTransitioning.value = true;
+  
+  // Wait for transition, then enter Zork mode
+  // Both effects now have 3 escalating phases totaling ~1.8s
+  const transitionDuration = 1800;
+  await new Promise(resolve => setTimeout(resolve, transitionDuration));
+  
+  // Enter zork mode AFTER transition completes
   zorkMode.value = true;
   zorkOutput.value = [];
   zorkTypingLine.value = '';
-  
-  // Clear the loading message
-  history.value[loadingIdx].output = '<em>Entering the Great Underground Empire...</em>';
+  zorkTransitioning.value = false;
   
   // Focus Zork input
   nextTick(() => {
@@ -1081,6 +1102,323 @@ onUnmounted(() => {
     z-index: 0;
     border-radius: 12px;
   }
+  
+  // =============================================================================
+  // CRT "Smack" Transition Effect - Three escalating hits
+  // =============================================================================
+  &.crt-smack {
+    animation: crt-smack-triple 1.8s ease-out;
+    
+    // Intensify scanlines during smacks
+    &::before {
+      animation: crt-smack-scanlines-triple 1.8s ease-out !important;
+    }
+  }
+  
+  // =============================================================================
+  // CRT "Roll" Transition Effect - Three attempts to sync vertical hold
+  // =============================================================================
+  &.crt-roll {
+    animation: crt-roll-triple 1.8s ease-out;
+    
+    // Intensify scanlines during rolls
+    &::before {
+      animation: crt-roll-scanlines-triple 1.8s ease-out !important;
+    }
+  }
+}
+
+// =============================================================================
+// CRT Triple Smack Keyframe Animations
+// =============================================================================
+
+// Three escalating smacks - like hitting a stubborn CRT multiple times
+// Hit 1: 0-20% (light tap)
+// Hit 2: 20-50% (medium smack)  
+// Hit 3: 50-100% (hard whack that finally works)
+@keyframes crt-smack-triple {
+  // === HIT 1: Light tap (0-20%) ===
+  0% {
+    transform: translate(0, 0) skewX(0deg);
+    filter: brightness(1) contrast(1) saturate(1);
+  }
+  2% {
+    transform: translate(-6px, 2px) skewX(-0.5deg);
+    filter: brightness(1.2) contrast(1.15) saturate(1.1);
+  }
+  4% {
+    transform: translate(8px, -2px) skewX(0.6deg);
+    filter: brightness(0.75) contrast(1.2) saturate(0.9);
+  }
+  7% {
+    transform: translate(-4px, 1px) skewX(-0.3deg);
+    filter: brightness(1.1) contrast(1.05) saturate(1);
+  }
+  10% {
+    transform: translate(3px, -1px) skewX(0.2deg);
+    filter: brightness(0.9) contrast(1) saturate(1);
+  }
+  15% {
+    transform: translate(-1px, 0) skewX(0deg);
+    filter: brightness(1.02) contrast(1) saturate(1);
+  }
+  20% {
+    transform: translate(0, 0) skewX(0deg);
+    filter: brightness(1) contrast(1) saturate(1);
+  }
+  
+  // === HIT 2: Medium smack (20-50%) ===
+  22% {
+    transform: translate(-12px, 4px) skewX(-1deg);
+    filter: brightness(1.35) contrast(1.25) saturate(1.15);
+  }
+  25% {
+    transform: translate(16px, -5px) skewX(1.3deg);
+    filter: brightness(0.55) contrast(1.35) saturate(0.8);
+  }
+  28% {
+    transform: translate(-10px, 6px) skewX(-0.9deg);
+    filter: brightness(1.25) contrast(1.15) saturate(1.1);
+  }
+  32% {
+    transform: translate(12px, -4px) skewX(0.7deg);
+    filter: brightness(0.7) contrast(1.2) saturate(0.9);
+  }
+  38% {
+    transform: translate(-6px, 2px) skewX(-0.4deg);
+    filter: brightness(1.1) contrast(1.05) saturate(1);
+  }
+  44% {
+    transform: translate(3px, -1px) skewX(0.2deg);
+    filter: brightness(0.95) contrast(1) saturate(1);
+  }
+  50% {
+    transform: translate(0, 0) skewX(0deg);
+    filter: brightness(1) contrast(1) saturate(1);
+  }
+  
+  // === HIT 3: Hard whack - the one that works! (50-100%) ===
+  52% {
+    transform: translate(-20px, 6px) skewX(-1.8deg);
+    filter: brightness(1.5) contrast(1.4) saturate(1.3);
+  }
+  55% {
+    transform: translate(25px, -8px) skewX(2deg);
+    filter: brightness(0.4) contrast(1.5) saturate(0.7);
+  }
+  58% {
+    transform: translate(-18px, 10px) skewX(-1.5deg);
+    filter: brightness(1.4) contrast(1.3) saturate(1.2);
+  }
+  62% {
+    transform: translate(20px, -6px) skewX(1.2deg);
+    filter: brightness(0.5) contrast(1.4) saturate(0.8);
+  }
+  67% {
+    transform: translate(-12px, 5px) skewX(-0.8deg);
+    filter: brightness(1.25) contrast(1.2) saturate(1.1);
+  }
+  73% {
+    transform: translate(8px, -3px) skewX(0.5deg);
+    filter: brightness(0.8) contrast(1.1) saturate(0.95);
+  }
+  80% {
+    transform: translate(-4px, 2px) skewX(-0.25deg);
+    filter: brightness(1.1) contrast(1.05) saturate(1);
+  }
+  87% {
+    transform: translate(2px, -1px) skewX(0.1deg);
+    filter: brightness(0.95) contrast(1) saturate(1);
+  }
+  94% {
+    transform: translate(-1px, 0) skewX(0deg);
+    filter: brightness(1.02) contrast(1) saturate(1);
+  }
+  100% {
+    transform: translate(0, 0) skewX(0deg);
+    filter: brightness(1) contrast(1) saturate(1);
+  }
+}
+
+// Scanline intensity pulse during triple smack
+@keyframes crt-smack-scanlines-triple {
+  // Hit 1
+  0% { opacity: 1; }
+  2% { opacity: 0.4; }
+  5% { opacity: 0.9; }
+  10% { opacity: 0.6; }
+  20% { opacity: 1; }
+  // Hit 2
+  22% { opacity: 0.3; }
+  26% { opacity: 0.8; }
+  32% { opacity: 0.4; }
+  40% { opacity: 0.7; }
+  50% { opacity: 1; }
+  // Hit 3
+  52% { opacity: 0.15; }
+  56% { opacity: 0.7; }
+  62% { opacity: 0.25; }
+  70% { opacity: 0.6; }
+  80% { opacity: 0.8; }
+  90% { opacity: 0.95; }
+  100% { opacity: 1; }
+}
+
+// =============================================================================
+// CRT Triple Roll Keyframe Animations
+// =============================================================================
+
+// Three attempts to sync vertical hold - like adjusting the V-hold knob
+// Roll 1: 0-25% (partial roll, almost catches)
+// Roll 2: 25-55% (bigger roll, nearly syncs but slips)  
+// Roll 3: 55-100% (full dramatic roll that finally locks in)
+@keyframes crt-roll-triple {
+  // === ROLL 1: Partial roll, almost catches (0-25%) ===
+  0% {
+    transform: translateY(0) scaleY(1);
+    filter: brightness(1) contrast(1);
+  }
+  3% {
+    transform: translateY(-15%) scaleY(0.98);
+    filter: brightness(0.8) contrast(1.15);
+  }
+  6% {
+    transform: translateY(-35%) scaleY(0.96);
+    filter: brightness(0.6) contrast(1.25);
+  }
+  9% {
+    transform: translateY(-20%) scaleY(0.97);
+    filter: brightness(0.75) contrast(1.15);
+  }
+  12% {
+    transform: translateY(-8%) scaleY(0.99);
+    filter: brightness(0.9) contrast(1.08);
+  }
+  18% {
+    transform: translateY(-3%) scaleY(1);
+    filter: brightness(0.97) contrast(1.02);
+  }
+  25% {
+    transform: translateY(0) scaleY(1);
+    filter: brightness(1) contrast(1);
+  }
+  
+  // === ROLL 2: Bigger roll, nearly syncs but slips (25-55%) ===
+  28% {
+    transform: translateY(-25%) scaleY(0.96);
+    filter: brightness(0.7) contrast(1.2);
+  }
+  32% {
+    transform: translateY(-55%) scaleY(0.93);
+    filter: brightness(0.5) contrast(1.35);
+  }
+  36% {
+    transform: translateY(-75%) scaleY(0.91);
+    filter: brightness(0.35) contrast(1.45);
+  }
+  // Almost wraps around!
+  38% {
+    transform: translateY(-90%) scaleY(0.89);
+    filter: brightness(0.25) contrast(1.5);
+  }
+  // Catches just in time, bounces back
+  40% {
+    transform: translateY(-70%) scaleY(0.92);
+    filter: brightness(0.4) contrast(1.4);
+  }
+  43% {
+    transform: translateY(-40%) scaleY(0.95);
+    filter: brightness(0.6) contrast(1.25);
+  }
+  47% {
+    transform: translateY(-15%) scaleY(0.98);
+    filter: brightness(0.8) contrast(1.12);
+  }
+  52% {
+    transform: translateY(-5%) scaleY(0.99);
+    filter: brightness(0.95) contrast(1.05);
+  }
+  55% {
+    transform: translateY(0) scaleY(1);
+    filter: brightness(1) contrast(1);
+  }
+  
+  // === ROLL 3: Full dramatic roll that finally locks in (55-100%) ===
+  58% {
+    transform: translateY(-30%) scaleY(0.94);
+    filter: brightness(0.6) contrast(1.3);
+  }
+  62% {
+    transform: translateY(-60%) scaleY(0.9);
+    filter: brightness(0.4) contrast(1.45);
+  }
+  66% {
+    transform: translateY(-90%) scaleY(0.87);
+    filter: brightness(0.2) contrast(1.6);
+  }
+  // Full wrap-around!
+  68% {
+    transform: translateY(-100%) scaleY(0.85);
+    filter: brightness(0.15) contrast(1.7);
+  }
+  68.01% {
+    transform: translateY(100%) scaleY(0.85);
+    filter: brightness(0.15) contrast(1.7);
+  }
+  71% {
+    transform: translateY(70%) scaleY(0.88);
+    filter: brightness(0.3) contrast(1.5);
+  }
+  75% {
+    transform: translateY(40%) scaleY(0.92);
+    filter: brightness(0.5) contrast(1.35);
+  }
+  79% {
+    transform: translateY(20%) scaleY(0.95);
+    filter: brightness(0.7) contrast(1.2);
+  }
+  83% {
+    transform: translateY(8%) scaleY(0.98);
+    filter: brightness(0.85) contrast(1.1);
+  }
+  87% {
+    transform: translateY(-4%) scaleY(0.99);
+    filter: brightness(0.95) contrast(1.05);
+  }
+  91% {
+    transform: translateY(2%) scaleY(1);
+    filter: brightness(1.02) contrast(1.02);
+  }
+  95% {
+    transform: translateY(-1%) scaleY(1);
+    filter: brightness(1) contrast(1);
+  }
+  100% {
+    transform: translateY(0) scaleY(1);
+    filter: brightness(1) contrast(1);
+  }
+}
+
+// Scanline distortion during triple roll
+@keyframes crt-roll-scanlines-triple {
+  // Roll 1
+  0% { opacity: 1; }
+  5% { opacity: 0.5; }
+  10% { opacity: 0.7; }
+  20% { opacity: 0.9; }
+  25% { opacity: 1; }
+  // Roll 2
+  30% { opacity: 0.35; }
+  38% { opacity: 0.2; }
+  45% { opacity: 0.5; }
+  55% { opacity: 1; }
+  // Roll 3
+  60% { opacity: 0.25; }
+  68% { opacity: 0.1; }
+  75% { opacity: 0.35; }
+  83% { opacity: 0.6; }
+  90% { opacity: 0.85; }
+  100% { opacity: 1; }
 }
 
 .terminal-output {
