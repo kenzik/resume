@@ -1,9 +1,7 @@
 import { ref, computed, onMounted, nextTick, getCurrentInstance } from 'vue';
 import { LocalStorage } from 'quasar';
 import { fonts, getFont, getDefaultFont, getDefaultLineHeight, loadWebFont, preloadWebFonts, type FontConfig } from '../config';
-
-const STORAGE_KEY_FONT = 'kenzik-resume-font';
-const STORAGE_KEY_LINE_HEIGHT = 'kenzik-resume-line-height';
+import { STORAGE_KEYS } from '../constants';
 
 // Reactive state
 const currentFont = ref<string>(getDefaultFont());
@@ -14,7 +12,7 @@ const hasCustomFont = ref<boolean>(false); // Track if user manually changed fon
 function loadFontPreference(): string {
   if (typeof window === 'undefined') return getDefaultFont();
   
-  const stored = LocalStorage.getItem<string>(STORAGE_KEY_FONT);
+  const stored = LocalStorage.getItem<string>(STORAGE_KEYS.font);
   if (stored && getFont(stored)) {
     hasCustomFont.value = true; // User has a custom preference
     return stored;
@@ -26,7 +24,7 @@ function loadFontPreference(): string {
 function loadLineHeightPreference(): number {
   if (typeof window === 'undefined') return getDefaultLineHeight();
   
-  const stored = LocalStorage.getItem<string>(STORAGE_KEY_LINE_HEIGHT);
+  const stored = LocalStorage.getItem<string>(STORAGE_KEYS.lineHeight);
   if (stored) {
     const parsed = parseFloat(stored);
     if (!isNaN(parsed) && parsed > 0 && parsed <= 3) {
@@ -39,14 +37,14 @@ function loadLineHeightPreference(): number {
 // Save font preference to Quasar LocalStorage
 function saveFontPreference(font: string) {
   if (typeof window === 'undefined') return;
-  LocalStorage.set(STORAGE_KEY_FONT, font);
+  LocalStorage.set(STORAGE_KEYS.font, font);
   hasCustomFont.value = true; // Mark as custom
 }
 
 // Save line height preference to Quasar LocalStorage
 function saveLineHeightPreference(lineHeight: number) {
   if (typeof window === 'undefined') return;
-  LocalStorage.set(STORAGE_KEY_LINE_HEIGHT, lineHeight.toString());
+  LocalStorage.set(STORAGE_KEYS.lineHeight, lineHeight.toString());
 }
 
 // Apply font to document - IMMEDIATE application

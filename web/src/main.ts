@@ -24,6 +24,3 @@ myApp.use(router);
 // Mount the app
 myApp.mount('#q-app');
 
-// Debug: Check if app mounted
-console.log('App mounted:', document.getElementById('q-app'));
-

@@ -170,11 +170,13 @@ import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
 import ZMachineQuitModal from './ZMachineQuitModal.vue';
 import { PAGER_CONFIG } from '../config';
-
-// Navigation prefix for commands that trigger page navigation
-const NAV_PREFIX = '__NAV__';
-// Z-Machine prefix for hidden game commands
-const ZMACHINE_PREFIX = '__Z__';
+import { 
+  NAV_PREFIX, 
+  ZMACHINE_PREFIX, 
+  MOBILE_BREAKPOINT,
+  TYPEWRITER_SPEEDS,
+  TERMINAL_CONFIG,
+} from '../constants';
 
 const router = useRouter();
 
@@ -193,7 +195,6 @@ const inputWrapperRefMobile = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
 
 // Mobile detection for native scroll fallback (Chrome iOS has issues with QScrollArea)
-const MOBILE_BREAKPOINT = 768;
 const isMobile = ref(false);
 
 // Detect mobile on mount and window resize
@@ -210,7 +211,6 @@ const hasScrollableContentBelow = ref(false);
 // Debounce scroll indicator updates for performance
 // Uses trailing-edge debounce: always processes the last call after delay
 let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-const SCROLL_DEBOUNCE_MS = 50;
 
 const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean = false) => {
   if (!scrollEl) return;
@@ -246,7 +246,7 @@ const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean
   scrollDebounceTimer = setTimeout(() => {
     scrollDebounceTimer = null;
     doUpdate();
-  }, SCROLL_DEBOUNCE_MS);
+  }, TERMINAL_CONFIG.scrollDebounceMs);
 };
 
 // Handle scroll events on the native scroll container
@@ -267,7 +267,6 @@ const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
 // Command history settings (for up/down arrow navigation)
-const COMMAND_HISTORY_MAX_LENGTH = 50;
 const commandHistory = ref<string[]>([]);
 const commandHistoryIndex = ref(-1);
 const savedInput = ref(''); // Saves current input when starting to navigate
@@ -291,11 +290,7 @@ const zmachineScrollRef = ref<HTMLElement | null>(null);
 const zmachineTransitioning = ref(false);
 const zmachineTransitionType = ref<'smack' | 'roll'>('smack'); // 'smack' = horizontal glitch, 'roll' = vertical roll
 
-// Z-Machine typewriter config (slightly faster for game feel)
-const zmachineTypewriterConfig = {
-  delay: 3,
-  charsPerTick: 8,
-};
+// Z-Machine typewriter config (from constants)
 
 const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
 const { typeText, isTyping } = useTypewriter();
@@ -314,18 +309,7 @@ let terminalClickHandler: (() => void) | null = null;
 let measureCanvas: HTMLCanvasElement | null = null;
 let measureContext: CanvasRenderingContext2D | null = null;
 
-// Typewriter speed configuration
-// Speed = charsPerTick / delay (chars per ms)
-const typewriterConfig = ref({
-  delay: 5,         // ms between ticks (browser minimum is ~4ms)
-  charsPerTick: 5, // characters per tick - increase for faster output
-});
-
-// Faster typewriter for pager mode (large content)
-const pagerTypewriterConfig = {
-  delay: 2,
-  charsPerTick: 50, // Much faster for paging
-};
+// Typewriter speeds are defined in constants/index.ts
 
 
 /**
@@ -335,7 +319,7 @@ const pagerTypewriterConfig = {
 const typeOutputToHistory = async (
   entryIndex: number,
   output: string,
-  config: { delay: number; charsPerTick: number } = typewriterConfig.value
+  config: { delay: number; charsPerTick: number } = TYPEWRITER_SPEEDS.default
 ) => {
   if (!output) return;
   
@@ -454,8 +438,8 @@ const enterPagerMode = async (command: string, rawContent: string) => {
   
   // Type out content with faster pager typewriter
   await typeText(htmlContent, {
-    delay: pagerTypewriterConfig.delay,
-    charsPerTick: pagerTypewriterConfig.charsPerTick,
+    delay: TYPEWRITER_SPEEDS.pager.delay,
+    charsPerTick: TYPEWRITER_SPEEDS.pager.charsPerTick,
     onChar: (text) => {
       pagerContent.value = text;
     },
@@ -623,7 +607,7 @@ const typeZMachineOutput = async (text: string) => {
     
     // Type this line
     await typeText(line, {
-      ...zmachineTypewriterConfig,
+      ...TYPEWRITER_SPEEDS.zmachine,
       onChar: (partialText) => {
         zmachineTypingLine.value = partialText;
         scrollZMachineToBottom();
@@ -846,7 +830,7 @@ const executeCommand = async () => {
   if (commandHistory.value[commandHistory.value.length - 1] !== command) {
     commandHistory.value.push(command);
     // Trim to max length
-    if (commandHistory.value.length > COMMAND_HISTORY_MAX_LENGTH) {
+    if (commandHistory.value.length > TERMINAL_CONFIG.commandHistoryMaxLength) {
       commandHistory.value.shift();
     }
   }
@@ -1101,127 +1085,52 @@ const handleKeyDown = (e: KeyboardEvent) => {
 };
 
 /**
- * Reset horizontal scroll on ALL containers including the input itself
- * Prevents left-shift bug on mobile when focusing input
+ * Reset horizontal scroll - simplified version
+ * CSS now handles overflow:hidden on all containers, so we just need
+ * to reset the window scroll position as a safety net
  */
 const resetHorizontalScroll = () => {
-  // Reset scroll containers
-  if (nativeScrollRef.value) {
-    nativeScrollRef.value.scrollLeft = 0;
-  }
-  if (terminalRef.value) {
-    terminalRef.value.scrollLeft = 0;
-  }
-  if (scrollAreaRef.value) {
-    const scrollTarget = scrollAreaRef.value.getScrollTarget?.();
-    if (scrollTarget) {
-      scrollTarget.scrollLeft = 0;
-    }
-  }
-  
-  // Reset the input element's own internal scroll
-  if (inputRefMobile.value) {
-    inputRefMobile.value.scrollLeft = 0;
-  }
-  if (inputRef.value) {
-    inputRef.value.scrollLeft = 0;
-  }
-  
-  // Reset Quasar containers
-  const qLayout = document.querySelector('.q-layout');
-  const qPageContainer = document.querySelector('.q-page-container');
-  const qPage = document.querySelector('.q-page');
-  const qApp = document.querySelector('#q-app');
-  
-  if (qLayout) (qLayout as HTMLElement).scrollLeft = 0;
-  if (qPageContainer) (qPageContainer as HTMLElement).scrollLeft = 0;
-  if (qPage) (qPage as HTMLElement).scrollLeft = 0;
-  if (qApp) (qApp as HTMLElement).scrollLeft = 0;
-  
-  // Reset document-level scroll (safety net)
-  if (document.documentElement) {
-    document.documentElement.scrollLeft = 0;
-  }
-  if (document.body) {
-    document.body.scrollLeft = 0;
-  }
-  
-  // Also try window.scrollTo for good measure
+  // Reset window scroll (CSS handles container overflow)
   window.scrollTo(0, window.scrollY);
+  
+  // Reset input scroll if needed
+  const input = isMobile.value ? inputRefMobile.value : inputRef.value;
+  if (input) {
+    input.scrollLeft = 0;
+  }
 };
 
 /**
- * Handle mobile input focus - aggressively reset horizontal scroll
- * The browser tends to scroll horizontally when focusing an input on mobile
+ * Handle mobile input focus - reset horizontal scroll after focus
+ * CSS overflow:hidden does most of the work; this is a safety net
  */
 const handleMobileInputFocus = (event: FocusEvent) => {
   const input = event.target as HTMLInputElement;
-  
-  // Reset the input's own scroll position
   if (input) {
     input.scrollLeft = 0;
   }
   
-  // Immediate reset of all containers
-  resetHorizontalScroll();
-  
-  // Reset again after browser has a chance to do its thing
+  // Single RAF to reset after browser processes focus
   requestAnimationFrame(() => {
-    if (input) input.scrollLeft = 0;
     resetHorizontalScroll();
-    // And once more after next paint
-    requestAnimationFrame(() => {
-      if (input) input.scrollLeft = 0;
-      resetHorizontalScroll();
-    });
   });
-  
-  // Also reset after a small delay to catch any delayed browser behavior
-  setTimeout(() => {
-    if (input) input.scrollLeft = 0;
-    resetHorizontalScroll();
-  }, 50);
-  
-  // And one more time after a longer delay
-  setTimeout(() => {
-    if (input) input.scrollLeft = 0;
-    resetHorizontalScroll();
-  }, 150);
 };
 
 /**
- * Handle mobile input blur - fix viewport when keyboard dismisses
- * iOS doesn't always properly resize the viewport when keyboard disappears
+ * Handle mobile input blur - scroll to bottom when keyboard dismisses
  */
 const handleMobileInputBlur = () => {
-  // Wait for keyboard to fully dismiss
+  // Wait for keyboard to dismiss, then scroll to bottom
   setTimeout(() => {
-    // Reset scroll positions
-    resetHorizontalScroll();
-    
-    // Scroll to bottom to show the prompt
     if (nativeScrollRef.value) {
       nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
     }
-    
-    // Force a layout recalculation by touching window scroll
     window.scrollTo(0, 0);
-    
-    // iOS sometimes needs a nudge to recalculate viewport
-    // Trigger a resize event to help iOS recalculate
-    requestAnimationFrame(() => {
-      resetHorizontalScroll();
-      if (nativeScrollRef.value) {
-        nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
-      }
-    });
   }, 100);
 };
 
 /**
  * Focus input with scroll protection
- * Focuses the appropriate input and resets any horizontal scroll
- * On mobile, scrolls the input into view vertically after focusing
  */
 const focusInputSafely = () => {
   const input = zmachineMode.value 
@@ -1229,25 +1138,12 @@ const focusInputSafely = () => {
     : (isMobile.value ? inputRefMobile.value : inputRef.value);
   
   if (input) {
-    // On mobile, let the browser handle scroll-to-input naturally
-    // On desktop, prevent scroll
     if (isMobile.value) {
-      input.focus(); // Let iOS handle the scroll
-      
-      // Then reset horizontal scroll only
-      nextTick(() => {
-        resetHorizontalScroll();
-      });
-      
-      // Keep resetting horizontal scroll as keyboard appears
-      setTimeout(() => resetHorizontalScroll(), 100);
-      setTimeout(() => resetHorizontalScroll(), 300);
-      setTimeout(() => resetHorizontalScroll(), 500);
+      input.focus();
+      // Single RAF for horizontal scroll reset
+      requestAnimationFrame(() => resetHorizontalScroll());
     } else {
       input.focus({ preventScroll: true });
-      nextTick(() => {
-        resetHorizontalScroll();
-      });
     }
   }
 };
