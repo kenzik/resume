@@ -85,6 +85,7 @@
             @keydown.up="navigateHistory(-1)"
             @keydown.down="navigateHistory(1)"
             @focus="handleMobileInputFocus"
+            @blur="handleMobileInputBlur"
             class="terminal-input"
             type="text"
             autofocus
@@ -1204,8 +1205,38 @@ const handleMobileInputFocus = (event: FocusEvent) => {
 };
 
 /**
+ * Handle mobile input blur - fix viewport when keyboard dismisses
+ * iOS doesn't always properly resize the viewport when keyboard disappears
+ */
+const handleMobileInputBlur = () => {
+  // Wait for keyboard to fully dismiss
+  setTimeout(() => {
+    // Reset scroll positions
+    resetHorizontalScroll();
+    
+    // Scroll to bottom to show the prompt
+    if (nativeScrollRef.value) {
+      nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+    }
+    
+    // Force a layout recalculation by touching window scroll
+    window.scrollTo(0, 0);
+    
+    // iOS sometimes needs a nudge to recalculate viewport
+    // Trigger a resize event to help iOS recalculate
+    requestAnimationFrame(() => {
+      resetHorizontalScroll();
+      if (nativeScrollRef.value) {
+        nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+      }
+    });
+  }, 100);
+};
+
+/**
  * Focus input with scroll protection
  * Focuses the appropriate input and resets any horizontal scroll
+ * On mobile, scrolls the input into view vertically after focusing
  */
 const focusInputSafely = () => {
   const input = zmachineMode.value 
@@ -1214,9 +1245,18 @@ const focusInputSafely = () => {
   
   if (input) {
     input.focus({ preventScroll: true });
-    // Reset horizontal scroll after focus to fix mobile left-shift bug
+    
+    // Reset horizontal scroll after focus
     nextTick(() => {
       resetHorizontalScroll();
+      
+      // On mobile, scroll the input into view vertically
+      // Use scrollIntoView with 'block: nearest' to only scroll if needed
+      if (isMobile.value && nativeScrollRef.value) {
+        // Scroll the container to show the input at the bottom
+        nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+        resetHorizontalScroll(); // Reset horizontal again after scroll
+      }
     });
   }
 };
