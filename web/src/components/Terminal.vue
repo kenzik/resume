@@ -132,7 +132,7 @@
           v-for="(line, index) in zorkOutput" 
           :key="index" 
           class="zork-line"
-          :class="{ 'zork-input-line': line.startsWith('>') }"
+          :class="{ 'zork-command-echo': line.startsWith('>') }"
         >{{ line }}</div>
         <!-- Currently typing line (typewriter effect) -->
         <div v-if="zorkTypingLine" class="zork-line zork-typing">{{ zorkTypingLine }}<span class="typing-cursor">█</span></div>
@@ -616,8 +616,11 @@ const typeZorkOutput = async (text: string) => {
       },
     });
     
-    // Move completed line to output array
-    zorkOutput.value.push(line);
+    // Move completed line to output array (skip empty prompts like ">")
+    const isEmptyPrompt = /^>\s*$/.test(line);
+    if (!isEmptyPrompt) {
+      zorkOutput.value.push(line);
+    }
     zorkTypingLine.value = '';
   }
   
@@ -1820,6 +1823,19 @@ onUnmounted(() => {
   overflow: hidden; // Prevent all overflow
   box-sizing: border-box; // Include padding/border in width calculation
   
+  // Active input line - visually separated from output
+  > .zork-input-line.terminal-line {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--terminal-dim, rgba(35, 209, 139, 0.2));
+    position: relative;
+    
+    // Subtle glow effect on the prompt to draw attention
+    .zork-prompt {
+      text-shadow: 0 0 8px var(--terminal-success, #23d18b);
+    }
+  }
+  
   // Ensure input line within zork wrapper is properly constrained
   .terminal-input-line {
     min-width: 0 !important;
@@ -1932,6 +1948,17 @@ onUnmounted(() => {
   &.zork-input-line {
     color: var(--terminal-command, #3b8eea);
     font-weight: bold;
+  }
+}
+
+// Historical command echoes - visually distinct from active input
+.zork-command-echo {
+  color: var(--terminal-dim, #6a737d);
+  opacity: 0.7;
+  
+  // The » character styling
+  &::first-letter {
+    color: var(--terminal-muted, #555);
   }
 }
 
