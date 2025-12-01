@@ -1,9 +1,13 @@
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, type InjectionKey } from 'vue';
 import { LocalStorage } from 'quasar';
 import { getTheme, type Theme, type ThemeName } from '../themes';
+import { STORAGE_KEYS } from '../constants';
 
-const STORAGE_KEY = 'kenzik-resume-theme';
 const DEFAULT_THEME: ThemeName = 'auto';
+
+// Typed injection key for theme context
+export type ThemeContext = ReturnType<typeof useTheme>;
+export const THEME_KEY: InjectionKey<ThemeContext> = Symbol('theme');
 
 // Singleton reactive state (shared across all uses)
 const currentThemeName = ref<ThemeName>(DEFAULT_THEME);
@@ -38,7 +42,7 @@ function setupMediaQueryWatcher() {
 function loadThemePreference(): ThemeName {
   if (typeof window === 'undefined') return DEFAULT_THEME;
   
-  const stored = LocalStorage.getItem<string>(STORAGE_KEY);
+  const stored = LocalStorage.getItem<string>(STORAGE_KEYS.theme);
   if (stored === 'dark' || stored === 'light' || stored === 'auto') {
     return stored as ThemeName;
   }
@@ -48,7 +52,7 @@ function loadThemePreference(): ThemeName {
 // Save theme preference to Quasar LocalStorage
 function saveThemePreference(theme: ThemeName) {
   if (typeof window === 'undefined') return;
-  LocalStorage.set(STORAGE_KEY, theme);
+  LocalStorage.set(STORAGE_KEYS.theme, theme);
 }
 
 // Apply theme to document
@@ -74,7 +78,7 @@ function applyTheme(theme: Theme) {
   
   // Only apply theme line-height if no custom preference
   const customLineHeight = typeof window !== 'undefined'
-    ? LocalStorage.getItem<string>('kenzik-resume-line-height')
+    ? LocalStorage.getItem<string>(STORAGE_KEYS.lineHeight)
     : null;
   if (!customLineHeight) {
     root.style.setProperty('--font-line-height', theme.font.lineHeight);

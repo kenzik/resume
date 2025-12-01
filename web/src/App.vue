@@ -13,16 +13,15 @@
 <script setup lang="ts">
 import { inject } from 'vue';
 import { useFont } from './composables/useFont';
+import { THEME_KEY } from './composables/useTheme';
 import CRTFrame from './components/CRTFrame.vue';
 
 // Theme is initialized via boot/theme.ts and provided to the app
-// Access via inject if needed for reactive references
-const theme = inject('theme') as ReturnType<typeof import('./composables/useTheme').useTheme> | undefined;
+// Access via inject with typed key for type safety
+const theme = inject(THEME_KEY);
 
 // Initialize font system
 useFont();
-
-// Theme debug logging now happens in boot/theme.ts
 </script>
 
 <style lang="scss">
