@@ -156,7 +156,7 @@ import { PAGER_CONFIG } from '../config';
 // Navigation prefix for commands that trigger page navigation
 const NAV_PREFIX = '__NAV__';
 // Zork prefix for hidden game commands
-const ZORK_PREFIX = '__ZORK__';
+const ZORK_PREFIX = '__Z__';
 
 const router = useRouter();
 
@@ -385,13 +385,15 @@ const enterPagerMode = async (command: string, rawContent: string) => {
 
 /**
  * Enter Zork mode - start the game
- * Can be called from xyzzy command or other triggers
  */
 const enterZorkMode = async (gameId: string = 'zork1') => {
-  // Show loading message
-  addHistoryEntry('xyzzy', '');
+  // Don't add command to history - the magic word just vanishes mysteriously
+  history.value.push({ 
+    command: '', 
+    output: '<em>Loading the Great Underground Empire...</em>', 
+    isStartup: true 
+  });
   const loadingIdx = history.value.length - 1;
-  history.value[loadingIdx].output = '<em>Loading the Great Underground Empire...</em>';
   scrollToBottom();
   
   // Start the game

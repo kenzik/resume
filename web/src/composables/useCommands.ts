@@ -1,5 +1,47 @@
 import { marked } from 'marked';
 
+// =============================================================================
+// Build-time obfuscated triggers (injected by vite plugin)
+// These use the git commit hash as XOR key - the hash is visible as version
+// info but the encoded triggers are meaningless without knowing the algorithm
+// =============================================================================
+const BUILD_HASH = __BUILD_HASH__;
+const ENCODED_TRIGGERS = __ENCODED_TRIGGERS__;
+const RESPONSE_PREFIX = __RESPONSE_PREFIX__;
+
+/**
+ * XOR encode input using build hash (mirrors build-time encoding)
+ */
+function xorEncode(str: string): string {
+  return Array.from(str)
+    .map((char, i) => char.charCodeAt(0) ^ BUILD_HASH.charCodeAt(i % BUILD_HASH.length))
+    .join(',');
+}
+
+/**
+ * XOR decode the response prefix back to readable form
+ */
+function decodePrefix(): string {
+  const codes = RESPONSE_PREFIX.split(',').map(Number);
+  return codes
+    .map((code, i) => String.fromCharCode(code ^ BUILD_HASH.charCodeAt(i % BUILD_HASH.length)))
+    .join('');
+}
+
+/**
+ * Check if input matches an obfuscated easter egg trigger
+ * Returns the action response or null if no match
+ */
+function checkHiddenCommand(input: string): string | null {
+  const encoded = xorEncode(input.toLowerCase().trim());
+  if (encoded in ENCODED_TRIGGERS) {
+    const action = ENCODED_TRIGGERS[encoded];
+    const prefix = decodePrefix();
+    return `${prefix}${action}`;
+  }
+  return null;
+}
+
 export interface CommandResult {
   output: string;
   error?: boolean;
@@ -346,27 +388,6 @@ ${fontList.join('\n')}
       return `__NAV__/resume/download/${format}`;
     },
 
-    // =========================================================================
-    // Hidden Easter Egg Commands
-    // =========================================================================
-
-    /**
-     * xyzzy - Classic IF magic word, launches Zork
-     * Hidden command - not shown in help
-     */
-    xyzzy: async () => {
-      // Return special marker that Terminal.vue will detect
-      // Format: __ZORK__<game_id>
-      return '__ZORK__zork1';
-    },
-
-    /**
-     * plugh - Another classic IF magic word
-     * Hidden command - alias for xyzzy
-     */
-    plugh: async () => {
-      return '__ZORK__zork1';
-    },
   };
 
   /**
@@ -380,6 +401,12 @@ ${fontList.join('\n')}
   ): Promise<string> => {
     if (!commandName.trim()) {
       return '';
+    }
+
+    // Check for obfuscated easter egg commands FIRST
+    const hiddenResult = checkHiddenCommand(commandName);
+    if (hiddenResult) {
+      return hiddenResult;
     }
 
     const cmdLower = commandName.toLowerCase();
