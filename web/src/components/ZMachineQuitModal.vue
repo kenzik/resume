@@ -1,12 +1,12 @@
 <template>
   <Teleport to="body">
     <Transition name="modal-fade">
-      <div v-if="modelValue" class="zork-modal-overlay" @click.self="handleNo" tabindex="-1">
-        <div class="zork-modal" role="dialog" aria-modal="true" aria-labelledby="zork-modal-title" tabindex="-1">
+      <div v-if="modelValue" class="zmachine-modal-overlay" @click.self="handleNo" tabindex="-1">
+        <div class="zmachine-modal" role="dialog" aria-modal="true" aria-labelledby="zmachine-modal-title" tabindex="-1">
           <div class="modal-border top" tabindex="-1"></div>
           <div class="modal-content" tabindex="-1">
-            <h2 id="zork-modal-title" class="modal-title">
-              Leave the Great Underground Empire?
+            <h2 id="zmachine-modal-title" class="modal-title">
+              {{ title }}
             </h2>
             <p class="modal-subtitle">
               Your progress will be lost.
@@ -36,10 +36,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
 
 const props = defineProps<{
   modelValue: boolean;
+  gameTitle?: string;
 }>();
 
 const emit = defineEmits<{
@@ -47,6 +48,14 @@ const emit = defineEmits<{
   (e: 'confirm'): void;
   (e: 'cancel'): void;
 }>();
+
+// Dynamic title based on game
+const title = computed(() => {
+  if (props.gameTitle) {
+    return `Leave ${props.gameTitle}?`;
+  }
+  return 'Quit the game?';
+});
 
 const yesButtonRef = ref<HTMLButtonElement | null>(null);
 const noButtonRef = ref<HTMLButtonElement | null>(null);
@@ -127,7 +136,7 @@ onUnmounted(() => {
 </script>
 
 <style lang="scss" scoped>
-.zork-modal-overlay {
+.zmachine-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.75);
@@ -138,7 +147,7 @@ onUnmounted(() => {
   backdrop-filter: blur(2px);
 }
 
-.zork-modal {
+.zmachine-modal {
   background: var(--color-background, #1e1e1e);
   border: 2px solid var(--color-brightBlack, #333);
   border-radius: 4px;
@@ -258,19 +267,19 @@ onUnmounted(() => {
   opacity: 0;
 }
 
-.modal-fade-enter-active .zork-modal,
-.modal-fade-leave-active .zork-modal {
+.modal-fade-enter-active .zmachine-modal,
+.modal-fade-leave-active .zmachine-modal {
   transition: transform 0.2s ease;
 }
 
-.modal-fade-enter-from .zork-modal,
-.modal-fade-leave-to .zork-modal {
+.modal-fade-enter-from .zmachine-modal,
+.modal-fade-leave-to .zmachine-modal {
   transform: scale(0.95);
 }
 
 // Mobile adjustments
 @media (max-width: 480px) {
-  .zork-modal {
+  .zmachine-modal {
     min-width: 280px;
   }
   
