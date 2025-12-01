@@ -528,10 +528,28 @@ const exitZorkMode = (showMessage: boolean = true) => {
     history.value[idx].isStartup = true; // Don't show prompt for this line
   }
   
-  // Refocus input
+  // Refocus input and reset scroll positions
   nextTick(() => {
     const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-    input?.focus();
+    input?.focus({ preventScroll: true });
+    
+    // Reset horizontal scroll position on all scroll containers
+    // This fixes layout issues where containers were scrolled during Zork mode
+    if (nativeScrollRef.value) {
+      nativeScrollRef.value.scrollLeft = 0;
+    }
+    if (scrollAreaRef.value) {
+      const scrollTarget = scrollAreaRef.value.getScrollTarget?.();
+      if (scrollTarget) {
+        scrollTarget.scrollLeft = 0;
+      }
+    }
+    
+    // Also reset on the terminal container itself
+    if (terminalRef.value) {
+      terminalRef.value.scrollLeft = 0;
+    }
+    
     scrollToBottom();
   });
 };
