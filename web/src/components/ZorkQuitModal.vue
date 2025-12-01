@@ -1,10 +1,10 @@
 <template>
   <Teleport to="body">
     <Transition name="modal-fade">
-      <div v-if="modelValue" class="zork-modal-overlay" @click.self="handleNo">
-        <div class="zork-modal" role="dialog" aria-modal="true" aria-labelledby="zork-modal-title">
-          <div class="modal-border top"></div>
-          <div class="modal-content">
+      <div v-if="modelValue" class="zork-modal-overlay" @click.self="handleNo" tabindex="-1">
+        <div class="zork-modal" role="dialog" aria-modal="true" aria-labelledby="zork-modal-title" tabindex="-1">
+          <div class="modal-border top" tabindex="-1"></div>
+          <div class="modal-content" tabindex="-1">
             <h2 id="zork-modal-title" class="modal-title">
               Leave the Great Underground Empire?
             </h2>
@@ -20,6 +20,7 @@
                 [Y]es, quit
               </button>
               <button 
+                ref="noButtonRef"
                 class="modal-btn modal-btn-no" 
                 @click="handleNo"
               >
@@ -27,7 +28,7 @@
               </button>
             </div>
           </div>
-          <div class="modal-border bottom"></div>
+          <div class="modal-border bottom" tabindex="-1"></div>
         </div>
       </div>
     </Transition>
@@ -48,6 +49,7 @@ const emit = defineEmits<{
 }>();
 
 const yesButtonRef = ref<HTMLButtonElement | null>(null);
+const noButtonRef = ref<HTMLButtonElement | null>(null);
 const acceptingInput = ref(false);
 
 const handleYes = () => {
@@ -60,28 +62,53 @@ const handleNo = () => {
   emit('cancel');
 };
 
-// Keyboard handler for Y/N keys
+// Keyboard handler for Y/N keys and focus trap
 const handleKeyDown = (e: KeyboardEvent) => {
-  if (!props.modelValue || !acceptingInput.value) return;
+  if (!props.modelValue) return;
   
   const key = e.key.toLowerCase();
   
-  if (key === 'y' || key === 'enter') {
+  // Focus trap - keep Tab within the modal
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const activeEl = document.activeElement;
+    if (e.shiftKey) {
+      // Shift+Tab: go backwards
+      if (activeEl === yesButtonRef.value) {
+        noButtonRef.value?.focus();
+      } else {
+        yesButtonRef.value?.focus();
+      }
+    } else {
+      // Tab: go forwards
+      if (activeEl === noButtonRef.value) {
+        yesButtonRef.value?.focus();
+      } else {
+        noButtonRef.value?.focus();
+      }
+    }
+    return;
+  }
+  
+  if (!acceptingInput.value) return;
+  
+  if (key === 'y') {
     e.preventDefault();
     handleYes();
   } else if (key === 'n' || key === 'escape') {
     e.preventDefault();
     handleNo();
   }
+  // Enter key is handled natively by the focused button
 };
 
 // Focus management - delay input acceptance to prevent Enter key from quit command triggering immediate confirm
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
     acceptingInput.value = false;
-    // Focus the Yes button when modal opens
+    // Focus the No button when modal opens (safer default)
     setTimeout(() => {
-      yesButtonRef.value?.focus();
+      noButtonRef.value?.focus();
       // Start accepting keyboard input after the Enter key from "quit" command has passed
       acceptingInput.value = true;
     }, 100);
