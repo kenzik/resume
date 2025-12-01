@@ -5,7 +5,7 @@
  * Implements a minimal Glk adapter for text I/O.
  */
 
-import { ref, shallowRef } from 'vue';
+import { ref } from 'vue';
 
 // Game registry - extensible for future games
 const GAMES: Record<string, string> = {
@@ -156,12 +156,6 @@ class MinimalGlk {
   glk_window_get_echo_stream(): null { return null; }
   glk_window_get_stream(): unknown { return {}; }
   glk_set_echo_line_event(): void {}
-  
-  // Character input
-  glk_request_char_event(): void {
-    // Not implemented - we use line input only
-  }
-  glk_cancel_char_event(): void {}
   
   // Mouse input (not supported)
   glk_request_mouse_event(): void {}

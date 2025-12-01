@@ -48,6 +48,7 @@ const emit = defineEmits<{
 }>();
 
 const yesButtonRef = ref<HTMLButtonElement | null>(null);
+const acceptingInput = ref(false);
 
 const handleYes = () => {
   emit('update:modelValue', false);
@@ -61,7 +62,7 @@ const handleNo = () => {
 
 // Keyboard handler for Y/N keys
 const handleKeyDown = (e: KeyboardEvent) => {
-  if (!props.modelValue) return;
+  if (!props.modelValue || !acceptingInput.value) return;
   
   const key = e.key.toLowerCase();
   
@@ -74,13 +75,18 @@ const handleKeyDown = (e: KeyboardEvent) => {
   }
 };
 
-// Focus management
+// Focus management - delay input acceptance to prevent Enter key from quit command triggering immediate confirm
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
+    acceptingInput.value = false;
     // Focus the Yes button when modal opens
     setTimeout(() => {
       yesButtonRef.value?.focus();
-    }, 50);
+      // Start accepting keyboard input after the Enter key from "quit" command has passed
+      acceptingInput.value = true;
+    }, 100);
+  } else {
+    acceptingInput.value = false;
   }
 });
 
