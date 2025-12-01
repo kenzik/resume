@@ -495,7 +495,7 @@ const enterZorkMode = async (gameId: string = 'zork1') => {
   
   // Focus Zork input
   nextTick(() => {
-    zorkInputRef.value?.focus();
+    zorkInputRef.value?.focus({ preventScroll: true });
   });
   
   // Get any initial output from game startup and type it out
@@ -507,7 +507,7 @@ const enterZorkMode = async (gameId: string = 'zork1') => {
   
   // Refocus after typing completes and reset cursor
   nextTick(() => {
-    zorkInputRef.value?.focus();
+    zorkInputRef.value?.focus({ preventScroll: true });
     updateCursorPosition();
   });
 };
@@ -1094,10 +1094,10 @@ watch(() => terminalRef.value, (newEl, oldEl) => {
       if (!pagerMode.value) {
         // Focus the appropriate input based on mode
         if (zorkMode.value) {
-          zorkInputRef.value?.focus();
+          zorkInputRef.value?.focus({ preventScroll: true });
         } else {
           const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-          input?.focus();
+          input?.focus({ preventScroll: true });
         }
       }
     };
@@ -1810,11 +1810,13 @@ onUnmounted(() => {
 .zork-wrapper {
   flex: 1;
   width: 100%;
+  max-width: 100%; // Prevent overflow
   min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
   z-index: 10;
+  overflow-x: hidden; // Explicitly prevent horizontal scroll
 }
 
 .zork-header {
@@ -1824,6 +1826,8 @@ onUnmounted(() => {
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--color-brightBlack, #444);
   margin-bottom: 0.75rem;
+  max-width: 100%; // Prevent overflow
+  min-width: 0; // Allow flex shrinking
 }
 
 .zork-title {
@@ -1850,20 +1854,34 @@ onUnmounted(() => {
   overscroll-behavior: contain;
   touch-action: pan-y;
   
+  // Prevent scroll when child elements get focus
+  scroll-padding: 0;
+  
   // Hide scrollbar
   scrollbar-width: none;
   -ms-overflow-style: none;
   &::-webkit-scrollbar {
     display: none;
   }
+  
+  // Ensure all children respect container width
+  > * {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
 }
 
 .zork-line {
   white-space: pre-wrap;
   word-wrap: break-word;
+  word-break: break-word; // Allow breaking long words
+  overflow-wrap: break-word; // Modern property for word breaking
   line-height: 1.5;
   margin-bottom: 0.25rem;
   color: var(--color-foreground, #d4d4d4);
+  max-width: 100%; // Prevent overflow
+  width: 100%;
   
   &.zork-input-line {
     color: var(--terminal-command, #3b8eea);
@@ -1879,9 +1897,13 @@ onUnmounted(() => {
 
 .zork-input {
   color: var(--terminal-command, #3b8eea);
+  max-width: 100%; // Prevent input from exceeding container
   
   // Force lowercase display (consistent with terminal input)
   text-transform: lowercase;
+  
+  // Prevent auto-scroll on focus (mobile browsers)
+  scroll-margin: 0;
   
   &::placeholder {
     color: var(--color-brightBlack, #555);
