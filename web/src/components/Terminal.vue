@@ -1249,15 +1249,31 @@ const focusInputSafely = () => {
     // Reset horizontal scroll after focus
     nextTick(() => {
       resetHorizontalScroll();
-      
-      // On mobile, scroll the input into view vertically
-      // Use scrollIntoView with 'block: nearest' to only scroll if needed
-      if (isMobile.value && nativeScrollRef.value) {
-        // Scroll the container to show the input at the bottom
-        nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
-        resetHorizontalScroll(); // Reset horizontal again after scroll
-      }
     });
+    
+    // On mobile, scroll to bottom after keyboard appears
+    // Need to wait for keyboard animation to complete
+    if (isMobile.value) {
+      // Multiple attempts to ensure scroll happens after keyboard is up
+      const scrollToInput = () => {
+        if (nativeScrollRef.value) {
+          nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+        }
+        resetHorizontalScroll();
+      };
+      
+      // Immediate attempt
+      scrollToInput();
+      
+      // After keyboard starts appearing (~100ms)
+      setTimeout(scrollToInput, 100);
+      
+      // After keyboard is mostly up (~300ms)
+      setTimeout(scrollToInput, 300);
+      
+      // Final attempt after keyboard is fully up (~500ms)
+      setTimeout(scrollToInput, 500);
+    }
   }
 };
 
