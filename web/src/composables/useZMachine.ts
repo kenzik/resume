@@ -1,8 +1,10 @@
 /**
- * useZork - Z-machine game integration for terminal
+ * useZMachine - Z-machine game integration for terminal
  * 
  * Bridges ifvms.js Z-machine interpreter to Vue reactive state.
  * Implements a minimal Glk adapter for text I/O.
+ * 
+ * Supports any Z-machine compatible game (.z3, .z5, .z8 files).
  */
 
 import { ref } from 'vue';
@@ -12,6 +14,13 @@ const GAMES: Record<string, string> = {
   zork1: '/games/zork1.z3',
   // zork2: '/games/zork2.z3',
   // zork3: '/games/zork3.z3',
+};
+
+// Game display titles for UI
+export const GAME_TITLES: Record<string, string> = {
+  zork1: 'ZORK I',
+  zork2: 'ZORK II',
+  zork3: 'ZORK III',
 };
 
 // Types for the VM and Glk
@@ -429,10 +438,10 @@ let vm: ZVM | null = null;
 let glk: MinimalGlk | null = null;
 
 /**
- * useZork composable
- * Provides reactive state and methods for Zork game integration
+ * useZMachine composable
+ * Provides reactive state and methods for Z-machine game integration
  */
-export function useZork() {
+export function useZMachine() {
   /**
    * Start a game
    */
@@ -489,7 +498,7 @@ export function useZork() {
       const msg = e instanceof Error ? e.message : String(e);
       error.value = msg;
       isLoading.value = false;
-      console.error('Failed to start Zork:', e);
+      console.error('Failed to start game:', e);
       return false;
     }
   };
