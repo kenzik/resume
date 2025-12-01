@@ -159,31 +159,22 @@ a {
     // Calculate content area height from rows
     --mobile-content-height: calc(var(--mobile-terminal-rows) * var(--mobile-row-height));
     
-    // Guaranteed vertical margin (ensures page is always visible around terminal)
-    --mobile-vertical-margin: 16px;
-    --mobile-max-viewport-height: calc(100vh - (var(--mobile-vertical-margin) * 2));
-    
     // Total terminal height = content + chrome
-    // Use min() with THREE constraints:
-    // 1. Row-based calculation (preferred)
-    // 2. 92vh (viewport cap)
-    // 3. Viewport minus guaranteed margins (ensures visible page boundaries)
+    // Use min() to cap at row-based calculation OR 94vh (whichever is smaller)
     --terminal-width: 96vw;
     --terminal-height: min(
       calc(var(--mobile-content-height) + var(--mobile-terminal-chrome)),
-      var(--mobile-max-viewport-height),
-      92vh
+      94vh
     );
     
     // Smaller border radius for tighter fit
     --terminal-border-radius: 10px;
     
-    // Enhanced bezel shadow - more visible "floating" effect on dark background
+    // Simplified bezel shadow
     --terminal-bezel-shadow: 
       0 0 0 2px #1a1a1a,
       0 0 0 4px #0d0d0d,
-      0 4px 24px rgba(0, 0, 0, 0.5),
-      0 0 40px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba(0, 0, 0, 0.6),
       inset 0 0 40px rgba(0, 0, 0, 0.2);
   }
 }
@@ -205,26 +196,20 @@ a {
     // Recalculate content height
     --mobile-content-height: calc(var(--mobile-terminal-rows) * var(--mobile-row-height));
     
-    // Smaller guaranteed margins for compact screens
-    --mobile-vertical-margin: 12px;
-    --mobile-max-viewport-height: calc(100vh - (var(--mobile-vertical-margin) * 2));
-    
-    // Terminal height with multiple constraints
+    // Terminal height - row-based or 96vh (maximize screen usage)
     --terminal-width: 98vw;
     --terminal-height: min(
       calc(var(--mobile-content-height) + var(--mobile-terminal-chrome)),
-      var(--mobile-max-viewport-height),
-      94vh
+      96vh
     );
     
     // Even smaller radius
     --terminal-border-radius: 8px;
     
-    // Lighter bezel for minimal aesthetic but still visible boundary
+    // Minimal bezel for maximum content
     --terminal-bezel-shadow: 
       0 0 0 1px #1a1a1a,
       0 0 0 2px #0d0d0d,
-      0 2px 16px rgba(0, 0, 0, 0.4),
       inset 0 0 30px rgba(0, 0, 0, 0.15);
   }
 }
