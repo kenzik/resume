@@ -1624,6 +1624,9 @@ onUnmounted(() => {
   margin: 0;
   caret-color: transparent; // Hide native input caret
   
+  // Force lowercase display
+  text-transform: lowercase;
+  
   // Prevent auto-scroll on focus (mobile browsers)
   scroll-margin: 0;
   
@@ -1876,6 +1879,9 @@ onUnmounted(() => {
 
 .zork-input {
   color: var(--terminal-command, #3b8eea);
+  
+  // Force lowercase display (consistent with terminal input)
+  text-transform: lowercase;
   
   &::placeholder {
     color: var(--color-brightBlack, #555);
