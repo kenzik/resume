@@ -1366,66 +1366,23 @@ onUnmounted(() => {
     transform: translateZ(0); // Force GPU layer on mobile to prevent scroll glitches
   }
   
-  // Scanlines overlay - z-index 1 to stay behind content
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.20) 0px,
-      rgba(0, 0, 0, 0.20) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-    pointer-events: none;
-    z-index: 1;
-    border-radius: 12px;
-  }
-  
-  // Vignette effect (darker at edges) - z-index 0 behind scanlines
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(
-      ellipse at center,
-      transparent 50%,
-      rgba(0, 0, 0, 0.25) 100%
-    );
-    pointer-events: none;
-    z-index: 0;
-    border-radius: 12px;
-  }
+  // Note: Scanlines and vignette are provided by CRTFrame.vue wrapper
+  // This avoids double-rendering of effects
   
   // =============================================================================
   // CRT "Smack" Transition Effect - Three escalating hits
+  // Used when entering Z-Machine mode
   // =============================================================================
   &.crt-smack {
     animation: crt-smack-triple 1.8s ease-out forwards;
-    
-    // Intensify scanlines during smacks
-    &::before {
-      animation: crt-smack-scanlines-triple 1.8s ease-out forwards !important;
-    }
   }
   
   // =============================================================================
   // CRT "Roll" Transition Effect - Three attempts to sync vertical hold
+  // Used when entering Z-Machine mode
   // =============================================================================
   &.crt-roll {
     animation: crt-roll-triple 1.8s ease-out forwards;
-    
-    // Intensify scanlines during rolls
-    &::before {
-      animation: crt-roll-scanlines-triple 1.8s ease-out forwards !important;
-    }
   }
 }
 
@@ -1539,30 +1496,6 @@ onUnmounted(() => {
     transform: translate(0, 0) skewX(0deg);
     filter: brightness(1) contrast(1) saturate(1);
   }
-}
-
-// Scanline intensity pulse during triple smack
-@keyframes crt-smack-scanlines-triple {
-  // Hit 1
-  0% { opacity: 1; }
-  2% { opacity: 0.4; }
-  5% { opacity: 0.9; }
-  10% { opacity: 0.6; }
-  20% { opacity: 1; }
-  // Hit 2
-  22% { opacity: 0.3; }
-  26% { opacity: 0.8; }
-  32% { opacity: 0.4; }
-  40% { opacity: 0.7; }
-  50% { opacity: 1; }
-  // Hit 3
-  52% { opacity: 0.15; }
-  56% { opacity: 0.7; }
-  62% { opacity: 0.25; }
-  70% { opacity: 0.6; }
-  80% { opacity: 0.8; }
-  90% { opacity: 0.95; }
-  100% { opacity: 1; }
 }
 
 // =============================================================================
@@ -1700,34 +1633,12 @@ onUnmounted(() => {
   }
 }
 
-// Scanline distortion during triple roll
-@keyframes crt-roll-scanlines-triple {
-  // Roll 1
-  0% { opacity: 1; }
-  5% { opacity: 0.5; }
-  10% { opacity: 0.7; }
-  20% { opacity: 0.9; }
-  25% { opacity: 1; }
-  // Roll 2
-  30% { opacity: 0.35; }
-  38% { opacity: 0.2; }
-  45% { opacity: 0.5; }
-  55% { opacity: 1; }
-  // Roll 3
-  60% { opacity: 0.25; }
-  68% { opacity: 0.1; }
-  75% { opacity: 0.35; }
-  83% { opacity: 0.6; }
-  90% { opacity: 0.85; }
-  100% { opacity: 1; }
-}
-
 .terminal-output {
   flex: 1;
   overflow: hidden; // QScrollArea handles overflow internally
   padding-right: 10px;
   position: relative;
-  z-index: 10;  // Above scanlines (1) and vignette (0)
+  z-index: 10;  // Ensure content is above any background effects
   min-height: 0; // Allow flex shrinking
   
   // QScrollArea handles scrollbar hiding via thumb-style and bar-style props
@@ -2252,7 +2163,7 @@ onUnmounted(() => {
   right: 10px;
   height: 28px;
   pointer-events: none;
-  z-index: 20; // Above content (10), above scanlines on Terminal
+  z-index: 20; // Above content (10)
   
   // Default: hidden, show when content is scrollable
   // Note: opacity transitions in when hasScrollableContentAbove/Below is true
