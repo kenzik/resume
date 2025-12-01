@@ -327,20 +327,6 @@ const pagerTypewriterConfig = {
   charsPerTick: 50, // Much faster for paging
 };
 
-// Debounced scroll for typewriter effect
-// Prevents excessive scroll calls during character-by-character output
-let typewriterScrollTimeout: ReturnType<typeof setTimeout> | null = null;
-const TYPEWRITER_SCROLL_DEBOUNCE_MS = 50;
-
-const debouncedScrollToBottom = () => {
-  if (typewriterScrollTimeout) {
-    clearTimeout(typewriterScrollTimeout);
-  }
-  typewriterScrollTimeout = setTimeout(() => {
-    typewriterScrollTimeout = null;
-    scrollToBottom();
-  }, TYPEWRITER_SCROLL_DEBOUNCE_MS);
-};
 
 /**
  * Helper to type output into a history entry with ANSI conversion
@@ -363,8 +349,7 @@ const typeOutputToHistory = async (
       // Only run conversion if we know there are ANSI codes
       const htmlOutput = hasAnsi ? ansiToHtml(text) : text;
       history.value[entryIndex].output = htmlOutput;
-      // Use debounced scroll to prevent excessive calls during typewriter
-      debouncedScrollToBottom();
+      scrollToBottom();
     },
   });
   
@@ -1344,11 +1329,6 @@ onUnmounted(() => {
     clearTimeout(scrollDebounceTimer);
     scrollDebounceTimer = null;
   }
-  // Clear typewriter scroll debounce timer
-  if (typewriterScrollTimeout) {
-    clearTimeout(typewriterScrollTimeout);
-    typewriterScrollTimeout = null;
-  }
 });
 </script>
 
@@ -1365,24 +1345,26 @@ onUnmounted(() => {
   font-weight: var(--font-weight, 400);
   line-height: var(--font-line-height, 1.6);
   padding: var(--spacing-padding, 20px);
-  overflow: hidden !important;
-  overflow-x: hidden !important; // Explicitly prevent horizontal scroll
+  overflow: hidden;
+  overflow-x: hidden; // Explicitly prevent horizontal scroll
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   border-radius: 12px;
   
-  // Prevent horizontal touch scrolling
-  touch-action: pan-y;
-  overscroll-behavior-x: none;
-  
-  // Ensure no transform origin issues
-  transform: translateZ(0); // Force GPU layer to prevent scroll glitches
-  
   // CRT screen glow
   box-shadow: 
     inset 0 0 100px rgba(0, 20, 20, 0.3),     // Inner dark vignette
     inset 0 0 50px rgba(0, 150, 120, 0.02);   // Subtle green tint
+  
+  // Mobile-specific overrides to prevent horizontal scrolling issues
+  @media (max-width: 768px) {
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    touch-action: pan-y;
+    overscroll-behavior-x: none;
+    transform: translateZ(0); // Force GPU layer on mobile to prevent scroll glitches
+  }
   
   // Scanlines overlay - z-index 1 to stay behind content
   &::before {
