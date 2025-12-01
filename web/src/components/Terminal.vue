@@ -500,6 +500,11 @@ const enterZMachineMode = async (gameId: string = 'zork1') => {
   zmachineTypingLine.value = '';
   zmachineTransitioning.value = false;
   
+  // Explicitly reset transform after animation to prevent layout issues on mobile
+  if (terminalRef.value) {
+    terminalRef.value.style.transform = '';
+  }
+  
   // Focus Z-Machine input
   nextTick(() => {
     zmachineInputRef.value?.focus({ preventScroll: true });
@@ -535,7 +540,7 @@ const exitZMachineMode = (showMessage: boolean = true) => {
     history.value[idx].isStartup = true; // Don't show prompt for this line
   }
   
-  // Refocus input and reset scroll positions
+  // Refocus input and reset scroll/transform positions
   nextTick(() => {
     const input = isMobile.value ? inputRefMobile.value : inputRef.value;
     input?.focus({ preventScroll: true });
@@ -552,9 +557,21 @@ const exitZMachineMode = (showMessage: boolean = true) => {
       }
     }
     
-    // Also reset on the terminal container itself
+    // Reset terminal container - fix for CRT animation transform persistence
     if (terminalRef.value) {
       terminalRef.value.scrollLeft = 0;
+      // Explicitly reset transform and animation in case they didn't complete cleanly
+      terminalRef.value.style.transform = 'none';
+      terminalRef.value.style.animation = 'none';
+      // Force layout recalculation to fix height issues on mobile
+      void terminalRef.value.offsetHeight;
+      // Clear the inline styles after reflow so CSS can take over again
+      requestAnimationFrame(() => {
+        if (terminalRef.value) {
+          terminalRef.value.style.transform = '';
+          terminalRef.value.style.animation = '';
+        }
+      });
     }
     
     scrollToBottom();
@@ -1241,11 +1258,11 @@ onUnmounted(() => {
   // CRT "Smack" Transition Effect - Three escalating hits
   // =============================================================================
   &.crt-smack {
-    animation: crt-smack-triple 1.8s ease-out;
+    animation: crt-smack-triple 1.8s ease-out forwards;
     
     // Intensify scanlines during smacks
     &::before {
-      animation: crt-smack-scanlines-triple 1.8s ease-out !important;
+      animation: crt-smack-scanlines-triple 1.8s ease-out forwards !important;
     }
   }
   
@@ -1253,11 +1270,11 @@ onUnmounted(() => {
   // CRT "Roll" Transition Effect - Three attempts to sync vertical hold
   // =============================================================================
   &.crt-roll {
-    animation: crt-roll-triple 1.8s ease-out;
+    animation: crt-roll-triple 1.8s ease-out forwards;
     
     // Intensify scanlines during rolls
     &::before {
-      animation: crt-roll-scanlines-triple 1.8s ease-out !important;
+      animation: crt-roll-scanlines-triple 1.8s ease-out forwards !important;
     }
   }
 }
