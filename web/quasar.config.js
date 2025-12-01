@@ -11,6 +11,7 @@
 const { configure } = require('quasar/wrappers');
 const path = require('path');
 const fs = require('fs');
+const { obfuscatePlugin } = require('./build/obfuscate-plugin');
 
 module.exports = configure(function (ctx) {
   return {
@@ -136,7 +137,8 @@ module.exports = configure(function (ctx) {
       },
 
       vitePlugins: [
-        // ['@quasar/legacy', { targets: 'defaults' }],
+        // Easter egg obfuscation - encodes hidden commands with git hash
+        [obfuscatePlugin, {}],
       ]
     },
 
