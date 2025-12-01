@@ -1244,35 +1244,25 @@ const focusInputSafely = () => {
     : (isMobile.value ? inputRefMobile.value : inputRef.value);
   
   if (input) {
-    input.focus({ preventScroll: true });
-    
-    // Reset horizontal scroll after focus
-    nextTick(() => {
-      resetHorizontalScroll();
-    });
-    
-    // On mobile, scroll to bottom after keyboard appears
-    // Need to wait for keyboard animation to complete
+    // On mobile, let the browser handle scroll-to-input naturally
+    // On desktop, prevent scroll
     if (isMobile.value) {
-      // Multiple attempts to ensure scroll happens after keyboard is up
-      const scrollToInput = () => {
-        if (nativeScrollRef.value) {
-          nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
-        }
+      input.focus(); // Let iOS handle the scroll
+      
+      // Then reset horizontal scroll only
+      nextTick(() => {
         resetHorizontalScroll();
-      };
+      });
       
-      // Immediate attempt
-      scrollToInput();
-      
-      // After keyboard starts appearing (~100ms)
-      setTimeout(scrollToInput, 100);
-      
-      // After keyboard is mostly up (~300ms)
-      setTimeout(scrollToInput, 300);
-      
-      // Final attempt after keyboard is fully up (~500ms)
-      setTimeout(scrollToInput, 500);
+      // Keep resetting horizontal scroll as keyboard appears
+      setTimeout(() => resetHorizontalScroll(), 100);
+      setTimeout(() => resetHorizontalScroll(), 300);
+      setTimeout(() => resetHorizontalScroll(), 500);
+    } else {
+      input.focus({ preventScroll: true });
+      nextTick(() => {
+        resetHorizontalScroll();
+      });
     }
   }
 };
