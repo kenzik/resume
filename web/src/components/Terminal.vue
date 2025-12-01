@@ -525,57 +525,17 @@ const enterZMachineMode = async (gameId: string = 'zork1') => {
 };
 
 /**
- * Exit Z-Machine mode - clean up and return to terminal
+ * Exit Z-Machine mode - clean up and redirect to home for clean state
  */
-const exitZMachineMode = (showMessage: boolean = true) => {
+const exitZMachineMode = () => {
   zmachine.quit();
   zmachineMode.value = false;
   zmachineOutput.value = [];
   showZMachineQuitModal.value = false;
   
-  if (showMessage) {
-    addHistoryEntry('', '');
-    const idx = history.value.length - 1;
-    history.value[idx].output = '<em>You have left the game.</em>';
-    history.value[idx].isStartup = true; // Don't show prompt for this line
-  }
-  
-  // Refocus input and reset scroll/transform positions
-  nextTick(() => {
-    const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-    input?.focus({ preventScroll: true });
-    
-    // Reset horizontal scroll position on all scroll containers
-    // This fixes layout issues where containers were scrolled during Z-Machine mode
-    if (nativeScrollRef.value) {
-      nativeScrollRef.value.scrollLeft = 0;
-    }
-    if (scrollAreaRef.value) {
-      const scrollTarget = scrollAreaRef.value.getScrollTarget?.();
-      if (scrollTarget) {
-        scrollTarget.scrollLeft = 0;
-      }
-    }
-    
-    // Reset terminal container - fix for CRT animation transform persistence
-    if (terminalRef.value) {
-      terminalRef.value.scrollLeft = 0;
-      // Explicitly reset transform and animation in case they didn't complete cleanly
-      terminalRef.value.style.transform = 'none';
-      terminalRef.value.style.animation = 'none';
-      // Force layout recalculation to fix height issues on mobile
-      void terminalRef.value.offsetHeight;
-      // Clear the inline styles after reflow so CSS can take over again
-      requestAnimationFrame(() => {
-        if (terminalRef.value) {
-          terminalRef.value.style.transform = '';
-          terminalRef.value.style.animation = '';
-        }
-      });
-    }
-    
-    scrollToBottom();
-  });
+  // Redirect to home page for a clean terminal state
+  // This avoids mobile layout bugs that occur when switching modes
+  router.push('/');
 };
 
 /**
@@ -589,7 +549,7 @@ const handleZMachineQuit = () => {
  * Confirm Z-Machine quit
  */
 const confirmZMachineQuit = () => {
-  exitZMachineMode(true);
+  exitZMachineMode();
 };
 
 /**
@@ -1055,7 +1015,7 @@ const clearTerminal = () => {
   
   // Exit Z-Machine mode if active
   if (zmachineMode.value) {
-    exitZMachineMode(false);
+    exitZMachineMode();
   }
   
   updateCursorPosition();
