@@ -1144,14 +1144,22 @@ const focusInputSafely = () => {
   }
 };
 
+// Touch handler to prevent horizontal scroll on mobile
+let terminalTouchHandler: ((e: TouchEvent) => void) | null = null;
+
 // Watch for terminal focus to refocus input
 watch(() => terminalRef.value, (newEl, oldEl) => {
-  // Cleanup old listener
-  if (oldEl && terminalClickHandler) {
-    oldEl.removeEventListener('click', terminalClickHandler);
+  // Cleanup old listeners
+  if (oldEl) {
+    if (terminalClickHandler) {
+      oldEl.removeEventListener('click', terminalClickHandler);
+    }
+    if (terminalTouchHandler) {
+      oldEl.removeEventListener('touchstart', terminalTouchHandler);
+    }
   }
   
-  // Add new listener
+  // Add new listeners
   if (newEl) {
     terminalClickHandler = () => {
       if (!pagerMode.value) {
@@ -1159,6 +1167,13 @@ watch(() => terminalRef.value, (newEl, oldEl) => {
       }
     };
     newEl.addEventListener('click', terminalClickHandler);
+    
+    // Touch handler - immediately reset any horizontal scroll on touch
+    terminalTouchHandler = () => {
+      // Reset horizontal scroll on any touch to prevent left-shift bug
+      resetHorizontalScroll();
+    };
+    newEl.addEventListener('touchstart', terminalTouchHandler, { passive: true });
   }
 }, { immediate: true });
 
@@ -1191,9 +1206,15 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
   window.removeEventListener('resize', updateMobileDetection);
-  if (terminalRef.value && terminalClickHandler) {
-    terminalRef.value.removeEventListener('click', terminalClickHandler);
-    terminalClickHandler = null;
+  if (terminalRef.value) {
+    if (terminalClickHandler) {
+      terminalRef.value.removeEventListener('click', terminalClickHandler);
+      terminalClickHandler = null;
+    }
+    if (terminalTouchHandler) {
+      terminalRef.value.removeEventListener('touchstart', terminalTouchHandler);
+      terminalTouchHandler = null;
+    }
   }
   // Clear scroll debounce timer
   if (scrollDebounceTimer) {
@@ -1221,12 +1242,19 @@ onUnmounted(() => {
   font-weight: var(--font-weight, 400);
   line-height: var(--font-line-height, 1.6);
   padding: var(--spacing-padding, 20px);
-  overflow: hidden;
-  overflow-x: hidden; // Explicitly prevent horizontal scroll
+  overflow: hidden !important;
+  overflow-x: hidden !important; // Explicitly prevent horizontal scroll
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   border-radius: 12px;
+  
+  // Prevent horizontal touch scrolling
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+  
+  // Ensure no transform origin issues
+  transform: translateZ(0); // Force GPU layer to prevent scroll glitches
   
   // CRT screen glow
   box-shadow: 
