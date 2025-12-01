@@ -669,7 +669,9 @@ onMounted(async () => {
   nextTick(() => {
     // Focus the appropriate input based on mobile detection
     const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-    input?.focus();
+    if (input) {
+      input.focus({ preventScroll: true }); // Prevent auto-scroll on focus
+    }
     updateCursorPosition();
     
     // Initialize scroll indicators on mobile (immediate mode)
@@ -970,10 +972,8 @@ const scrollToBottom = () => {
             // Update scroll indicators after scrolling completes (immediate mode)
             updateScrollIndicators(nativeScrollRef.value, true);
           }
-          // scrollIntoView as final fallback
-          if (inputRefMobile.value) {
-            inputRefMobile.value.scrollIntoView({ behavior: 'instant', block: 'end' });
-          }
+          // Don't use scrollIntoView on mobile - it causes unwanted horizontal scrolling
+          // The terminal's own scroll handling is sufficient
         });
       });
     } else {
@@ -983,7 +983,9 @@ const scrollToBottom = () => {
         scrollAreaRef.value.setScrollPosition('vertical', scrollTarget.scrollHeight, 0);
         // Update scroll indicators for desktop too
         requestAnimationFrame(() => {
-          updateScrollIndicators(scrollTarget, true);
+          if (scrollTarget instanceof HTMLElement) {
+            updateScrollIndicators(scrollTarget, true);
+          }
         });
       }
     }
@@ -1115,8 +1117,8 @@ watch(history, () => {
     requestAnimationFrame(() => {
       const scrollEl = isMobile.value 
         ? nativeScrollRef.value 
-        : scrollAreaRef.value?.getScrollTarget();
-      if (scrollEl) {
+        : (scrollAreaRef.value?.getScrollTarget() as HTMLElement | null);
+      if (scrollEl instanceof HTMLElement) {
         updateScrollIndicators(scrollEl, true);
       }
     });
@@ -1148,6 +1150,7 @@ onUnmounted(() => {
 .terminal {
   position: relative;
   width: 100%;
+  max-width: 100%; // Prevent overflow
   height: 100%;  // Fill the 4:3 body container
   background-color: var(--color-background, #1e1e1e);
   color: var(--color-foreground, #d4d4d4);
@@ -1157,6 +1160,7 @@ onUnmounted(() => {
   line-height: var(--font-line-height, 1.6);
   padding: var(--spacing-padding, 20px);
   overflow: hidden;
+  overflow-x: hidden; // Explicitly prevent horizontal scroll
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -1549,12 +1553,22 @@ onUnmounted(() => {
   // Prevents accidental horizontal swipes from triggering navigation
   touch-action: pan-y;
   
+  // Prevent scroll when child elements get focus
+  scroll-padding: 0;
+  
   // Hide scrollbar but keep scroll functionality
   scrollbar-width: none;  // Firefox
   -ms-overflow-style: none;  // IE/Edge
   
   &::-webkit-scrollbar {
     display: none;  // Chrome/Safari/Opera
+  }
+  
+  // Ensure all children respect container width
+  > * {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
   }
 }
 
@@ -1564,7 +1578,10 @@ onUnmounted(() => {
   margin-bottom: 0.5rem;
   min-height: 1.6em;
   word-wrap: break-word;
+  word-break: break-word; // Allow breaking long words
   white-space: pre-wrap;
+  overflow-wrap: break-word; // Modern property for word breaking
+  max-width: 100%; // Ensure lines don't exceed container
 }
 
 .terminal-command {
@@ -1578,6 +1595,8 @@ onUnmounted(() => {
   position: relative;
   // Override terminal-line margin for input line
   margin-bottom: 0 !important;
+  min-width: 0; // Allow flex item to shrink
+  max-width: 100%; // Prevent overflow
 }
 
 .input-wrapper {
@@ -1585,11 +1604,15 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   position: relative;
+  min-width: 0; // Allow flex item to shrink below content size
+  max-width: 100%; // Prevent overflow
+  overflow: hidden; // Hide any overflow
 }
 
 .terminal-input {
   flex: 1;
   width: 100%;
+  max-width: 100%; // Prevent input from exceeding container
   background: transparent;
   border: none;
   outline: none;
@@ -1600,6 +1623,9 @@ onUnmounted(() => {
   padding: 0;
   margin: 0;
   caret-color: transparent; // Hide native input caret
+  
+  // Prevent auto-scroll on focus (mobile browsers)
+  scroll-margin: 0;
   
   &::placeholder {
     color: var(--color-brightBlack, #666666);
@@ -1626,10 +1652,13 @@ onUnmounted(() => {
   margin-left: 0;
   padding: 0;
   width: 100%;
+  max-width: 100%; // Prevent overflow
   display: block;
   white-space: normal;
   line-height: 1.6;
   clear: both;
+  overflow-wrap: break-word; // Allow long words to break
+  word-break: break-word; // Break long words if needed
   
   :deep(pre) {
     margin: 0;
