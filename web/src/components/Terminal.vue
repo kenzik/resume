@@ -84,6 +84,8 @@
             @keydown.enter="executeCommand"
             @keydown.up="navigateHistory(-1)"
             @keydown.down="navigateHistory(1)"
+            @focus="handleMobileInputFocus"
+            @blur="handleMobileInputBlur"
             class="terminal-input"
             type="text"
             autofocus
@@ -250,6 +252,12 @@ const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean
 // Handle scroll events on the native scroll container
 const handleNativeScroll = (event: Event) => {
   const target = event.target as HTMLElement;
+  
+  // Immediately reset any horizontal scroll - this is a safety net
+  if (target.scrollLeft !== 0) {
+    target.scrollLeft = 0;
+  }
+  
   updateScrollIndicators(target);
 };
 
@@ -319,6 +327,21 @@ const pagerTypewriterConfig = {
   charsPerTick: 50, // Much faster for paging
 };
 
+// Debounced scroll for typewriter effect
+// Prevents excessive scroll calls during character-by-character output
+let typewriterScrollTimeout: ReturnType<typeof setTimeout> | null = null;
+const TYPEWRITER_SCROLL_DEBOUNCE_MS = 50;
+
+const debouncedScrollToBottom = () => {
+  if (typewriterScrollTimeout) {
+    clearTimeout(typewriterScrollTimeout);
+  }
+  typewriterScrollTimeout = setTimeout(() => {
+    typewriterScrollTimeout = null;
+    scrollToBottom();
+  }, TYPEWRITER_SCROLL_DEBOUNCE_MS);
+};
+
 /**
  * Helper to type output into a history entry with ANSI conversion
  * Consolidates the repeated typewriter logic across processCommand, processPipeline, etc.
@@ -340,7 +363,8 @@ const typeOutputToHistory = async (
       // Only run conversion if we know there are ANSI codes
       const htmlOutput = hasAnsi ? ansiToHtml(text) : text;
       history.value[entryIndex].output = htmlOutput;
-      scrollToBottom();
+      // Use debounced scroll to prevent excessive calls during typewriter
+      debouncedScrollToBottom();
     },
   });
   
@@ -348,6 +372,9 @@ const typeOutputToHistory = async (
   if (hasAnsi) {
     history.value[entryIndex].output = ansiToHtml(output);
   }
+  
+  // Ensure final scroll after typewriter completes
+  scrollToBottom();
 };
 
 // Check if pager is showing resume content (for download shortcut)
@@ -672,11 +699,7 @@ onMounted(async () => {
   
   // Focus input after startup commands complete
   nextTick(() => {
-    // Focus the appropriate input based on mobile detection
-    const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-    if (input) {
-      input.focus({ preventScroll: true }); // Prevent auto-scroll on focus
-    }
+    focusInputSafely();
     updateCursorPosition();
     
     // Initialize scroll indicators on mobile (immediate mode)
@@ -969,11 +992,17 @@ const scrollToBottom = () => {
       requestAnimationFrame(() => {
         if (nativeScrollRef.value) {
           nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+          // Always reset horizontal scroll on mobile to prevent left-shift bug
+          nativeScrollRef.value.scrollLeft = 0;
+        }
+        if (terminalRef.value) {
+          terminalRef.value.scrollLeft = 0;
         }
         // Double RAF for Chrome iOS - ensures scroll happens after paint
         requestAnimationFrame(() => {
           if (nativeScrollRef.value) {
             nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+            nativeScrollRef.value.scrollLeft = 0; // Reset again after second RAF
             // Update scroll indicators after scrolling completes (immediate mode)
             updateScrollIndicators(nativeScrollRef.value, true);
           }
@@ -1086,27 +1115,188 @@ const handleKeyDown = (e: KeyboardEvent) => {
   }
 };
 
-// Watch for terminal focus to refocus input
-watch(() => terminalRef.value, (newEl, oldEl) => {
-  // Cleanup old listener
-  if (oldEl && terminalClickHandler) {
-    oldEl.removeEventListener('click', terminalClickHandler);
+/**
+ * Reset horizontal scroll on ALL containers including the input itself
+ * Prevents left-shift bug on mobile when focusing input
+ */
+const resetHorizontalScroll = () => {
+  // Reset scroll containers
+  if (nativeScrollRef.value) {
+    nativeScrollRef.value.scrollLeft = 0;
+  }
+  if (terminalRef.value) {
+    terminalRef.value.scrollLeft = 0;
+  }
+  if (scrollAreaRef.value) {
+    const scrollTarget = scrollAreaRef.value.getScrollTarget?.();
+    if (scrollTarget) {
+      scrollTarget.scrollLeft = 0;
+    }
   }
   
-  // Add new listener
+  // Reset the input element's own internal scroll
+  if (inputRefMobile.value) {
+    inputRefMobile.value.scrollLeft = 0;
+  }
+  if (inputRef.value) {
+    inputRef.value.scrollLeft = 0;
+  }
+  
+  // Reset Quasar containers
+  const qLayout = document.querySelector('.q-layout');
+  const qPageContainer = document.querySelector('.q-page-container');
+  const qPage = document.querySelector('.q-page');
+  const qApp = document.querySelector('#q-app');
+  
+  if (qLayout) (qLayout as HTMLElement).scrollLeft = 0;
+  if (qPageContainer) (qPageContainer as HTMLElement).scrollLeft = 0;
+  if (qPage) (qPage as HTMLElement).scrollLeft = 0;
+  if (qApp) (qApp as HTMLElement).scrollLeft = 0;
+  
+  // Reset document-level scroll (safety net)
+  if (document.documentElement) {
+    document.documentElement.scrollLeft = 0;
+  }
+  if (document.body) {
+    document.body.scrollLeft = 0;
+  }
+  
+  // Also try window.scrollTo for good measure
+  window.scrollTo(0, window.scrollY);
+};
+
+/**
+ * Handle mobile input focus - aggressively reset horizontal scroll
+ * The browser tends to scroll horizontally when focusing an input on mobile
+ */
+const handleMobileInputFocus = (event: FocusEvent) => {
+  const input = event.target as HTMLInputElement;
+  
+  // Reset the input's own scroll position
+  if (input) {
+    input.scrollLeft = 0;
+  }
+  
+  // Immediate reset of all containers
+  resetHorizontalScroll();
+  
+  // Reset again after browser has a chance to do its thing
+  requestAnimationFrame(() => {
+    if (input) input.scrollLeft = 0;
+    resetHorizontalScroll();
+    // And once more after next paint
+    requestAnimationFrame(() => {
+      if (input) input.scrollLeft = 0;
+      resetHorizontalScroll();
+    });
+  });
+  
+  // Also reset after a small delay to catch any delayed browser behavior
+  setTimeout(() => {
+    if (input) input.scrollLeft = 0;
+    resetHorizontalScroll();
+  }, 50);
+  
+  // And one more time after a longer delay
+  setTimeout(() => {
+    if (input) input.scrollLeft = 0;
+    resetHorizontalScroll();
+  }, 150);
+};
+
+/**
+ * Handle mobile input blur - fix viewport when keyboard dismisses
+ * iOS doesn't always properly resize the viewport when keyboard disappears
+ */
+const handleMobileInputBlur = () => {
+  // Wait for keyboard to fully dismiss
+  setTimeout(() => {
+    // Reset scroll positions
+    resetHorizontalScroll();
+    
+    // Scroll to bottom to show the prompt
+    if (nativeScrollRef.value) {
+      nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+    }
+    
+    // Force a layout recalculation by touching window scroll
+    window.scrollTo(0, 0);
+    
+    // iOS sometimes needs a nudge to recalculate viewport
+    // Trigger a resize event to help iOS recalculate
+    requestAnimationFrame(() => {
+      resetHorizontalScroll();
+      if (nativeScrollRef.value) {
+        nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
+      }
+    });
+  }, 100);
+};
+
+/**
+ * Focus input with scroll protection
+ * Focuses the appropriate input and resets any horizontal scroll
+ * On mobile, scrolls the input into view vertically after focusing
+ */
+const focusInputSafely = () => {
+  const input = zmachineMode.value 
+    ? zmachineInputRef.value 
+    : (isMobile.value ? inputRefMobile.value : inputRef.value);
+  
+  if (input) {
+    // On mobile, let the browser handle scroll-to-input naturally
+    // On desktop, prevent scroll
+    if (isMobile.value) {
+      input.focus(); // Let iOS handle the scroll
+      
+      // Then reset horizontal scroll only
+      nextTick(() => {
+        resetHorizontalScroll();
+      });
+      
+      // Keep resetting horizontal scroll as keyboard appears
+      setTimeout(() => resetHorizontalScroll(), 100);
+      setTimeout(() => resetHorizontalScroll(), 300);
+      setTimeout(() => resetHorizontalScroll(), 500);
+    } else {
+      input.focus({ preventScroll: true });
+      nextTick(() => {
+        resetHorizontalScroll();
+      });
+    }
+  }
+};
+
+// Touch handler to prevent horizontal scroll on mobile
+let terminalTouchHandler: ((e: TouchEvent) => void) | null = null;
+
+// Watch for terminal focus to refocus input
+watch(() => terminalRef.value, (newEl, oldEl) => {
+  // Cleanup old listeners
+  if (oldEl) {
+    if (terminalClickHandler) {
+      oldEl.removeEventListener('click', terminalClickHandler);
+    }
+    if (terminalTouchHandler) {
+      oldEl.removeEventListener('touchstart', terminalTouchHandler);
+    }
+  }
+  
+  // Add new listeners
   if (newEl) {
     terminalClickHandler = () => {
       if (!pagerMode.value) {
-        // Focus the appropriate input based on mode
-        if (zmachineMode.value) {
-          zmachineInputRef.value?.focus({ preventScroll: true });
-        } else {
-          const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-          input?.focus({ preventScroll: true });
-        }
+        focusInputSafely();
       }
     };
     newEl.addEventListener('click', terminalClickHandler);
+    
+    // Touch handler - immediately reset any horizontal scroll on touch
+    terminalTouchHandler = () => {
+      // Reset horizontal scroll on any touch to prevent left-shift bug
+      resetHorizontalScroll();
+    };
+    newEl.addEventListener('touchstart', terminalTouchHandler, { passive: true });
   }
 }, { immediate: true });
 
@@ -1139,14 +1329,25 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
   window.removeEventListener('resize', updateMobileDetection);
-  if (terminalRef.value && terminalClickHandler) {
-    terminalRef.value.removeEventListener('click', terminalClickHandler);
-    terminalClickHandler = null;
+  if (terminalRef.value) {
+    if (terminalClickHandler) {
+      terminalRef.value.removeEventListener('click', terminalClickHandler);
+      terminalClickHandler = null;
+    }
+    if (terminalTouchHandler) {
+      terminalRef.value.removeEventListener('touchstart', terminalTouchHandler);
+      terminalTouchHandler = null;
+    }
   }
   // Clear scroll debounce timer
   if (scrollDebounceTimer) {
     clearTimeout(scrollDebounceTimer);
     scrollDebounceTimer = null;
+  }
+  // Clear typewriter scroll debounce timer
+  if (typewriterScrollTimeout) {
+    clearTimeout(typewriterScrollTimeout);
+    typewriterScrollTimeout = null;
   }
 });
 </script>
@@ -1164,12 +1365,19 @@ onUnmounted(() => {
   font-weight: var(--font-weight, 400);
   line-height: var(--font-line-height, 1.6);
   padding: var(--spacing-padding, 20px);
-  overflow: hidden;
-  overflow-x: hidden; // Explicitly prevent horizontal scroll
+  overflow: hidden !important;
+  overflow-x: hidden !important; // Explicitly prevent horizontal scroll
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   border-radius: 12px;
+  
+  // Prevent horizontal touch scrolling
+  touch-action: pan-y;
+  overscroll-behavior-x: none;
+  
+  // Ensure no transform origin issues
+  transform: translateZ(0); // Force GPU layer to prevent scroll glitches
   
   // CRT screen glow
   box-shadow: 
@@ -1546,13 +1754,14 @@ onUnmounted(() => {
 // Native scroll variant for mobile (Chrome iOS compatibility)
 .terminal-output-native {
   overflow-y: auto;
-  overflow-x: hidden;
+  overflow-x: hidden !important; // Force no horizontal scroll
   -webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
   
   // Scroll containment - prevents scroll chaining to parent/page
   // This stops the "bounce" effect and address bar toggling when hitting scroll boundaries
   overscroll-behavior: contain;
   overscroll-behavior-y: contain;
+  overscroll-behavior-x: none !important; // Absolutely no horizontal overscroll
   
   // Restrict touch actions to vertical pan only
   // Prevents accidental horizontal swipes from triggering navigation
@@ -1560,6 +1769,9 @@ onUnmounted(() => {
   
   // Prevent scroll when child elements get focus
   scroll-padding: 0;
+  
+  // CSS containment for layout optimization
+  contain: layout style;
   
   // Hide scrollbar but keep scroll functionality
   scrollbar-width: none;  // Firefox
@@ -1602,6 +1814,7 @@ onUnmounted(() => {
   margin-bottom: 0 !important;
   min-width: 0; // Allow flex item to shrink
   max-width: 100%; // Prevent overflow
+  overflow-x: hidden; // Prevent horizontal scroll
 }
 
 .input-wrapper {
@@ -1611,7 +1824,14 @@ onUnmounted(() => {
   position: relative;
   min-width: 0; // Allow flex item to shrink below content size
   max-width: 100%; // Prevent overflow
-  overflow: hidden; // Hide any overflow
+  overflow: hidden !important; // Force hide any overflow
+  overflow-x: hidden !important; // Explicitly prevent horizontal scroll
+  
+  // Mobile: Ensure no scroll-into-view behavior
+  @media (max-width: 768px) {
+    // Contain the input to prevent focus scroll
+    contain: layout style;
+  }
 }
 
 .terminal-input {
@@ -1627,16 +1847,38 @@ onUnmounted(() => {
   line-height: var(--font-line-height, 1.6);
   padding: 0;
   margin: 0;
-  caret-color: transparent; // Hide native input caret
+  caret-color: transparent; // Hide native input caret (desktop)
   
   // Force lowercase display
   text-transform: lowercase;
   
   // Prevent auto-scroll on focus (mobile browsers)
   scroll-margin: 0;
+  scroll-padding: 0;
   
   &::placeholder {
     color: var(--color-brightBlack, #666666);
+  }
+  
+  // Mobile: Use native caret instead of custom cursor
+  // This prevents horizontal scroll issues caused by cursor positioning
+  @media (max-width: 768px) {
+    caret-color: var(--terminal-command, #3b8eea); // Show native caret on mobile
+    
+    // CRITICAL: Font size must be >= 16px to prevent iOS auto-zoom on focus
+    font-size: 16px !important;
+    
+    // Prevent the input from having any internal scroll
+    overflow: hidden;
+    text-overflow: clip;
+    
+    // Disable any scroll-into-view behavior
+    scroll-margin: 0 !important;
+    scroll-padding: 0 !important;
+    
+    // Try to prevent browser focus scrolling
+    scroll-snap-type: none;
+    overscroll-behavior: none;
   }
 }
 
@@ -1646,6 +1888,11 @@ onUnmounted(() => {
   animation: blink 1s infinite;
   pointer-events: none;
   flex-shrink: 0;
+  
+  // Mobile: Hide custom cursor, use native caret instead
+  @media (max-width: 768px) {
+    display: none !important;
+  }
 }
 
 @keyframes blink {
