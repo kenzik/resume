@@ -37,21 +37,25 @@ html {
   width: 100%;
   max-width: 100vw; // Prevent horizontal overflow
   height: 100vh;
-  overflow: hidden !important;
-  overflow-x: hidden !important; // Explicitly prevent horizontal scroll
+  overflow: hidden;
+  overflow-x: hidden; // Explicitly prevent horizontal scroll
   background-color: #1a1a1a; // Dark outer background
   
   // Prevent overscroll bounce on mobile (iOS Safari, Chrome)
   overscroll-behavior: none;
-  overscroll-behavior-x: none;
-  
-  // Prevent any touch-based scrolling at root level
-  touch-action: pan-y;
   
   // Center the terminal both horizontally and vertically
   display: flex;
   justify-content: center;
   align-items: center;
+  
+  // Mobile-specific overrides
+  @media (max-width: 768px) {
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+  }
 }
 
 body {
@@ -65,18 +69,11 @@ body {
   
   margin: 0;  // Flexbox on html handles centering
   padding: 0;
-  overflow: hidden !important;
+  overflow: hidden;
   overflow-x: hidden !important; // Explicitly prevent horizontal scroll
   
   // Prevent overscroll bounce on mobile
   overscroll-behavior: none;
-  overscroll-behavior-x: none;
-  
-  // Prevent horizontal touch scrolling
-  touch-action: pan-y;
-  
-  // Fixed position to prevent any scroll issues
-  position: relative;
   
   font-family: var(--font-family, monospace);
   font-size: var(--font-size, 14px);
@@ -88,6 +85,14 @@ body {
   // CRT bezel effect (responsive)
   border-radius: var(--terminal-border-radius);
   box-shadow: var(--terminal-bezel-shadow);
+  
+  // Mobile-specific overrides
+  @media (max-width: 768px) {
+    overflow: hidden !important;
+    overscroll-behavior-x: none;
+    touch-action: pan-y;
+    position: relative;
+  }
 }
 
 a {
@@ -101,11 +106,16 @@ a {
 
 #q-app {
   height: 100%;
-  width: 100%;
-  max-width: 100%;
-  overflow: hidden !important;
-  overflow-x: hidden !important;
-  position: relative;
+  overflow: hidden;
+  
+  // Mobile-specific overrides
+  @media (max-width: 768px) {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden !important;
+    overflow-x: hidden !important;
+    position: relative;
+  }
 }
 
 // =============================================================================
@@ -115,23 +125,18 @@ a {
 .q-layout {
   height: 100% !important;
   min-height: 0 !important;
-  overflow: hidden !important;
-  overflow-x: hidden !important;
 }
 
 .q-page-container {
   height: 100% !important;
   min-height: 0 !important;
-  overflow: hidden !important;
-  overflow-x: hidden !important;
+  overflow: hidden;
   padding: 0 !important;  // Remove any default padding
 }
 
 .q-page {
   min-height: 0 !important;  // Override Quasar's default min-height
   padding: 0 !important;  // Remove any default padding
-  overflow: hidden !important;
-  overflow-x: hidden !important;
 }
 
 // Selection styling
