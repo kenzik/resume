@@ -39,6 +39,9 @@ html {
   overflow: hidden;
   background-color: #1a1a1a; // Dark outer background
   
+  // Prevent overscroll bounce on mobile (iOS Safari, Chrome)
+  overscroll-behavior: none;
+  
   // Center the terminal both horizontally and vertically
   display: flex;
   justify-content: center;
@@ -56,6 +59,9 @@ body {
   margin: 0;  // Flexbox on html handles centering
   padding: 0;
   overflow: hidden;
+  
+  // Prevent overscroll bounce on mobile
+  overscroll-behavior: none;
   
   font-family: var(--font-family, monospace);
   font-size: var(--font-size, 14px);
@@ -131,20 +137,53 @@ a {
 // Mobile Responsive Styles
 // Optimize the CRT terminal for smaller screens while keeping retro aesthetic
 // =============================================================================
+
+// Row-based height calculation for mobile
+// Instead of viewport percentages, we calculate based on target row count
+// This provides a consistent, predictable terminal size
 @media (max-width: 768px) {
   :root {
-    // Expand terminal to use more screen real estate
+    // Mobile typography settings (used for row calculation)
+    --mobile-font-size: 15px;
+    --mobile-line-height: 1.5;
+    --mobile-row-height: calc(var(--mobile-font-size) * var(--mobile-line-height)); // ~22.5px
+    
+    // Terminal chrome (padding, input line, margins)
+    // Top padding (14px) + bottom padding (14px) + input line (~40px) + buffer
+    --mobile-terminal-chrome: 80px;
+    
+    // Target row count for terminal content area
+    // 40 rows provides good balance of content visibility and scroll predictability
+    --mobile-terminal-rows: 40;
+    
+    // Calculate content area height from rows
+    --mobile-content-height: calc(var(--mobile-terminal-rows) * var(--mobile-row-height));
+    
+    // Guaranteed vertical margin (ensures page is always visible around terminal)
+    --mobile-vertical-margin: 16px;
+    --mobile-max-viewport-height: calc(100vh - (var(--mobile-vertical-margin) * 2));
+    
+    // Total terminal height = content + chrome
+    // Use min() with THREE constraints:
+    // 1. Row-based calculation (preferred)
+    // 2. 92vh (viewport cap)
+    // 3. Viewport minus guaranteed margins (ensures visible page boundaries)
     --terminal-width: 96vw;
-    --terminal-height: 92vh;
+    --terminal-height: min(
+      calc(var(--mobile-content-height) + var(--mobile-terminal-chrome)),
+      var(--mobile-max-viewport-height),
+      92vh
+    );
     
     // Smaller border radius for tighter fit
     --terminal-border-radius: 10px;
     
-    // Simplified bezel - less heavy, more subtle
+    // Enhanced bezel shadow - more visible "floating" effect on dark background
     --terminal-bezel-shadow: 
       0 0 0 2px #1a1a1a,
       0 0 0 4px #0d0d0d,
-      0 0 20px rgba(0, 0, 0, 0.6),
+      0 4px 24px rgba(0, 0, 0, 0.5),
+      0 0 40px rgba(0, 0, 0, 0.3),
       inset 0 0 40px rgba(0, 0, 0, 0.2);
   }
 }
@@ -152,18 +191,57 @@ a {
 // Extra small screens (phones in portrait)
 @media (max-width: 480px) {
   :root {
-    // Near full-screen on very small devices
+    // Slightly smaller font for very small screens
+    --mobile-font-size: 14px;
+    --mobile-line-height: 1.4;
+    --mobile-row-height: calc(var(--mobile-font-size) * var(--mobile-line-height)); // ~19.6px
+    
+    // Reduced chrome for compact displays
+    --mobile-terminal-chrome: 65px;
+    
+    // Fewer rows for very small screens (still generous)
+    --mobile-terminal-rows: 35;
+    
+    // Recalculate content height
+    --mobile-content-height: calc(var(--mobile-terminal-rows) * var(--mobile-row-height));
+    
+    // Smaller guaranteed margins for compact screens
+    --mobile-vertical-margin: 12px;
+    --mobile-max-viewport-height: calc(100vh - (var(--mobile-vertical-margin) * 2));
+    
+    // Terminal height with multiple constraints
     --terminal-width: 98vw;
-    --terminal-height: 94vh;
+    --terminal-height: min(
+      calc(var(--mobile-content-height) + var(--mobile-terminal-chrome)),
+      var(--mobile-max-viewport-height),
+      94vh
+    );
     
     // Even smaller radius
     --terminal-border-radius: 8px;
     
-    // Minimal bezel for maximum content
+    // Lighter bezel for minimal aesthetic but still visible boundary
     --terminal-bezel-shadow: 
       0 0 0 1px #1a1a1a,
       0 0 0 2px #0d0d0d,
+      0 2px 16px rgba(0, 0, 0, 0.4),
       inset 0 0 30px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// =============================================================================
+// Mobile Page Background Enhancement
+// Add subtle visual depth to the page area surrounding the terminal
+// =============================================================================
+@media (max-width: 768px) {
+  html {
+    // Subtle radial gradient to draw eye toward terminal
+    background: radial-gradient(
+      ellipse 80% 60% at 50% 50%,
+      #1e1e1e 0%,
+      #1a1a1a 50%,
+      #151515 100%
+    );
   }
 }
 
