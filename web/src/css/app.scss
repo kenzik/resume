@@ -115,18 +115,23 @@ a {
 .q-layout {
   height: 100% !important;
   min-height: 0 !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
 }
 
 .q-page-container {
   height: 100% !important;
   min-height: 0 !important;
-  overflow: hidden;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
   padding: 0 !important;  // Remove any default padding
 }
 
 .q-page {
   min-height: 0 !important;  // Override Quasar's default min-height
   padding: 0 !important;  // Remove any default padding
+  overflow: hidden !important;
+  overflow-x: hidden !important;
 }
 
 // Selection styling

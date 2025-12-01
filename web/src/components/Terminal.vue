@@ -1115,10 +1115,11 @@ const handleKeyDown = (e: KeyboardEvent) => {
 };
 
 /**
- * Reset horizontal scroll on all containers
+ * Reset horizontal scroll on ALL containers including the input itself
  * Prevents left-shift bug on mobile when focusing input
  */
 const resetHorizontalScroll = () => {
+  // Reset scroll containers
   if (nativeScrollRef.value) {
     nativeScrollRef.value.scrollLeft = 0;
   }
@@ -1131,29 +1132,75 @@ const resetHorizontalScroll = () => {
       scrollTarget.scrollLeft = 0;
     }
   }
+  
+  // Reset the input element's own internal scroll
+  if (inputRefMobile.value) {
+    inputRefMobile.value.scrollLeft = 0;
+  }
+  if (inputRef.value) {
+    inputRef.value.scrollLeft = 0;
+  }
+  
+  // Reset Quasar containers
+  const qLayout = document.querySelector('.q-layout');
+  const qPageContainer = document.querySelector('.q-page-container');
+  const qPage = document.querySelector('.q-page');
+  const qApp = document.querySelector('#q-app');
+  
+  if (qLayout) (qLayout as HTMLElement).scrollLeft = 0;
+  if (qPageContainer) (qPageContainer as HTMLElement).scrollLeft = 0;
+  if (qPage) (qPage as HTMLElement).scrollLeft = 0;
+  if (qApp) (qApp as HTMLElement).scrollLeft = 0;
+  
+  // Reset document-level scroll (safety net)
+  if (document.documentElement) {
+    document.documentElement.scrollLeft = 0;
+  }
+  if (document.body) {
+    document.body.scrollLeft = 0;
+  }
+  
+  // Also try window.scrollTo for good measure
+  window.scrollTo(0, window.scrollY);
 };
 
 /**
  * Handle mobile input focus - aggressively reset horizontal scroll
  * The browser tends to scroll horizontally when focusing an input on mobile
  */
-const handleMobileInputFocus = () => {
-  // Immediate reset
+const handleMobileInputFocus = (event: FocusEvent) => {
+  const input = event.target as HTMLInputElement;
+  
+  // Reset the input's own scroll position
+  if (input) {
+    input.scrollLeft = 0;
+  }
+  
+  // Immediate reset of all containers
   resetHorizontalScroll();
   
   // Reset again after browser has a chance to do its thing
   requestAnimationFrame(() => {
+    if (input) input.scrollLeft = 0;
     resetHorizontalScroll();
     // And once more after next paint
     requestAnimationFrame(() => {
+      if (input) input.scrollLeft = 0;
       resetHorizontalScroll();
     });
   });
   
   // Also reset after a small delay to catch any delayed browser behavior
   setTimeout(() => {
+    if (input) input.scrollLeft = 0;
     resetHorizontalScroll();
   }, 50);
+  
+  // And one more time after a longer delay
+  setTimeout(() => {
+    if (input) input.scrollLeft = 0;
+    resetHorizontalScroll();
+  }, 150);
 };
 
 /**
@@ -1761,6 +1808,7 @@ onUnmounted(() => {
   
   // Prevent auto-scroll on focus (mobile browsers)
   scroll-margin: 0;
+  scroll-padding: 0;
   
   &::placeholder {
     color: var(--color-brightBlack, #666666);
@@ -1770,6 +1818,21 @@ onUnmounted(() => {
   // This prevents horizontal scroll issues caused by cursor positioning
   @media (max-width: 768px) {
     caret-color: var(--terminal-command, #3b8eea); // Show native caret on mobile
+    
+    // CRITICAL: Font size must be >= 16px to prevent iOS auto-zoom on focus
+    font-size: 16px !important;
+    
+    // Prevent the input from having any internal scroll
+    overflow: hidden;
+    text-overflow: clip;
+    
+    // Disable any scroll-into-view behavior
+    scroll-margin: 0 !important;
+    scroll-padding: 0 !important;
+    
+    // Try to prevent browser focus scrolling
+    scroll-snap-type: none;
+    overscroll-behavior: none;
   }
 }
 
