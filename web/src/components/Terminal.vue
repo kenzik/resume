@@ -691,10 +691,13 @@ const processCommandQueue = async () => {
 
   isExecutingCommand.value = false;
   
-  // Refocus input after all commands are processed
-  nextTick(() => {
-    inputRef.value?.focus();
-  });
+  // On desktop: refocus input for continued typing
+  // On mobile: keyboard was already dismissed in executeCommand, don't refocus
+  if (!isMobile.value) {
+    nextTick(() => {
+      inputRef.value?.focus();
+    });
+  }
 };
 
 // Execute command (entry point - queues if needed)
@@ -702,12 +705,18 @@ const processCommandQueue = async () => {
 const executeCommand = async () => {
   const command = currentInput.value.trim();
   
+  // Empty input - just add blank line, keep keyboard open
   if (!command) {
     addHistoryEntry('', '');
     currentInput.value = '';
     updateCursorPosition();
     scrollToBottom();
     return;
+  }
+
+  // Valid command: on mobile, dismiss keyboard immediately so user can see output
+  if (isMobile.value) {
+    inputRefMobile.value?.blur();
   }
 
   // Add to command history (avoid duplicating the last command)
@@ -719,7 +728,7 @@ const executeCommand = async () => {
     }
   }
 
-  // Clear input immediately
+  // Clear input
   currentInput.value = '';
   commandHistoryIndex.value = -1;
   savedInput.value = '';
