@@ -170,11 +170,13 @@ import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
 import ZMachineQuitModal from './ZMachineQuitModal.vue';
 import { PAGER_CONFIG } from '../config';
-
-// Navigation prefix for commands that trigger page navigation
-const NAV_PREFIX = '__NAV__';
-// Z-Machine prefix for hidden game commands
-const ZMACHINE_PREFIX = '__Z__';
+import { 
+  NAV_PREFIX, 
+  ZMACHINE_PREFIX, 
+  MOBILE_BREAKPOINT,
+  TYPEWRITER_SPEEDS,
+  TERMINAL_CONFIG,
+} from '../constants';
 
 const router = useRouter();
 
@@ -193,7 +195,6 @@ const inputWrapperRefMobile = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
 
 // Mobile detection for native scroll fallback (Chrome iOS has issues with QScrollArea)
-const MOBILE_BREAKPOINT = 768;
 const isMobile = ref(false);
 
 // Detect mobile on mount and window resize
@@ -210,7 +211,6 @@ const hasScrollableContentBelow = ref(false);
 // Debounce scroll indicator updates for performance
 // Uses trailing-edge debounce: always processes the last call after delay
 let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-const SCROLL_DEBOUNCE_MS = 50;
 
 const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean = false) => {
   if (!scrollEl) return;
@@ -246,7 +246,7 @@ const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean
   scrollDebounceTimer = setTimeout(() => {
     scrollDebounceTimer = null;
     doUpdate();
-  }, SCROLL_DEBOUNCE_MS);
+  }, TERMINAL_CONFIG.scrollDebounceMs);
 };
 
 // Handle scroll events on the native scroll container
@@ -267,7 +267,6 @@ const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
 // Command history settings (for up/down arrow navigation)
-const COMMAND_HISTORY_MAX_LENGTH = 50;
 const commandHistory = ref<string[]>([]);
 const commandHistoryIndex = ref(-1);
 const savedInput = ref(''); // Saves current input when starting to navigate
@@ -291,11 +290,7 @@ const zmachineScrollRef = ref<HTMLElement | null>(null);
 const zmachineTransitioning = ref(false);
 const zmachineTransitionType = ref<'smack' | 'roll'>('smack'); // 'smack' = horizontal glitch, 'roll' = vertical roll
 
-// Z-Machine typewriter config (slightly faster for game feel)
-const zmachineTypewriterConfig = {
-  delay: 3,
-  charsPerTick: 8,
-};
+// Z-Machine typewriter config (from constants)
 
 const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
 const { typeText, isTyping } = useTypewriter();
@@ -314,18 +309,7 @@ let terminalClickHandler: (() => void) | null = null;
 let measureCanvas: HTMLCanvasElement | null = null;
 let measureContext: CanvasRenderingContext2D | null = null;
 
-// Typewriter speed configuration
-// Speed = charsPerTick / delay (chars per ms)
-const typewriterConfig = ref({
-  delay: 5,         // ms between ticks (browser minimum is ~4ms)
-  charsPerTick: 5, // characters per tick - increase for faster output
-});
-
-// Faster typewriter for pager mode (large content)
-const pagerTypewriterConfig = {
-  delay: 2,
-  charsPerTick: 50, // Much faster for paging
-};
+// Typewriter speeds are defined in constants/index.ts
 
 
 /**
@@ -335,7 +319,7 @@ const pagerTypewriterConfig = {
 const typeOutputToHistory = async (
   entryIndex: number,
   output: string,
-  config: { delay: number; charsPerTick: number } = typewriterConfig.value
+  config: { delay: number; charsPerTick: number } = TYPEWRITER_SPEEDS.default
 ) => {
   if (!output) return;
   
@@ -454,8 +438,8 @@ const enterPagerMode = async (command: string, rawContent: string) => {
   
   // Type out content with faster pager typewriter
   await typeText(htmlContent, {
-    delay: pagerTypewriterConfig.delay,
-    charsPerTick: pagerTypewriterConfig.charsPerTick,
+    delay: TYPEWRITER_SPEEDS.pager.delay,
+    charsPerTick: TYPEWRITER_SPEEDS.pager.charsPerTick,
     onChar: (text) => {
       pagerContent.value = text;
     },
@@ -623,7 +607,7 @@ const typeZMachineOutput = async (text: string) => {
     
     // Type this line
     await typeText(line, {
-      ...zmachineTypewriterConfig,
+      ...TYPEWRITER_SPEEDS.zmachine,
       onChar: (partialText) => {
         zmachineTypingLine.value = partialText;
         scrollZMachineToBottom();
@@ -846,7 +830,7 @@ const executeCommand = async () => {
   if (commandHistory.value[commandHistory.value.length - 1] !== command) {
     commandHistory.value.push(command);
     // Trim to max length
-    if (commandHistory.value.length > COMMAND_HISTORY_MAX_LENGTH) {
+    if (commandHistory.value.length > TERMINAL_CONFIG.commandHistoryMaxLength) {
       commandHistory.value.shift();
     }
   }
@@ -1101,127 +1085,52 @@ const handleKeyDown = (e: KeyboardEvent) => {
 };
 
 /**
- * Reset horizontal scroll on ALL containers including the input itself
- * Prevents left-shift bug on mobile when focusing input
+ * Reset horizontal scroll - simplified version
+ * CSS now handles overflow:hidden on all containers, so we just need
+ * to reset the window scroll position as a safety net
  */
 const resetHorizontalScroll = () => {
-  // Reset scroll containers
-  if (nativeScrollRef.value) {
-    nativeScrollRef.value.scrollLeft = 0;
-  }
-  if (terminalRef.value) {
-    terminalRef.value.scrollLeft = 0;
-  }
-  if (scrollAreaRef.value) {
-    const scrollTarget = scrollAreaRef.value.getScrollTarget?.();
-    if (scrollTarget) {
-      scrollTarget.scrollLeft = 0;
-    }
-  }
-  
-  // Reset the input element's own internal scroll
-  if (inputRefMobile.value) {
-    inputRefMobile.value.scrollLeft = 0;
-  }
-  if (inputRef.value) {
-    inputRef.value.scrollLeft = 0;
-  }
-  
-  // Reset Quasar containers
-  const qLayout = document.querySelector('.q-layout');
-  const qPageContainer = document.querySelector('.q-page-container');
-  const qPage = document.querySelector('.q-page');
-  const qApp = document.querySelector('#q-app');
-  
-  if (qLayout) (qLayout as HTMLElement).scrollLeft = 0;
-  if (qPageContainer) (qPageContainer as HTMLElement).scrollLeft = 0;
-  if (qPage) (qPage as HTMLElement).scrollLeft = 0;
-  if (qApp) (qApp as HTMLElement).scrollLeft = 0;
-  
-  // Reset document-level scroll (safety net)
-  if (document.documentElement) {
-    document.documentElement.scrollLeft = 0;
-  }
-  if (document.body) {
-    document.body.scrollLeft = 0;
-  }
-  
-  // Also try window.scrollTo for good measure
+  // Reset window scroll (CSS handles container overflow)
   window.scrollTo(0, window.scrollY);
+  
+  // Reset input scroll if needed
+  const input = isMobile.value ? inputRefMobile.value : inputRef.value;
+  if (input) {
+    input.scrollLeft = 0;
+  }
 };
 
 /**
- * Handle mobile input focus - aggressively reset horizontal scroll
- * The browser tends to scroll horizontally when focusing an input on mobile
+ * Handle mobile input focus - reset horizontal scroll after focus
+ * CSS overflow:hidden does most of the work; this is a safety net
  */
 const handleMobileInputFocus = (event: FocusEvent) => {
   const input = event.target as HTMLInputElement;
-  
-  // Reset the input's own scroll position
   if (input) {
     input.scrollLeft = 0;
   }
   
-  // Immediate reset of all containers
-  resetHorizontalScroll();
-  
-  // Reset again after browser has a chance to do its thing
+  // Single RAF to reset after browser processes focus
   requestAnimationFrame(() => {
-    if (input) input.scrollLeft = 0;
     resetHorizontalScroll();
-    // And once more after next paint
-    requestAnimationFrame(() => {
-      if (input) input.scrollLeft = 0;
-      resetHorizontalScroll();
-    });
   });
-  
-  // Also reset after a small delay to catch any delayed browser behavior
-  setTimeout(() => {
-    if (input) input.scrollLeft = 0;
-    resetHorizontalScroll();
-  }, 50);
-  
-  // And one more time after a longer delay
-  setTimeout(() => {
-    if (input) input.scrollLeft = 0;
-    resetHorizontalScroll();
-  }, 150);
 };
 
 /**
- * Handle mobile input blur - fix viewport when keyboard dismisses
- * iOS doesn't always properly resize the viewport when keyboard disappears
+ * Handle mobile input blur - scroll to bottom when keyboard dismisses
  */
 const handleMobileInputBlur = () => {
-  // Wait for keyboard to fully dismiss
+  // Wait for keyboard to dismiss, then scroll to bottom
   setTimeout(() => {
-    // Reset scroll positions
-    resetHorizontalScroll();
-    
-    // Scroll to bottom to show the prompt
     if (nativeScrollRef.value) {
       nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
     }
-    
-    // Force a layout recalculation by touching window scroll
     window.scrollTo(0, 0);
-    
-    // iOS sometimes needs a nudge to recalculate viewport
-    // Trigger a resize event to help iOS recalculate
-    requestAnimationFrame(() => {
-      resetHorizontalScroll();
-      if (nativeScrollRef.value) {
-        nativeScrollRef.value.scrollTop = nativeScrollRef.value.scrollHeight;
-      }
-    });
   }, 100);
 };
 
 /**
  * Focus input with scroll protection
- * Focuses the appropriate input and resets any horizontal scroll
- * On mobile, scrolls the input into view vertically after focusing
  */
 const focusInputSafely = () => {
   const input = zmachineMode.value 
@@ -1229,25 +1138,12 @@ const focusInputSafely = () => {
     : (isMobile.value ? inputRefMobile.value : inputRef.value);
   
   if (input) {
-    // On mobile, let the browser handle scroll-to-input naturally
-    // On desktop, prevent scroll
     if (isMobile.value) {
-      input.focus(); // Let iOS handle the scroll
-      
-      // Then reset horizontal scroll only
-      nextTick(() => {
-        resetHorizontalScroll();
-      });
-      
-      // Keep resetting horizontal scroll as keyboard appears
-      setTimeout(() => resetHorizontalScroll(), 100);
-      setTimeout(() => resetHorizontalScroll(), 300);
-      setTimeout(() => resetHorizontalScroll(), 500);
+      input.focus();
+      // Single RAF for horizontal scroll reset
+      requestAnimationFrame(() => resetHorizontalScroll());
     } else {
       input.focus({ preventScroll: true });
-      nextTick(() => {
-        resetHorizontalScroll();
-      });
     }
   }
 };
@@ -1366,66 +1262,23 @@ onUnmounted(() => {
     transform: translateZ(0); // Force GPU layer on mobile to prevent scroll glitches
   }
   
-  // Scanlines overlay - z-index 1 to stay behind content
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.20) 0px,
-      rgba(0, 0, 0, 0.20) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-    pointer-events: none;
-    z-index: 1;
-    border-radius: 12px;
-  }
-  
-  // Vignette effect (darker at edges) - z-index 0 behind scanlines
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(
-      ellipse at center,
-      transparent 50%,
-      rgba(0, 0, 0, 0.25) 100%
-    );
-    pointer-events: none;
-    z-index: 0;
-    border-radius: 12px;
-  }
+  // Note: Scanlines and vignette are provided by CRTFrame.vue wrapper
+  // This avoids double-rendering of effects
   
   // =============================================================================
   // CRT "Smack" Transition Effect - Three escalating hits
+  // Used when entering Z-Machine mode
   // =============================================================================
   &.crt-smack {
     animation: crt-smack-triple 1.8s ease-out forwards;
-    
-    // Intensify scanlines during smacks
-    &::before {
-      animation: crt-smack-scanlines-triple 1.8s ease-out forwards !important;
-    }
   }
   
   // =============================================================================
   // CRT "Roll" Transition Effect - Three attempts to sync vertical hold
+  // Used when entering Z-Machine mode
   // =============================================================================
   &.crt-roll {
     animation: crt-roll-triple 1.8s ease-out forwards;
-    
-    // Intensify scanlines during rolls
-    &::before {
-      animation: crt-roll-scanlines-triple 1.8s ease-out forwards !important;
-    }
   }
 }
 
@@ -1539,30 +1392,6 @@ onUnmounted(() => {
     transform: translate(0, 0) skewX(0deg);
     filter: brightness(1) contrast(1) saturate(1);
   }
-}
-
-// Scanline intensity pulse during triple smack
-@keyframes crt-smack-scanlines-triple {
-  // Hit 1
-  0% { opacity: 1; }
-  2% { opacity: 0.4; }
-  5% { opacity: 0.9; }
-  10% { opacity: 0.6; }
-  20% { opacity: 1; }
-  // Hit 2
-  22% { opacity: 0.3; }
-  26% { opacity: 0.8; }
-  32% { opacity: 0.4; }
-  40% { opacity: 0.7; }
-  50% { opacity: 1; }
-  // Hit 3
-  52% { opacity: 0.15; }
-  56% { opacity: 0.7; }
-  62% { opacity: 0.25; }
-  70% { opacity: 0.6; }
-  80% { opacity: 0.8; }
-  90% { opacity: 0.95; }
-  100% { opacity: 1; }
 }
 
 // =============================================================================
@@ -1700,34 +1529,12 @@ onUnmounted(() => {
   }
 }
 
-// Scanline distortion during triple roll
-@keyframes crt-roll-scanlines-triple {
-  // Roll 1
-  0% { opacity: 1; }
-  5% { opacity: 0.5; }
-  10% { opacity: 0.7; }
-  20% { opacity: 0.9; }
-  25% { opacity: 1; }
-  // Roll 2
-  30% { opacity: 0.35; }
-  38% { opacity: 0.2; }
-  45% { opacity: 0.5; }
-  55% { opacity: 1; }
-  // Roll 3
-  60% { opacity: 0.25; }
-  68% { opacity: 0.1; }
-  75% { opacity: 0.35; }
-  83% { opacity: 0.6; }
-  90% { opacity: 0.85; }
-  100% { opacity: 1; }
-}
-
 .terminal-output {
   flex: 1;
   overflow: hidden; // QScrollArea handles overflow internally
   padding-right: 10px;
   position: relative;
-  z-index: 10;  // Above scanlines (1) and vignette (0)
+  z-index: 10;  // Ensure content is above any background effects
   min-height: 0; // Allow flex shrinking
   
   // QScrollArea handles scrollbar hiding via thumb-style and bar-style props
@@ -2252,7 +2059,7 @@ onUnmounted(() => {
   right: 10px;
   height: 28px;
   pointer-events: none;
-  z-index: 20; // Above content (10), above scanlines on Terminal
+  z-index: 20; // Above content (10)
   
   // Default: hidden, show when content is scrollable
   // Note: opacity transitions in when hasScrollableContentAbove/Below is true

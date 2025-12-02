@@ -14,12 +14,7 @@
             <!-- Flashing cursor (appears after power-on) -->
             <div class="startup-cursor">█</div>
           </div>
-          
-          <!-- Scanlines overlay (same as Terminal.vue) -->
-          <div class="scanlines"></div>
-          
-          <!-- Vignette overlay (same as Terminal.vue) -->
-          <div class="vignette"></div>
+          <!-- Note: Scanlines and vignette are provided by CRTFrame.vue wrapper -->
         </div>
       </q-page>
     </q-page-container>
@@ -160,41 +155,7 @@ onUnmounted(() => {
   z-index: 20;
 }
 
-// Scanlines (same as Terminal.vue)
-.scanlines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.20) 0px,
-    rgba(0, 0, 0, 0.20) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  pointer-events: none;
-  z-index: 10;
-  border-radius: 12px;
-}
-
-// Vignette (same as Terminal.vue)
-.vignette {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 50%,
-    rgba(0, 0, 0, 0.25) 100%
-  );
-  pointer-events: none;
-  z-index: 5;
-  border-radius: 12px;
-}
+// Note: Scanlines and vignette are provided by CRTFrame.vue wrapper
 
 // ============================================
 // Animation States
@@ -354,10 +315,6 @@ onUnmounted(() => {
     border-radius: 8px;
   }
   
-  .scanlines, .vignette {
-    border-radius: 8px;
-  }
-  
   .startup-cursor {
     top: 14px;
     left: 14px;
@@ -367,10 +324,6 @@ onUnmounted(() => {
 
 @media (max-width: 480px) {
   .crt-container {
-    border-radius: 6px;
-  }
-  
-  .scanlines, .vignette {
     border-radius: 6px;
   }
   

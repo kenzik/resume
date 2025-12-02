@@ -171,48 +171,10 @@ function triggerDownload() {
   align-items: center;
   justify-content: center;
   
-  // CRT effects
+  // CRT glow effect (scanlines and vignette provided by CRTFrame.vue wrapper)
   box-shadow: 
     inset 0 0 100px rgba(0, 20, 20, 0.3),
     inset 0 0 50px rgba(0, 150, 120, 0.02);
-  
-  // Scanlines
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.20) 0px,
-      rgba(0, 0, 0, 0.20) 1px,
-      transparent 1px,
-      transparent 3px
-    );
-    pointer-events: none;
-    z-index: 1;
-    border-radius: 12px;
-  }
-  
-  // Vignette
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: radial-gradient(
-      ellipse at center,
-      transparent 50%,
-      rgba(0, 0, 0, 0.25) 100%
-    );
-    pointer-events: none;
-    z-index: 0;
-    border-radius: 12px;
-  }
 }
 
 .download-content {
@@ -322,10 +284,6 @@ function triggerDownload() {
 @media (max-width: 768px) {
   .download-container {
     border-radius: 8px;
-    
-    &::before, &::after {
-      border-radius: 8px;
-    }
   }
   
   .download-content {
@@ -344,10 +302,6 @@ function triggerDownload() {
 @media (max-width: 480px) {
   .download-container {
     border-radius: 6px;
-    
-    &::before, &::after {
-      border-radius: 6px;
-    }
   }
   
   .download-content {
