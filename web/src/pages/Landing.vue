@@ -37,7 +37,7 @@ const router = useRouter();
 const animationClass = ref('power-off');
 
 // Power-on delay from env variable (default 6000ms)
-const powerOnDelayMs = Number(import.meta.env.VITE_POWER_ON_DELAY_MS) || 6000;
+const powerOnDelayMs = Number(import.meta.env.VITE_POWER_ON_DELAY_MS) || 5000;
 
 // Need separate useTimeout instances for concurrent timers (each instance supports only 1 timer)
 const { registerTimeout: setAnimationStart } = useTimeout();
@@ -179,12 +179,12 @@ onMounted(() => {
   
   // Phase 2: Phosphor glow builds up
   .phosphor-glow {
-    animation: phosphorWarmup 3s ease-out 0.3s forwards;
+    animation: phosphorWarmup 2s ease-out 0.3s forwards;
   }
   
   // Phase 3: Screen brightness increases
   .crt-screen {
-    animation: screenWarmup 3s ease-out 0.5s forwards;
+    animation: screenWarmup 2s ease-out 0.5s forwards;
   }
 }
 
