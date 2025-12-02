@@ -224,11 +224,131 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 
-// Content inherits terminal-output-text styles from parent
-// We define minimal overrides here
+// Terminal output text styles (must be defined here since scoped styles don't penetrate)
 .pager-content {
   color: var(--terminal-output, #d4d4d4);
+  margin-top: 0.25rem;
+  margin-bottom: 0.75rem;
+  margin-left: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100%;
+  display: block;
+  white-space: normal;
   line-height: 1.6;
+  clear: both;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  
+  :deep(pre) {
+    margin: 0;
+    font-family: var(--font-family, monospace);
+    line-height: var(--font-line-height, 1.8);
+    white-space: pre-wrap;
+  }
+  
+  :deep(code) {
+    font-family: var(--font-family, monospace);
+    background: var(--color-brightBlack, #666666);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--terminal-command, #3b8eea);
+    display: inline-block;
+    vertical-align: middle;
+    line-height: 1.2;
+    margin: .125rem 0;
+  }
+  
+  :deep(strong) {
+    color: var(--terminal-success, #23d18b);
+    font-weight: bold;
+  }
+  
+  :deep(p) {
+    margin: .75em 0 .5em 0;
+    padding: 0;
+    line-height: 1.4;
+  }
+  
+  :deep(div) {
+    margin: 0;
+    padding: 0;
+  }
+  
+  :deep(br) {
+    line-height: 1.5;
+  }
+
+  :deep(h1) {
+    font-size: 1.4em;
+    line-height: 1.6;
+    font-weight: bold;
+    color: var(--terminal-success, #23d18b);
+    margin: 0.75em 0 0.5em 0;
+  }
+
+  :deep(h2) {
+    font-size: 1em;
+    line-height: 1.4;
+    font-weight: bold;
+    color: var(--terminal-success, #23d18b);
+    margin: 0.75em 0 0.5em 0;
+  }
+
+  :deep(h3) {
+    font-size: .75em;
+    line-height: 1.4;
+    font-weight: bold;
+    color: var(--terminal-info, #29b8db);
+    margin: 0.4em 0 0.2em 0;
+  }
+
+  :deep(h4), :deep(h5), :deep(h6) {
+    font-size: 1em;
+    font-weight: bold;
+    color: var(--terminal-info, #29b8db);
+    margin: 0.3em 0 0.15em 0;
+  }
+
+  :deep(hr) {
+    border: none;
+    border-top: 1px solid var(--color-brightBlack, #666666);
+    margin: 0.5em 0;
+  }
+
+  :deep(ul), :deep(ol) {
+    margin: 0.25em 0;
+    padding-left: 1.5em;
+    list-style-position: inside;
+  }
+
+  :deep(li) {
+    margin: 0.1em 0;
+    line-height: 1.4;
+  }
+}
+
+// Mobile responsive styles for pager content
+@media (max-width: 768px) {
+  .pager-content {
+    line-height: var(--mobile-line-height, 1.5);
+    
+    :deep(h1) {
+      font-size: 1.2em;
+    }
+    
+    :deep(h2) {
+      font-size: 0.95em;
+    }
+    
+    :deep(p) {
+      margin: 0.5em 0 0.35em 0;
+    }
+    
+    :deep(ul), :deep(ol) {
+      padding-left: 1.2em;
+    }
+  }
 }
 </style>
 
