@@ -37,6 +37,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
+import { useTimeout } from 'quasar';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -49,6 +50,9 @@ const emit = defineEmits<{
   (e: 'cancel'): void;
 }>();
 
+// Quasar's useTimeout auto-cleans up on unmount
+const { registerTimeout, removeTimeout } = useTimeout();
+
 // Dynamic title based on game
 const title = computed(() => {
   if (props.gameTitle) {
@@ -60,9 +64,6 @@ const title = computed(() => {
 const yesButtonRef = ref<HTMLButtonElement | null>(null);
 const noButtonRef = ref<HTMLButtonElement | null>(null);
 const acceptingInput = ref(false);
-
-// Timer ref for cleanup
-let focusDelayTimer: ReturnType<typeof setTimeout> | null = null;
 
 const handleYes = () => {
   emit('update:modelValue', false);
@@ -117,16 +118,12 @@ const handleKeyDown = (e: KeyboardEvent) => {
 // Focus management - delay input acceptance to prevent Enter key from quit command triggering immediate confirm
 watch(() => props.modelValue, (isOpen) => {
   // Clear any pending timer
-  if (focusDelayTimer) {
-    clearTimeout(focusDelayTimer);
-    focusDelayTimer = null;
-  }
+  removeTimeout();
   
   if (isOpen) {
     acceptingInput.value = false;
     // Focus the No button when modal opens (safer default)
-    focusDelayTimer = setTimeout(() => {
-      focusDelayTimer = null;
+    registerTimeout(() => {
       noButtonRef.value?.focus();
       // Start accepting keyboard input after the Enter key from "quit" command has passed
       acceptingInput.value = true;
@@ -142,10 +139,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
-  if (focusDelayTimer) {
-    clearTimeout(focusDelayTimer);
-    focusDelayTimer = null;
-  }
+  // useTimeout auto-cleans up, but we remove listener manually
 });
 </script>
 
