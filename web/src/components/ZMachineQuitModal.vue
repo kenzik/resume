@@ -61,6 +61,9 @@ const yesButtonRef = ref<HTMLButtonElement | null>(null);
 const noButtonRef = ref<HTMLButtonElement | null>(null);
 const acceptingInput = ref(false);
 
+// Timer ref for cleanup
+let focusDelayTimer: ReturnType<typeof setTimeout> | null = null;
+
 const handleYes = () => {
   emit('update:modelValue', false);
   emit('confirm');
@@ -113,10 +116,17 @@ const handleKeyDown = (e: KeyboardEvent) => {
 
 // Focus management - delay input acceptance to prevent Enter key from quit command triggering immediate confirm
 watch(() => props.modelValue, (isOpen) => {
+  // Clear any pending timer
+  if (focusDelayTimer) {
+    clearTimeout(focusDelayTimer);
+    focusDelayTimer = null;
+  }
+  
   if (isOpen) {
     acceptingInput.value = false;
     // Focus the No button when modal opens (safer default)
-    setTimeout(() => {
+    focusDelayTimer = setTimeout(() => {
+      focusDelayTimer = null;
       noButtonRef.value?.focus();
       // Start accepting keyboard input after the Enter key from "quit" command has passed
       acceptingInput.value = true;
@@ -132,6 +142,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
+  if (focusDelayTimer) {
+    clearTimeout(focusDelayTimer);
+    focusDelayTimer = null;
+  }
 });
 </script>
 
