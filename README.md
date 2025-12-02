@@ -38,6 +38,8 @@ resume/
 │   ├── build_resume.py      #    Generates PDF, DOCX, MD, RTF
 │   └── requirements.txt     #    Python dependencies
 │
+├── games/                   # 🎮 ...nothing to see here, move along
+│
 └── web/                     # 🖥️  PRESENTATION LAYER - Interactive Website
     ├── src/                 #    Vue 3 + Quasar + TypeScript
     └── public/downloads/    #    Pre-built downloadable files
@@ -64,7 +66,7 @@ It's a **terminal emulator** that lets you explore my resume with Unix-like comm
 $ help              # Available commands
 $ resume            # View full resume  
 $ skills            # List technical skills
-$ experience /gcp/i # Search experience with regex
+$ experience google # Filter by company name
 $ resume | grep AI  # Pipe and filter like a real terminal
 $ resume | more     # Page through long output
 $ download pdf      # Download resume as PDF

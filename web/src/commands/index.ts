@@ -73,7 +73,7 @@ export function generateHelpText(): string {
   
   // Add examples section
   const examples = [
-    '`experience /five9/i` - Find experience matching "five9"',
+    '`experience google` - Filter experience by company',
     '`skills | grep kubernetes` - Find skills matching "kubernetes"',
     '`resume | more` - Page through full resume',
     '`download pdf` - Download resume as PDF',

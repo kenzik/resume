@@ -49,7 +49,7 @@ export const resumeCommands: CommandRegistry = {
     },
     description: 'Show work experience',
     usage: 'experience [company]',
-    examples: ['experience', 'experience /five9/i', 'experience google'],
+    examples: ['experience', 'experience google', 'experience acme'],
   },
 
   download: {

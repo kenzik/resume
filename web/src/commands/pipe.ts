@@ -43,7 +43,7 @@ export const pipeCommands: CommandRegistry = {
     },
     description: 'Filter lines matching a pattern',
     usage: 'grep <pattern>',
-    examples: ['resume | grep kubernetes', 'skills | grep /gcp/i'],
+    examples: ['resume | grep kubernetes', 'skills | grep cloud'],
     requiresStdin: true,
   },
 
