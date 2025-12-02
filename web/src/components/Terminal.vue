@@ -100,61 +100,30 @@
     </div>
     
     <!-- Scroll indicators - show when content extends beyond visible area (mobile only) -->
-    <div 
+    <ScrollIndicators
       v-if="isMobile && !pagerMode && !zmachineMode"
-      class="scroll-indicator scroll-indicator--top"
-      :class="{ 'scroll-indicator--visible': hasScrollableContentAbove }"
-      aria-hidden="true"
-    />
-    <div 
-      v-if="isMobile && !pagerMode && !zmachineMode"
-      class="scroll-indicator scroll-indicator--bottom"
-      :class="{ 'scroll-indicator--visible': hasScrollableContentBelow }"
-      aria-hidden="true"
+      :show-top="hasScrollableContentAbove"
+      :show-bottom="hasScrollableContentBelow"
     />
     
-    <!-- Pager mode - separate scrollable area with fixed prompt at bottom -->
-    <div v-show="pagerMode" class="pager-wrapper">
-      <!-- Prompt first in DOM, appears last due to column-reverse -->
-      <div class="pager-prompt">
-        {{ pagerPromptText }}
-      </div>
-      <div class="pager-content-area" ref="pagerContentRef">
-        <div class="terminal-output-text pager-content" v-html="pagerContent"></div>
-      </div>
-    </div>
+    <!-- Pager mode - separate scrollable area with keyboard navigation -->
+    <TerminalPager
+      :active="pagerMode"
+      :command="pagerCommand"
+      :raw-content="pagerRawContent"
+      @exit="handlePagerExit"
+    />
     
     <!-- Z-Machine mode - full terminal takeover for game -->
-    <div v-show="zmachineMode" class="zmachine-wrapper">
-      <div class="zmachine-header">
-        <span class="zmachine-title">{{ currentGameTitle }}</span>
-        <span class="zmachine-hint">Type 'quit' to exit</span>
-      </div>
-      <div class="zmachine-output-area" ref="zmachineScrollRef">
-        <div 
-          v-for="(line, index) in zmachineOutput" 
-          :key="index" 
-          class="zmachine-line"
-          :class="{ 'zmachine-command-echo': line.startsWith('>') }"
-        >{{ line }}</div>
-        <!-- Currently typing line (typewriter effect) -->
-        <div v-if="zmachineTypingLine" class="zmachine-line zmachine-typing">{{ zmachineTypingLine }}<span class="typing-cursor">█</span></div>
-      </div>
-      <div class="zmachine-input-line terminal-line">
-        <span class="zmachine-prompt">&gt;</span>
-        <div class="input-wrapper" ref="zmachineInputWrapperRef">
-          <input
-            ref="zmachineInputRef"
-            v-model="currentInput"
-            @keydown.enter="executeCommand"
-            class="terminal-input zmachine-input zmachine-native-caret"
-            type="text"
-            spellcheck="false"
-            placeholder="What do you want to do?"
-          />
-        </div>
-      </div>
-    </div>
+    <TerminalZMachine
+      ref="zmachineRef"
+      :active="zmachineMode"
+      :game-title="currentGameTitle"
+      :output-lines="zmachineOutput"
+      :typing-line="zmachineTypingLine"
+      v-model="zmachineInput"
+      @submit="handleZMachineSubmit"
+    />
   </div>
 </template>
 
@@ -169,7 +138,9 @@ import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipel
 import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
 import ZMachineQuitModal from './ZMachineQuitModal.vue';
-import { PAGER_CONFIG } from '../config';
+import ScrollIndicators from './terminal/ScrollIndicators.vue';
+import TerminalPager from './terminal/TerminalPager.vue';
+import TerminalZMachine from './terminal/TerminalZMachine.vue';
 import { 
   NAV_PREFIX, 
   ZMACHINE_PREFIX, 
@@ -188,8 +159,8 @@ const scrollAreaRef = ref<InstanceType<typeof QScrollArea> | null>(null);
 const nativeScrollRef = ref<HTMLElement | null>(null);
 const inputRef = ref<HTMLInputElement | null>(null);
 const inputRefMobile = ref<HTMLInputElement | null>(null);
-const zmachineInputRef = ref<HTMLInputElement | null>(null);
-const zmachineInputWrapperRef = ref<HTMLElement | null>(null);
+const zmachineRef = ref<InstanceType<typeof TerminalZMachine> | null>(null);
+const zmachineInput = ref('');  // Separate input state for Z-Machine mode
 const inputWrapperRef = ref<HTMLElement | null>(null);
 const inputWrapperRefMobile = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
@@ -271,12 +242,10 @@ const commandHistory = ref<string[]>([]);
 const commandHistoryIndex = ref(-1);
 const savedInput = ref(''); // Saves current input when starting to navigate
 
-// Pager mode state
+// Pager mode state (UI logic handled by TerminalPager component)
 const pagerMode = ref(false);
-const pagerContent = ref('');           // Full HTML content to display
 const pagerCommand = ref('');           // The command that triggered pager mode
-const pagerAtEnd = ref(false);          // True when scrolled to bottom
-const pagerContentRef = ref<HTMLElement | null>(null);
+const pagerRawContent = ref('');        // Raw markdown content for pager
 
 // Z-Machine mode state
 const zmachineMode = ref(false);
@@ -284,7 +253,6 @@ const zmachineOutput = ref<string[]>([]);   // Game output lines (fully typed)
 const zmachineTypingLine = ref('');          // Currently typing line
 const zmachineIsTyping = ref(false);         // Whether typewriter is active
 const showZMachineQuitModal = ref(false);   // Quit confirmation modal
-const zmachineScrollRef = ref<HTMLElement | null>(null);
 
 // CRT transition effects for Z-Machine mode
 const zmachineTransitioning = ref(false);
@@ -346,108 +314,27 @@ const typeOutputToHistory = async (
   scrollToBottom();
 };
 
-// Check if pager is showing resume content (for download shortcut)
-const pagerShowingResume = computed(() => {
-  const cmd = pagerCommand.value.toLowerCase();
-  // Match "resume" command or "resume | more" pipeline
-  return cmd === 'resume' || cmd.startsWith('resume |') || cmd.startsWith('resume|');
-});
-
-// Compute pager prompt text based on scroll position and content
-const pagerPromptText = computed(() => {
-  const downloadHint = pagerShowingResume.value ? ', d to download' : '';
-  if (pagerAtEnd.value) {
-    return pagerShowingResume.value 
-      ? '(END) d to download, any other key to exit'
-      : '(END) Press any key to exit';
-  }
-  return `-- Press a key for next page${downloadHint}, q to quit --`;
-});
-
-// Check if pager is at the end (can't scroll further)
-const checkPagerAtEnd = () => {
-  if (pagerContentRef.value) {
-    const el = pagerContentRef.value;
-    // Allow 5px tolerance for floating point issues
-    pagerAtEnd.value = el.scrollTop + el.clientHeight >= el.scrollHeight - 5;
-  }
+// Enter pager mode with content
+const enterPagerMode = (command: string, rawContent: string) => {
+  pagerCommand.value = command;
+  pagerRawContent.value = rawContent;
+  pagerMode.value = true;
 };
 
-// Scroll pager content by one viewport
-const pagerPageDown = () => {
-  if (pagerContentRef.value) {
-    const el = pagerContentRef.value;
-    
-    // Get the inner content element for accurate line-height measurement
-    const contentEl = el.querySelector('.terminal-output-text');
-    let overlap = 150; // Default fallback
-    
-    if (contentEl) {
-      const computedStyle = window.getComputedStyle(contentEl);
-      const fontSize = parseFloat(computedStyle.fontSize) || 14;
-      const lineHeightStr = computedStyle.lineHeight;
-      
-      // Calculate actual line height in pixels
-      let lineHeight: number;
-      if (lineHeightStr === 'normal') {
-        lineHeight = fontSize * 1.6;
-      } else {
-        lineHeight = parseFloat(lineHeightStr) || fontSize * 1.6;
-      }
-      
-      // Keep 5-6 lines of overlap to ensure no content is lost
-      overlap = Math.max(lineHeight * 6, 150);
-    }
-    
-    const pageHeight = Math.max(el.clientHeight - overlap, 50); // Ensure we scroll at least 50px
-    el.scrollBy({ top: pageHeight, behavior: 'instant' });
-    
-    // Check if we've reached the end after scrolling
-    nextTick(() => {
-      checkPagerAtEnd();
-    });
-  }
-};
-
-// Exit pager mode
-const exitPager = () => {
+// Handle pager exit (called by TerminalPager component)
+const handlePagerExit = () => {
   // Add command to history without output (like real `more` - output was already displayed)
   addHistoryEntry(pagerCommand.value, '');
   
   // Reset pager state
   pagerMode.value = false;
-  pagerContent.value = '';
   pagerCommand.value = '';
-  pagerAtEnd.value = false;
+  pagerRawContent.value = '';
   
   // Refocus input
   nextTick(() => {
     inputRef.value?.focus();
     scrollToBottom();
-  });
-};
-
-// Enter pager mode with content
-const enterPagerMode = async (command: string, rawContent: string) => {
-  pagerCommand.value = command;
-  pagerAtEnd.value = false;
-  pagerMode.value = true;
-  
-  // Render markdown to HTML
-  const htmlContent = await renderForDisplay(rawContent);
-  
-  // Type out content with faster pager typewriter
-  await typeText(htmlContent, {
-    delay: TYPEWRITER_SPEEDS.pager.delay,
-    charsPerTick: TYPEWRITER_SPEEDS.pager.charsPerTick,
-    onChar: (text) => {
-      pagerContent.value = text;
-    },
-  });
-  
-  // After typewriter, check if content fits in viewport (no paging needed)
-  nextTick(() => {
-    checkPagerAtEnd();
   });
 };
 
@@ -503,7 +390,7 @@ const enterZMachineMode = async (gameId: string = 'zork1') => {
   
   // Focus Z-Machine input
   nextTick(() => {
-    zmachineInputRef.value?.focus({ preventScroll: true });
+    zmachineRef.value?.focus();
   });
   
   // Get any initial output from game startup and type it out
@@ -513,10 +400,9 @@ const enterZMachineMode = async (gameId: string = 'zork1') => {
     await typeZMachineOutput(initialOutput);
   }
   
-  // Refocus after typing completes and reset cursor
+  // Refocus after typing completes
   nextTick(() => {
-    zmachineInputRef.value?.focus({ preventScroll: true });
-    updateCursorPosition();
+    zmachineRef.value?.focus();
   });
 };
 
@@ -585,10 +471,17 @@ const sendZMachineInput = (input: string) => {
  */
 const scrollZMachineToBottom = () => {
   nextTick(() => {
-    if (zmachineScrollRef.value) {
-      zmachineScrollRef.value.scrollTop = zmachineScrollRef.value.scrollHeight;
-    }
+    zmachineRef.value?.scrollToBottom();
   });
+};
+
+/**
+ * Handle Z-Machine command submission from component
+ */
+const handleZMachineSubmit = (command: string) => {
+  if (command) {
+    sendZMachineInput(command);
+  }
 };
 
 /**
@@ -805,18 +698,9 @@ const processCommandQueue = async () => {
 };
 
 // Execute command (entry point - queues if needed)
+// Note: Z-Machine mode has its own input handled by TerminalZMachine component
 const executeCommand = async () => {
   const command = currentInput.value.trim();
-  
-  // If in Z-Machine mode, send input to game instead
-  if (zmachineMode.value) {
-    if (command) {
-      sendZMachineInput(command);
-    }
-    currentInput.value = '';
-    updateCursorPosition();
-    return;
-  }
   
   if (!command) {
     addHistoryEntry('', '');
@@ -902,13 +786,15 @@ const navigateHistory = (direction: number) => {
 const updateCursorPosition = () => {
   nextTick(() => {
     // Get the appropriate input ref based on mode and mobile detection
+    // Z-Machine mode uses native caret, skip cursor position update
+    if (zmachineMode.value) {
+      return;
+    }
+    
     let currentInputEl: HTMLInputElement | null;
     let currentWrapper: HTMLElement | null;
     
-    if (zmachineMode.value) {
-      currentInputEl = zmachineInputRef.value;
-      currentWrapper = zmachineInputWrapperRef.value;
-    } else if (isMobile.value) {
+    if (isMobile.value) {
       currentInputEl = inputRefMobile.value;
       currentWrapper = inputWrapperRefMobile.value;
     } else {
@@ -1006,9 +892,8 @@ const clearTerminal = () => {
   // Exit pager mode if active
   if (pagerMode.value) {
     pagerMode.value = false;
-    pagerContent.value = '';
     pagerCommand.value = '';
-    pagerAtEnd.value = false;
+    pagerRawContent.value = '';
   }
   
   // Exit Z-Machine mode if active
@@ -1023,10 +908,16 @@ const clearTerminal = () => {
   });
 };
 
-// Handle keyboard shortcuts (including pager mode and Z-Machine mode)
+// Handle keyboard shortcuts (Z-Machine mode and global shortcuts)
+// Note: Pager mode keyboard handling is in TerminalPager component
 const handleKeyDown = (e: KeyboardEvent) => {
   // Z-Machine quit modal is handled by the modal component itself
   if (showZMachineQuitModal.value) {
+    return;
+  }
+  
+  // Pager mode handles its own keyboard events
+  if (pagerMode.value) {
     return;
   }
   
@@ -1039,41 +930,10 @@ const handleKeyDown = (e: KeyboardEvent) => {
       return;
     }
     // Ensure Z-Machine input is focused for all other keys
-    if (zmachineInputRef.value && document.activeElement !== zmachineInputRef.value) {
-      zmachineInputRef.value.focus();
+    const zmInput = zmachineRef.value?.inputRef;
+    if (zmInput && document.activeElement !== zmInput) {
+      zmachineRef.value?.focus();
     }
-    return;
-  }
-  
-  // Pager mode key handling
-  if (pagerMode.value) {
-    e.preventDefault();
-    
-    // Check for download key (d) - only when viewing resume
-    if ((e.key === 'd' || e.key === 'D') && pagerShowingResume.value) {
-      exitPager();
-      router.push('/resume/download/pdf');
-      return;
-    }
-    
-    // At end of content - any key exits
-    if (pagerAtEnd.value) {
-      exitPager();
-      return;
-    }
-    
-    // Check for exit keys (q, Escape)
-    if (PAGER_CONFIG.exitKeys.includes(e.key)) {
-      exitPager();
-      return;
-    }
-    
-    // Check for next page keys (space, Enter, etc.)
-    if (PAGER_CONFIG.nextPageKeys.includes(e.key)) {
-      pagerPageDown();
-      return;
-    }
-    
     return;
   }
   
@@ -1133,9 +993,12 @@ const handleMobileInputBlur = () => {
  * Focus input with scroll protection
  */
 const focusInputSafely = () => {
-  const input = zmachineMode.value 
-    ? zmachineInputRef.value 
-    : (isMobile.value ? inputRefMobile.value : inputRef.value);
+  if (zmachineMode.value) {
+    zmachineRef.value?.focus();
+    return;
+  }
+  
+  const input = isMobile.value ? inputRefMobile.value : inputRef.value;
   
   if (input) {
     if (isMobile.value) {
@@ -1798,246 +1661,8 @@ onUnmounted(() => {
   animation: blink 1s infinite;
 }
 
-// Pager styles - wrapper takes remaining space, prompt at top
-.pager-wrapper {
-  flex: 1;
-  width: 100%;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 10;
-}
-
-.pager-content-area {
-  flex: 1 1 0;  // Grow AND shrink
-  overflow-y: auto;
-  overflow-x: hidden;
-  min-height: 0;  // Allow shrinking below content size
-  
-  // Scroll containment for mobile
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-  
-  // Hide scrollbar
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-// .pager-content inherits terminal-output-text styles via HTML class
-
-.pager-prompt {
-  flex-shrink: 0;
-  width: 100%;
-  color: var(--terminal-info, #29b8db);
-  background: var(--color-background, #1e1e1e);
-  padding: 0.5rem 0;
-  font-weight: bold;
-  border-bottom: 1px solid var(--color-brightBlack, #444);
-  z-index: 10;
-  margin-bottom: 0.5rem;
-  text-align: center;
-  box-sizing: border-box;
-}
-
-// =============================================================================
-// Z-Machine Mode Styles
-// =============================================================================
-.zmachine-wrapper {
-  flex: 1;
-  width: 100%;
-  max-width: 100%; // Prevent overflow
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  z-index: 10;
-  overflow-x: hidden !important; // Explicitly prevent horizontal scroll
-  overflow: hidden; // Prevent all overflow
-  box-sizing: border-box; // Include padding/border in width calculation
-  
-  // Active input line - visually separated from output
-  > .zmachine-input-line.terminal-line {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--terminal-dim, rgba(35, 209, 139, 0.2));
-    position: relative;
-    
-    // Subtle glow effect on the prompt to draw attention
-    .zmachine-prompt {
-      text-shadow: 0 0 8px var(--terminal-success, #23d18b);
-    }
-  }
-  
-  // Ensure input line within zmachine wrapper is properly constrained
-  .terminal-input-line {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    width: 100%;
-    overflow: hidden;
-    
-    .input-wrapper {
-      min-width: 0 !important;
-      max-width: 100% !important;
-      overflow: hidden;
-    }
-  }
-}
-
-.zmachine-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--color-brightBlack, #444);
-  margin-bottom: 0.75rem;
-  max-width: 100%; // Prevent overflow
-  min-width: 0; // Allow flex shrinking
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden; // Prevent any overflow
-  flex-shrink: 0; // Don't shrink header
-  
-  // Styles for title and hint are defined separately below
-}
-
-.zmachine-title {
-  color: var(--terminal-success, #23d18b);
-  font-weight: bold;
-  font-size: 1.1em;
-  letter-spacing: 0.1em;
-  max-width: 50%; // Constrain width to prevent overflow
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 1; // Allow shrinking if needed
-}
-
-.zmachine-hint {
-  color: var(--color-brightBlack, #666);
-  font-size: 0.85em;
-  font-style: italic;
-  max-width: 50%; // Constrain width to prevent overflow
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex-shrink: 1; // Allow shrinking if needed
-  text-align: right; // Align hint to the right
-}
-
-.zmachine-output-area {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden !important; // Force no horizontal scroll
-  min-height: 0;
-  padding-right: 10px;
-  padding-left: 0; // Ensure no left padding causes overflow
-  width: 100%;
-  max-width: 100%;
-  box-sizing: border-box;
-  
-  // Use CSS containment for better performance and overflow control
-  contain: layout style;
-  
-  // Scroll containment for mobile
-  overscroll-behavior: contain;
-  overscroll-behavior-x: none !important; // Absolutely no horizontal overscroll
-  touch-action: pan-y;
-  
-  // Prevent scroll when child elements get focus
-  scroll-padding: 0;
-  
-  // Hide scrollbar
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
-  
-  // Ensure all children respect container width - use !important to override any inline styles
-  > * {
-    max-width: 100% !important;
-    width: 100% !important;
-    overflow-wrap: break-word !important;
-    word-break: break-word !important;
-    box-sizing: border-box !important;
-    overflow: hidden !important; // Prevent any child overflow
-  }
-}
-
-.zmachine-line {
-  white-space: pre-wrap;
-  word-wrap: break-word !important;
-  word-break: break-word !important; // Allow breaking long words
-  overflow-wrap: break-word !important; // Modern property for word breaking
-  line-height: 1.5;
-  margin-bottom: 0.25rem;
-  color: var(--color-foreground, #d4d4d4);
-  max-width: 100% !important; // Prevent overflow
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden; // Prevent any overflow
-  
-  &.zmachine-input-line {
-    color: var(--terminal-command, #3b8eea);
-    font-weight: bold;
-  }
-}
-
-// Historical command echoes - visually distinct from active input
-.zmachine-command-echo {
-  color: var(--terminal-dim, #6a737d);
-  opacity: 0.7;
-  
-  // The » character styling
-  &::first-letter {
-    color: var(--terminal-muted, #555);
-  }
-}
-
-.zmachine-prompt {
-  color: var(--terminal-success, #23d18b);
-  font-weight: bold;
-  margin-right: 0.5rem;
-}
-
-.zmachine-input {
-  color: var(--terminal-command, #3b8eea);
-  max-width: 100%; // Prevent input from exceeding container
-  
-  // Force lowercase display (consistent with terminal input)
-  text-transform: lowercase;
-  
-  // Prevent auto-scroll on focus (mobile browsers)
-  scroll-margin: 0;
-  
-  &::placeholder {
-    color: var(--color-brightBlack, #555);
-    font-style: italic;
-  }
-}
-
-// Use native browser caret for Z-Machine input (simpler than custom cursor)
-.zmachine-native-caret {
-  caret-color: var(--terminal-success, #23d18b);
-}
-
-.zmachine-typing {
-  display: block; // Changed from inline to prevent overflow
-  width: 100%;
-  max-width: 100%;
-  overflow-wrap: break-word !important;
-  word-break: break-word !important;
-  box-sizing: border-box;
-}
-
-.typing-cursor {
-  color: var(--terminal-success, #23d18b);
-  animation: blink 1s step-end infinite;
-}
+// Note: Pager styles are in TerminalPager.vue
+// Note: Z-Machine styles are in TerminalZMachine.vue
 
 // Default line-height for all terminal text
 // Only apply to direct children, not nested elements
@@ -2050,54 +1675,7 @@ onUnmounted(() => {
   }
 }
 
-// =============================================================================
-// Scroll Indicators - visual cue when content extends beyond visible area
-// =============================================================================
-.scroll-indicator {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  height: 28px;
-  pointer-events: none;
-  z-index: 20; // Above content (10)
-  
-  // Default: hidden, show when content is scrollable
-  // Note: opacity transitions in when hasScrollableContentAbove/Below is true
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  
-  &.scroll-indicator--visible {
-    opacity: 1;
-  }
-}
-
-.scroll-indicator--top {
-  top: 10px;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 150, 120, 0.25) 0%,
-    rgba(0, 100, 80, 0.12) 50%,
-    transparent 100%
-  );
-  border-radius: 6px 6px 0 0;
-  
-  // Subtle top accent line
-  border-top: 2px solid rgba(35, 209, 139, 0.35);
-}
-
-.scroll-indicator--bottom {
-  bottom: 10px;
-  background: linear-gradient(
-    to top,
-    rgba(0, 150, 120, 0.25) 0%,
-    rgba(0, 100, 80, 0.12) 50%,
-    transparent 100%
-  );
-  border-radius: 0 0 6px 6px;
-  
-  // Subtle bottom accent line
-  border-bottom: 2px solid rgba(35, 209, 139, 0.35);
-}
+// Note: Scroll indicator styles are in ScrollIndicators.vue
 
 // =============================================================================
 // Mobile Responsive Styles
