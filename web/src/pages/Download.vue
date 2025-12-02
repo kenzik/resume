@@ -72,15 +72,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { useMeta } from 'quasar';
+import { useMeta, useTimeout } from 'quasar';
 
 const route = useRoute();
 
-// Timer refs for cleanup
-let downloadDelayTimer: ReturnType<typeof setTimeout> | null = null;
-let completeDelayTimer: ReturnType<typeof setTimeout> | null = null;
+// Quasar's useTimeout auto-cleans up on unmount
+const { registerTimeout } = useTimeout();
 
 // Valid formats configuration
 const validFormats = [
@@ -133,22 +132,10 @@ onMounted(() => {
   }
   
   // Wait for page transition to complete before triggering download
-  downloadDelayTimer = setTimeout(() => {
-    downloadDelayTimer = null;
+  // useTimeout auto-cleans up on unmount
+  registerTimeout(() => {
     triggerDownload();
   }, 2000);
-});
-
-// Cleanup timers on unmount
-onUnmounted(() => {
-  if (downloadDelayTimer) {
-    clearTimeout(downloadDelayTimer);
-    downloadDelayTimer = null;
-  }
-  if (completeDelayTimer) {
-    clearTimeout(completeDelayTimer);
-    completeDelayTimer = null;
-  }
 });
 
 function triggerDownload() {
@@ -162,8 +149,7 @@ function triggerDownload() {
   document.body.removeChild(link);
   
   // Mark download as complete after a brief moment
-  completeDelayTimer = setTimeout(() => {
-    completeDelayTimer = null;
+  registerTimeout(() => {
     downloadComplete.value = true;
   }, 300);
 }
