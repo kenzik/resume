@@ -61,7 +61,7 @@
       v-if="isMobile && !pagerMode && !zmachineMode" 
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
-      @scroll="handleNativeScroll"
+      @scroll.passive="handleNativeScroll"
     >
       <template v-for="(entry, index) in history" :key="'m-' + index">
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -130,7 +130,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { QScrollArea } from 'quasar';
+import { QScrollArea, useQuasar } from 'quasar';
 import { useCommands } from '../composables/useCommands';
 import type { HistoryEntry } from '../commands/types';
 import { isNavigationCommand, getNavigationPath, isZMachineCommand, getZMachineGameId } from '../commands/types';
@@ -144,7 +144,6 @@ import ScrollIndicators from './terminal/ScrollIndicators.vue';
 import TerminalPager from './terminal/TerminalPager.vue';
 import TerminalZMachine from './terminal/TerminalZMachine.vue';
 import { 
-  MOBILE_BREAKPOINT,
   TYPEWRITER_SPEEDS,
   TERMINAL_CONFIG,
 } from '../constants';
@@ -165,13 +164,9 @@ const inputWrapperRef = ref<HTMLElement | null>(null);
 const inputWrapperRefMobile = ref<HTMLElement | null>(null);
 const cursorLeft = ref(0);
 
-// Mobile detection for native scroll fallback (Chrome iOS has issues with QScrollArea)
-const isMobile = ref(false);
-
-// Detect mobile on mount and window resize
-const updateMobileDetection = () => {
-  isMobile.value = typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT;
-};
+// Mobile detection using Quasar Platform (no resize listener needed)
+const $q = useQuasar();
+const isMobile = computed(() => $q.platform.is.mobile || $q.screen.lt.md);
 
 // =============================================================================
 // Scroll Indicators - show when content extends beyond visible area
@@ -276,6 +271,7 @@ let terminalClickHandler: (() => void) | null = null;
 // Cached canvas for text measurement (performance optimization)
 let measureCanvas: HTMLCanvasElement | null = null;
 let measureContext: CanvasRenderingContext2D | null = null;
+let cachedFontString: string | null = null;
 
 // Typewriter speeds are defined in constants/index.ts
 
@@ -519,9 +515,9 @@ const typeZMachineOutput = async (text: string) => {
   scrollZMachineToBottom();
 };
 
-// Watch Z-Machine output and sync to display with typewriter
-watch(() => zmachine.output.value, async (newOutput) => {
-  if (zmachineMode.value && newOutput.length > 0) {
+// Watch Z-Machine output length (not deep) to sync to display with typewriter
+watch(() => zmachine.output.value.length, async (newLength) => {
+  if (zmachineMode.value && newLength > 0) {
     // Get new output (the composable accumulates)
     const text = zmachine.getOutputText();
     if (text) {
@@ -529,7 +525,7 @@ watch(() => zmachine.output.value, async (newOutput) => {
       await typeZMachineOutput(text);
     }
   }
-}, { deep: true });
+});
 
 // Process a startup command (output only, no prompt shown)
 const processStartupCommand = async (command: string) => {
@@ -548,10 +544,6 @@ const processStartupCommand = async (command: string) => {
 
 // Run startup commands on mount
 onMounted(async () => {
-  // Detect mobile for native scroll fallback
-  updateMobileDetection();
-  window.addEventListener('resize', updateMobileDetection);
-  
   // Run all startup commands through the standard command path
   for (const command of startupCommands) {
     await processStartupCommand(command);
@@ -791,6 +783,18 @@ const navigateHistory = (direction: number) => {
   });
 };
 
+/**
+ * Update cached font string from input element styles
+ * Only called when font settings change (not on every keystroke)
+ */
+const updateCachedFont = () => {
+  const inputEl = isMobile.value ? inputRefMobile.value : inputRef.value;
+  if (inputEl) {
+    const styles = window.getComputedStyle(inputEl);
+    cachedFontString = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+  }
+};
+
 // Update cursor position based on input text width
 const updateCursorPosition = () => {
   nextTick(() => {
@@ -800,42 +804,38 @@ const updateCursorPosition = () => {
       return;
     }
     
-    let currentInputEl: HTMLInputElement | null;
-    let currentWrapper: HTMLElement | null;
+    const currentInputEl = isMobile.value ? inputRefMobile.value : inputRef.value;
     
-    if (isMobile.value) {
-      currentInputEl = inputRefMobile.value;
-      currentWrapper = inputWrapperRefMobile.value;
-    } else {
-      currentInputEl = inputRef.value;
-      currentWrapper = inputWrapperRef.value;
-    }
-    
-    if (currentInputEl && currentWrapper) {
+    if (currentInputEl) {
       // Initialize canvas cache on first use
       if (!measureCanvas) {
         measureCanvas = document.createElement('canvas');
         measureContext = measureCanvas.getContext('2d');
       }
       
-      // Try cached Canvas API first for accurate measurement
-      if (measureContext && currentInputEl) {
-        const styles = window.getComputedStyle(currentInputEl);
-        measureContext.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`;
+      // Initialize font cache if needed
+      if (!cachedFontString) {
+        updateCachedFont();
+      }
+      
+      // Use cached Canvas API for fast measurement (no getComputedStyle on each keystroke)
+      if (measureContext && cachedFontString) {
+        measureContext.font = cachedFontString;
         const textWidth = measureContext.measureText(currentInputEl.value).width;
         cursorLeft.value = textWidth;
         return;
       }
       
-      // Fallback: use hidden span to measure text width
+      // Fallback: use hidden span to measure text width (slower)
+      const styles = window.getComputedStyle(currentInputEl);
       const measureSpan = document.createElement('span');
       measureSpan.style.visibility = 'hidden';
       measureSpan.style.position = 'absolute';
       measureSpan.style.whiteSpace = 'pre';
-      measureSpan.style.fontFamily = window.getComputedStyle(currentInputEl).fontFamily;
-      measureSpan.style.fontSize = window.getComputedStyle(currentInputEl).fontSize;
-      measureSpan.style.fontWeight = window.getComputedStyle(currentInputEl).fontWeight;
-      measureSpan.style.fontStyle = window.getComputedStyle(currentInputEl).fontStyle;
+      measureSpan.style.fontFamily = styles.fontFamily;
+      measureSpan.style.fontSize = styles.fontSize;
+      measureSpan.style.fontWeight = styles.fontWeight;
+      measureSpan.style.fontStyle = styles.fontStyle;
       measureSpan.textContent = currentInputEl.value || '';
       
       document.body.appendChild(measureSpan);
@@ -1058,8 +1058,13 @@ watch(currentInput, () => {
   updateCursorPosition();
 });
 
-// Watch history changes to update scroll indicators
-watch(history, () => {
+// Invalidate font cache when mobile mode changes (different input elements)
+watch(isMobile, () => {
+  cachedFontString = null;
+});
+
+// Watch history length (not deep) to update scroll indicators when entries added
+watch(() => history.value.length, () => {
   // Debounced update after content changes
   nextTick(() => {
     requestAnimationFrame(() => {
@@ -1071,7 +1076,7 @@ watch(history, () => {
       }
     });
   });
-}, { deep: true });
+});
 
 // Add global keyboard event listener
 onMounted(() => {
@@ -1081,7 +1086,6 @@ onMounted(() => {
 // Cleanup
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
-  window.removeEventListener('resize', updateMobileDetection);
   if (terminalRef.value) {
     if (terminalClickHandler) {
       terminalRef.value.removeEventListener('click', terminalClickHandler);
