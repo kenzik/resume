@@ -1,4 +1,5 @@
 import { marked } from 'marked';
+import { NAV_PREFIX } from '../constants';
 
 // =============================================================================
 // Build-time obfuscated triggers (injected by vite plugin)
@@ -385,7 +386,7 @@ ${fontList.join('\n')}
       
       // Return special navigation marker
       // Terminal.vue will detect this and navigate
-      return `__NAV__/resume/download/${format}`;
+      return `${NAV_PREFIX}/resume/download/${format}`;
     },
 
   };
