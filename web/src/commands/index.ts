@@ -24,6 +24,67 @@ export const commands: CommandRegistry = {
 };
 
 /**
+ * Command categories for organized help output
+ */
+const commandCategories = [
+  { 
+    name: 'General',
+    commands: ['help', 'clear', 'history', 'motd'],
+  },
+  {
+    name: 'Resume',
+    commands: ['resume', 'skills', 'experience', 'download'],
+  },
+  {
+    name: 'Settings',
+    commands: ['theme', 'font'],
+  },
+  {
+    name: 'Pipe Commands',
+    description: 'Use with `|` (e.g., `resume | more`)',
+    commands: ['more', 'grep', 'head', 'tail', 'wc'],
+  },
+];
+
+/**
+ * Generate help text from command registry
+ */
+export function generateHelpText(): string {
+  const sections: string[] = [];
+  
+  for (const category of commandCategories) {
+    const lines: string[] = [];
+    lines.push(`#### ${category.name}`);
+    if (category.description) {
+      lines.push(`*${category.description}*`);
+    }
+    lines.push('');
+    
+    for (const cmdName of category.commands) {
+      const cmd = commands[cmdName];
+      if (!cmd || cmd.hidden) continue;
+      
+      const usage = cmd.usage || cmdName;
+      lines.push(`- **${usage}** - ${cmd.description}`);
+    }
+    
+    sections.push(lines.join('\n'));
+  }
+  
+  // Add examples section
+  const examples = [
+    '`experience /five9/i` - Find experience matching "five9"',
+    '`skills | grep kubernetes` - Find skills matching "kubernetes"',
+    '`resume | more` - Page through full resume',
+    '`download pdf` - Download resume as PDF',
+  ];
+  
+  sections.push(`#### Examples\n\n${examples.map(e => `- ${e}`).join('\n')}`);
+  
+  return sections.join('\n\n');
+}
+
+/**
  * Get a command by name (case-insensitive)
  */
 export function getCommand(name: string): CommandDefinition | undefined {
