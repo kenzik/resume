@@ -39,22 +39,24 @@ const animationClass = ref('power-off');
 // Power-on delay from env variable (default 6000ms)
 const powerOnDelayMs = Number(import.meta.env.VITE_POWER_ON_DELAY_MS) || 6000;
 
-// Quasar's useTimeout auto-cleans up on unmount
-const { registerTimeout } = useTimeout();
+// Need separate useTimeout instances for concurrent timers (each instance supports only 1 timer)
+const { registerTimeout: setAnimationStart } = useTimeout();
+const { registerTimeout: setPoweredOn } = useTimeout();
+const { registerTimeout: setRedirect } = useTimeout();
 
 onMounted(() => {
   // Start the power-on animation after a brief delay
-  registerTimeout(() => {
+  setAnimationStart(() => {
     animationClass.value = 'powering-on';
   }, 100);
   
   // Transition to "powered on" state after animation completes (~3s)
-  registerTimeout(() => {
+  setPoweredOn(() => {
     animationClass.value = 'powered-on';
   }, 3500);
   
   // Redirect to /resume after power-on delay
-  registerTimeout(() => {
+  setRedirect(() => {
     router.push('/resume');
   }, powerOnDelayMs);
 });
