@@ -132,6 +132,8 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { QScrollArea } from 'quasar';
 import { useCommands } from '../composables/useCommands';
+import type { HistoryEntry } from '../commands/types';
+import { isNavigationCommand, getNavigationPath, isZMachineCommand, getZMachineGameId } from '../commands/types';
 import { useTypewriter } from '../composables/useTypewriter';
 import { useZMachine, GAME_TITLES } from '../composables/useZMachine';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
@@ -142,8 +144,6 @@ import ScrollIndicators from './terminal/ScrollIndicators.vue';
 import TerminalPager from './terminal/TerminalPager.vue';
 import TerminalZMachine from './terminal/TerminalZMachine.vue';
 import { 
-  NAV_PREFIX, 
-  ZMACHINE_PREFIX, 
   MOBILE_BREAKPOINT,
   TYPEWRITER_SPEEDS,
   TERMINAL_CONFIG,
@@ -233,7 +233,7 @@ const handleNativeScroll = (event: Event) => {
 };
 
 const currentInput = ref('');
-const history = ref<Array<{ command: string; output: string; isStartup?: boolean }>>([]);
+const history = ref<HistoryEntry[]>([]);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
@@ -614,8 +614,8 @@ const processCommand = async (command: string) => {
   const rawOutput = await executeCmd(command);
   
   // Check if this is a navigation command
-  if (rawOutput.startsWith(NAV_PREFIX)) {
-    const targetPath = rawOutput.slice(NAV_PREFIX.length);
+  if (isNavigationCommand(rawOutput)) {
+    const targetPath = getNavigationPath(rawOutput);
     // Add command to history with navigation message
     addHistoryEntry(command, '');
     const entryIndex = history.value.length - 1;
@@ -630,8 +630,8 @@ const processCommand = async (command: string) => {
   }
   
   // Check if this is a Z-Machine command (hidden Easter egg)
-  if (rawOutput.startsWith(ZMACHINE_PREFIX)) {
-    const gameId = rawOutput.slice(ZMACHINE_PREFIX.length);
+  if (isZMachineCommand(rawOutput)) {
+    const gameId = getZMachineGameId(rawOutput);
     await enterZMachineMode(gameId);
     return;
   }

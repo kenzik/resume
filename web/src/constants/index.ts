@@ -5,8 +5,12 @@
 
 // =============================================================================
 // Command Prefixes
-// Used by Terminal.vue to detect special command responses
+// Re-exported from commands module for convenience
 // =============================================================================
+export { COMMAND_PREFIXES } from '../commands/types';
+export { COMMAND_PREFIXES as default } from '../commands/types';
+
+// Legacy exports for backward compatibility
 export const NAV_PREFIX = '__NAV__';
 export const ZMACHINE_PREFIX = '__Z__';
 
