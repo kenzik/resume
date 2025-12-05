@@ -16,7 +16,8 @@ import type { CommandContext } from '../commands/types';
 // =============================================================================
 const BUILD_HASH = __BUILD_HASH__;
 const ENCODED_TRIGGERS = __ENCODED_TRIGGERS__;
-const RESPONSE_PREFIX = __RESPONSE_PREFIX__;
+const RESPONSE_PREFIX = __RESPONSE_PREFIX__;  // Z-Machine games (__Z__)
+const DOOM_PREFIX = __DOOM_PREFIX__;          // DOOM games (__DOOM__)
 
 /**
  * XOR encode input using build hash (mirrors build-time encoding)
@@ -28,10 +29,10 @@ function xorEncode(str: string): string {
 }
 
 /**
- * XOR decode the response prefix back to readable form
+ * XOR decode a prefix back to readable form
  */
-function decodePrefix(): string {
-  const codes = RESPONSE_PREFIX.split(',').map(Number);
+function decodePrefix(encodedPrefix: string): string {
+  const codes = encodedPrefix.split(',').map(Number);
   return codes
     .map((code, i) => String.fromCharCode(code ^ BUILD_HASH.charCodeAt(i % BUILD_HASH.length)))
     .join('');
@@ -40,12 +41,20 @@ function decodePrefix(): string {
 /**
  * Check if input matches an obfuscated easter egg trigger
  * Returns the action response or null if no match
+ * 
+ * Different game types use different prefixes:
+ * - Z-Machine games (zork1, zork2, etc.) use __Z__ prefix
+ * - DOOM games use __DOOM__ prefix
  */
 function checkHiddenCommand(input: string): string | null {
   const encoded = xorEncode(input.toLowerCase().trim());
   if (encoded in ENCODED_TRIGGERS) {
     const action = ENCODED_TRIGGERS[encoded];
-    const prefix = decodePrefix();
+    
+    // Determine which prefix to use based on the action
+    const isDoomAction = action === 'doom' || action.startsWith('doom');
+    const prefix = decodePrefix(isDoomAction ? DOOM_PREFIX : RESPONSE_PREFIX);
+    
     return `${prefix}${action}`;
   }
   return null;
