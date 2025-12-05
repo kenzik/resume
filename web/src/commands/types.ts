@@ -87,8 +87,10 @@ export interface PipelineResult {
 export const COMMAND_PREFIXES = {
   /** Navigation command - triggers router navigation */
   NAV: '__NAV__',
-  /** Z-Machine command - triggers game mode */
+  /** Z-Machine command - triggers text adventure game mode */
   ZMACHINE: '__Z__',
+  /** DOOM command - triggers FPS game mode */
+  DOOM: '__DOOM__',
 } as const;
 
 /**
@@ -117,5 +119,19 @@ export function isZMachineCommand(output: string): boolean {
  */
 export function getZMachineGameId(output: string): string {
   return output.slice(COMMAND_PREFIXES.ZMACHINE.length);
+}
+
+/**
+ * Check if output is a DOOM command
+ */
+export function isDoomCommand(output: string): boolean {
+  return output.startsWith(COMMAND_PREFIXES.DOOM);
+}
+
+/**
+ * Extract game ID from DOOM command (for future WAD support)
+ */
+export function getDoomGameId(output: string): string {
+  return output.slice(COMMAND_PREFIXES.DOOM.length) || 'doom1';
 }
 

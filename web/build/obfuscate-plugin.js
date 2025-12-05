@@ -48,10 +48,15 @@ function getGitInfo() {
  * in the GAMES registry (see useZMachine.ts)
  */
 const HIDDEN_COMMANDS = [
+  // Z-Machine games (text adventures)
   { trigger: 'xyzzy', action: 'zork1' },  // Classic IF magic word
   { trigger: 'plugh', action: 'zork1' },  // Another classic IF magic word
-  // Future games can be added here with different triggers
   // { trigger: 'frotz', action: 'zork2' },
+  
+  // DOOM (FPS game via WebAssembly)
+  { trigger: 'iddqd', action: 'doom' },      // God mode cheat code
+  { trigger: 'idkfa', action: 'doom' },      // All keys/weapons cheat code
+  { trigger: 'idspispopd', action: 'doom' }, // No-clip cheat code
 ];
 
 /**
@@ -67,8 +72,11 @@ function obfuscatePlugin() {
     encodedTriggers[encoded] = action;
   });
   
-  // Also encode the response marker prefix
+  // Encode response marker prefixes for different game types
+  // Z-Machine prefix for text adventures (Zork, etc.)
   const responsePrefix = xorEncode('__Z__', git.hash);
+  // DOOM prefix for FPS games
+  const doomPrefix = xorEncode('__DOOM__', git.hash);
   
   console.log(` Easter Eggs • Encoded ${HIDDEN_COMMANDS.length} triggers with hash ${git.hash}`);
   
@@ -84,6 +92,7 @@ function obfuscatePlugin() {
           __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
           __ENCODED_TRIGGERS__: JSON.stringify(encodedTriggers),
           __RESPONSE_PREFIX__: JSON.stringify(responsePrefix),
+          __DOOM_PREFIX__: JSON.stringify(doomPrefix),
         }
       };
     }
