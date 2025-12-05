@@ -28,3 +28,7 @@ yarn-error.log*
 # Kenzik file
 data/kenzik.yml
 
+# Game assets notes:
+# - freedoom.jsdos (~11MB) is committed for CI/CD builds
+# - It's open source (BSD license) so safe to include in repo
+

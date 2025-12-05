@@ -23,6 +23,9 @@ declare const __BUILD_TIME__: string;
  */
 declare const __ENCODED_TRIGGERS__: Record<string, string>;
 
-/** XOR-encoded response prefix (decodes to "__Z__") */
+/** XOR-encoded response prefix for Z-Machine games (decodes to "__Z__") */
 declare const __RESPONSE_PREFIX__: string;
+
+/** XOR-encoded response prefix for DOOM (decodes to "__DOOM__") */
+declare const __DOOM_PREFIX__: string;
 
