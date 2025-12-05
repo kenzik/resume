@@ -1,6 +1,6 @@
 {
   "name": "kenzik-resume-web",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Terminal-based resume web application",
   "scripts": {
     "dev": "quasar dev",
