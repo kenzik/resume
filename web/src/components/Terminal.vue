@@ -2,8 +2,9 @@
   <div class="terminal" :class="{ 
       'pager-active': pagerMode, 
       'zmachine-active': zmachineMode,
-      'crt-smack': zmachineTransitioning && zmachineTransitionType === 'smack',
-      'crt-roll': zmachineTransitioning && zmachineTransitionType === 'roll'
+      'doom-active': doomMode,
+      'crt-smack': (zmachineTransitioning && zmachineTransitionType === 'smack') || (doomTransitioning && doomTransitionType === 'smack'),
+      'crt-roll': (zmachineTransitioning && zmachineTransitionType === 'roll') || (doomTransitioning && doomTransitionType === 'roll')
     }" ref="terminalRef">
     <!-- Z-Machine Quit Confirmation Modal -->
     <ZMachineQuitModal 
@@ -13,10 +14,19 @@
       @cancel="cancelZMachineQuit"
     />
     
-    <!-- Normal terminal output - hidden during pager mode or zmachine mode -->
+    <!-- DOOM Pause Modal -->
+    <DoomPauseModal
+      v-model="showDoomPauseModal"
+      :audio-enabled="doom.audioEnabled.value"
+      @resume="handleDoomResume"
+      @quit="handleDoomQuit"
+      @toggle-sound="handleDoomToggleSound"
+    />
+    
+    <!-- Normal terminal output - hidden during pager mode, zmachine mode, or doom mode -->
     <!-- Desktop: Use QScrollArea for smooth scrolling -->
     <q-scroll-area 
-      v-if="!isMobile && !pagerMode && !zmachineMode" 
+      v-if="!isMobile && !pagerMode && !zmachineMode && !doomMode" 
       class="terminal-output"
       ref="scrollAreaRef"
       :thumb-style="{ display: 'none' }"
@@ -58,7 +68,7 @@
     
     <!-- Mobile: Use native scroll for better iOS Chrome compatibility -->
     <div 
-      v-if="isMobile && !pagerMode && !zmachineMode" 
+      v-if="isMobile && !pagerMode && !zmachineMode && !doomMode" 
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
       @scroll.passive="handleNativeScroll"
@@ -101,7 +111,7 @@
     
     <!-- Scroll indicators - show when content extends beyond visible area (mobile only) -->
     <ScrollIndicators
-      v-if="isMobile && !pagerMode && !zmachineMode"
+      v-if="isMobile && !pagerMode && !zmachineMode && !doomMode"
       :show-top="hasScrollableContentAbove"
       :show-bottom="hasScrollableContentBelow"
     />
@@ -124,6 +134,18 @@
       v-model="zmachineInput"
       @submit="handleZMachineSubmit"
     />
+    
+    <!-- DOOM mode - full terminal takeover for FPS game -->
+    <DoomCanvas
+      v-if="doomMode"
+      ref="doomRef"
+      :active="doomMode"
+      :game-id="doom.currentGame.value || 'doom1'"
+      @pause="handleDoomPause"
+      @quit="handleDoomQuit"
+      @ready="handleDoomReady"
+      @error="handleDoomError"
+    />
   </div>
 </template>
 
@@ -133,13 +155,16 @@ import { useRouter } from 'vue-router';
 import { QScrollArea, useQuasar } from 'quasar';
 import { useCommands } from '../composables/useCommands';
 import type { HistoryEntry } from '../commands/types';
-import { isNavigationCommand, getNavigationPath, isZMachineCommand, getZMachineGameId } from '../commands/types';
+import { isNavigationCommand, getNavigationPath, isZMachineCommand, getZMachineGameId, isDoomCommand, getDoomGameId } from '../commands/types';
 import { useTypewriter } from '../composables/useTypewriter';
 import { useZMachine, GAME_TITLES } from '../composables/useZMachine';
+import { useDoom, DOOM_TITLES } from '../composables/useDoom';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
 import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
 import ZMachineQuitModal from './ZMachineQuitModal.vue';
+import DoomCanvas from './DoomCanvas.vue';
+import DoomPauseModal from './DoomPauseModal.vue';
 import ScrollIndicators from './terminal/ScrollIndicators.vue';
 import TerminalPager from './terminal/TerminalPager.vue';
 import TerminalZMachine from './terminal/TerminalZMachine.vue';
@@ -253,16 +278,30 @@ const showZMachineQuitModal = ref(false);   // Quit confirmation modal
 const zmachineTransitioning = ref(false);
 const zmachineTransitionType = ref<'smack' | 'roll'>('smack'); // 'smack' = horizontal glitch, 'roll' = vertical roll
 
-// Z-Machine typewriter config (from constants)
+// DOOM mode state
+const doomMode = ref(false);
+const doomRef = ref<InstanceType<typeof DoomCanvas> | null>(null);
+const showDoomPauseModal = ref(false);
+
+// CRT transition effects for DOOM mode (reuses same animation types)
+const doomTransitioning = ref(false);
+const doomTransitionType = ref<'smack' | 'roll'>('smack');
 
 const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
 const { typeText, isTyping } = useTypewriter();
 const zmachine = useZMachine();
+const doom = useDoom();
 
-// Current game title for display
+// Current game title for display (Z-Machine)
 const currentGameTitle = computed(() => {
   const gameId = zmachine.currentGame.value;
   return GAME_TITLES[gameId || ''] || gameId?.toUpperCase() || 'GAME';
+});
+
+// Current DOOM title for display
+const currentDoomTitle = computed(() => {
+  const gameId = doom.currentGame.value;
+  return DOOM_TITLES[gameId || ''] || 'DOOM';
 });
 
 // Click handler stored at module level for proper cleanup
@@ -439,6 +478,124 @@ const cancelZMachineQuit = () => {
     const input = isMobile.value ? inputRefMobile.value : inputRef.value;
     input?.focus();
   });
+};
+
+// =============================================================================
+// DOOM Mode Functions
+// =============================================================================
+
+/**
+ * Enter DOOM mode - start the game
+ */
+const enterDoomMode = async (gameId: string = 'doom1') => {
+  // Don't add command to history - the cheat code just vanishes mysteriously
+  history.value.push({ 
+    command: '', 
+    output: '<em>Initializing DOOM...</em>', 
+    isStartup: true 
+  });
+  const loadingIdx = history.value.length - 1;
+  scrollToBottom();
+  
+  // Randomly choose CRT transition effect
+  doomTransitionType.value = Math.random() > 0.5 ? 'smack' : 'roll';
+  
+  // Trigger CRT transition effect
+  doomTransitioning.value = true;
+  
+  // Wait for transition
+  const transitionDuration = 1800;
+  await new Promise(resolve => setTimeout(resolve, transitionDuration));
+  
+  // Clear the loading message
+  history.value[loadingIdx].output = '';
+  
+  // Enter DOOM mode AFTER transition completes
+  doomMode.value = true;
+  doomTransitioning.value = false;
+  
+  // Explicitly reset transform after animation
+  if (terminalRef.value) {
+    terminalRef.value.style.transform = '';
+  }
+  
+  // Focus DOOM canvas
+  nextTick(() => {
+    doomRef.value?.focus();
+  });
+};
+
+/**
+ * Exit DOOM mode - clean up and return to terminal
+ */
+const exitDoomMode = () => {
+  doom.quit();
+  doomMode.value = false;
+  showDoomPauseModal.value = false;
+  
+  // Redirect to home page for a clean terminal state
+  router.push('/');
+};
+
+/**
+ * Handle DOOM pause - show pause modal
+ */
+const handleDoomPause = () => {
+  doom.pause();
+  showDoomPauseModal.value = true;
+};
+
+/**
+ * Handle DOOM resume from pause modal
+ */
+const handleDoomResume = () => {
+  showDoomPauseModal.value = false;
+  doom.resume();
+  nextTick(() => {
+    doomRef.value?.focus();
+  });
+};
+
+/**
+ * Handle DOOM quit from pause modal
+ */
+const handleDoomQuit = () => {
+  exitDoomMode();
+};
+
+/**
+ * Handle DOOM audio toggle
+ */
+const handleDoomToggleSound = () => {
+  doom.toggleAudio();
+};
+
+/**
+ * Handle DOOM ready event (game loaded successfully)
+ */
+const handleDoomReady = () => {
+  // Game is ready, focus canvas
+  nextTick(() => {
+    doomRef.value?.focus();
+  });
+};
+
+/**
+ * Handle DOOM error
+ */
+const handleDoomError = (message: string) => {
+  console.error('DOOM error:', message);
+  // Exit DOOM mode on error
+  doomMode.value = false;
+  doom.quit();
+  
+  // Show error in terminal
+  history.value.push({
+    command: '',
+    output: `<span style="color: var(--terminal-error)">DOOM failed to load: ${message}</span>`,
+    isStartup: true,
+  });
+  scrollToBottom();
 };
 
 /**
@@ -625,6 +782,13 @@ const processCommand = async (command: string) => {
   if (isZMachineCommand(rawOutput)) {
     const gameId = getZMachineGameId(rawOutput);
     await enterZMachineMode(gameId);
+    return;
+  }
+  
+  // Check if this is a DOOM command (hidden Easter egg)
+  if (isDoomCommand(rawOutput)) {
+    const gameId = getDoomGameId(rawOutput);
+    await enterDoomMode(gameId);
     return;
   }
   
@@ -910,6 +1074,11 @@ const clearTerminal = () => {
     exitZMachineMode();
   }
   
+  // Exit DOOM mode if active
+  if (doomMode.value) {
+    exitDoomMode();
+  }
+  
   updateCursorPosition();
   nextTick(() => {
     inputRef.value?.focus();
@@ -917,7 +1086,7 @@ const clearTerminal = () => {
   });
 };
 
-// Handle keyboard shortcuts (Z-Machine mode and global shortcuts)
+// Handle keyboard shortcuts (Z-Machine mode, DOOM mode, and global shortcuts)
 // Note: Pager mode keyboard handling is in TerminalPager component
 const handleKeyDown = (e: KeyboardEvent) => {
   // Z-Machine quit modal is handled by the modal component itself
@@ -925,8 +1094,24 @@ const handleKeyDown = (e: KeyboardEvent) => {
     return;
   }
   
+  // DOOM pause modal is handled by the modal component itself
+  if (showDoomPauseModal.value) {
+    return;
+  }
+  
   // Pager mode handles its own keyboard events
   if (pagerMode.value) {
+    return;
+  }
+  
+  // DOOM mode - let game handle input, Escape triggers pause
+  if (doomMode.value) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      handleDoomPause();
+      return;
+    }
+    // Let DOOM handle all other keys
     return;
   }
   
