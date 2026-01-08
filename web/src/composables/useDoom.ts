@@ -99,18 +99,28 @@ async function loadJsDosScripts(): Promise<void> {
     
     script.onload = () => {
       scriptsLoaded = true;
-      // Give it a moment to initialize
-      setTimeout(() => {
+      // Give it a moment to initialize - check multiple times with increasing delays
+      let attempts = 0;
+      const maxAttempts = 10;
+      const checkInterval = 100;
+      
+      const checkReady = () => {
+        attempts++;
         if (window.Dos) {
           resolve();
+        } else if (attempts < maxAttempts) {
+          setTimeout(checkReady, checkInterval);
         } else {
-          reject(new Error('js-dos loaded but Dos function not available'));
+          reject(new Error('js-dos loaded but Dos function not available after initialization'));
         }
-      }, 100);
+      };
+      
+      setTimeout(checkReady, checkInterval);
     };
     
-    script.onerror = () => {
-      reject(new Error('Failed to load js-dos script'));
+    script.onerror = (event) => {
+      const errorMsg = event instanceof ErrorEvent ? event.message : 'Unknown error';
+      reject(new Error(`Failed to load js-dos script: ${errorMsg}. Check browser console and CSP settings.`));
     };
     
     document.head.appendChild(script);
