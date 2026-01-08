@@ -130,8 +130,9 @@ jobs:
           projectName: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'kenzik-resume' }}
           directory: web/dist/spa
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          # Preview deployment uses branch name (PR head_ref or manual input or current ref)
-          branch: ${{ github.head_ref || inputs.branch || github.ref_name }}
+          # Use PR head_ref if available, otherwise use manual input, otherwise use main as safe fallback
+          # This prevents errors when deploying from deleted branches
+          branch: ${{ github.head_ref || inputs.branch || 'main' }}
       
       - name: Print Preview URL (Manual Dispatch)
         if: github.event_name == 'workflow_dispatch'

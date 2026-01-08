@@ -44,6 +44,7 @@ interface DosOptions {
   noNetworking?: boolean;
   noSocialBlade?: boolean;
   withExperimentalApi?: boolean;
+  autoStart?: boolean;
 }
 
 // Extend Window to include Dos
@@ -164,6 +165,7 @@ export function useDoom() {
         noCloud: true,
         noNetworking: true,
         noSocialBlade: true,
+        autoStart: true,  // Auto-start the game instead of showing player UI
       });
       
       loadProgress.value = 100;
