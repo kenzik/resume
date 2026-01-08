@@ -48,6 +48,7 @@ function decodePrefix(encodedPrefix: string): string {
  */
 function checkHiddenCommand(input: string): string | null {
   const encoded = xorEncode(input.toLowerCase().trim());
+  
   if (encoded in ENCODED_TRIGGERS) {
     const action = ENCODED_TRIGGERS[encoded];
     
