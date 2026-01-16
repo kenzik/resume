@@ -1,19 +1,27 @@
 <template>
-  <div class="terminal" :class="{ 
-      'pager-active': pagerMode, 
+  <div class="terminal" :class="{
+      'pager-active': pagerMode,
       'zmachine-active': zmachineMode,
       'doom-active': doomMode,
-      'crt-smack': (zmachineTransitioning && zmachineTransitionType === 'smack') || (doomTransitioning && doomTransitionType === 'smack'),
-      'crt-roll': (zmachineTransitioning && zmachineTransitionType === 'roll') || (doomTransitioning && doomTransitionType === 'roll')
+      'wopr-active': woprMode,
+      'crt-smack': (zmachineTransitioning && zmachineTransitionType === 'smack') || (doomTransitioning && doomTransitionType === 'smack') || (woprTransitioning && woprTransitionType === 'smack'),
+      'crt-roll': (zmachineTransitioning && zmachineTransitionType === 'roll') || (doomTransitioning && doomTransitionType === 'roll') || (woprTransitioning && woprTransitionType === 'roll')
     }" ref="terminalRef">
     <!-- Z-Machine Quit Confirmation Modal -->
-    <ZMachineQuitModal 
+    <ZMachineQuitModal
       v-model="showZMachineQuitModal"
       :game-title="currentGameTitle"
       @confirm="confirmZMachineQuit"
       @cancel="cancelZMachineQuit"
     />
-    
+
+    <!-- WOPR Quit Confirmation Modal -->
+    <WOPRQuitModal
+      v-model="showWOPRQuitModal"
+      @confirm="confirmWOPRQuit"
+      @cancel="cancelWOPRQuit"
+    />
+
     <!-- DOOM Pause Modal -->
     <DoomPauseModal
       v-model="showDoomPauseModal"
@@ -23,10 +31,10 @@
       @toggle-sound="handleDoomToggleSound"
     />
     
-    <!-- Normal terminal output - hidden during pager mode, zmachine mode, or doom mode -->
+    <!-- Normal terminal output - hidden during pager mode, zmachine mode, doom mode, or wopr mode -->
     <!-- Desktop: Use QScrollArea for smooth scrolling -->
-    <q-scroll-area 
-      v-if="!isMobile && !pagerMode && !zmachineMode && !doomMode" 
+    <q-scroll-area
+      v-if="!isMobile && !pagerMode && !zmachineMode && !doomMode && !woprMode"
       class="terminal-output"
       ref="scrollAreaRef"
       :thumb-style="{ display: 'none' }"
@@ -67,8 +75,8 @@
     </q-scroll-area>
     
     <!-- Mobile: Use native scroll for better iOS Chrome compatibility -->
-    <div 
-      v-if="isMobile && !pagerMode && !zmachineMode && !doomMode" 
+    <div
+      v-if="isMobile && !pagerMode && !zmachineMode && !doomMode && !woprMode"
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
       @scroll.passive="handleNativeScroll"
@@ -111,7 +119,7 @@
     
     <!-- Scroll indicators - show when content extends beyond visible area (mobile only) -->
     <ScrollIndicators
-      v-if="isMobile && !pagerMode && !zmachineMode && !doomMode"
+      v-if="isMobile && !pagerMode && !zmachineMode && !doomMode && !woprMode"
       :show-top="hasScrollableContentAbove"
       :show-bottom="hasScrollableContentBelow"
     />
@@ -134,7 +142,17 @@
       v-model="zmachineInput"
       @submit="handleZMachineSubmit"
     />
-    
+
+    <!-- WOPR mode - full terminal takeover for WarGames simulator -->
+    <TerminalWOPR
+      ref="woprRef"
+      :active="woprMode"
+      :output-lines="woprOutput"
+      :typing-line="woprTypingLine"
+      v-model="woprInput"
+      @submit="handleWOPRSubmit"
+    />
+
     <!-- DOOM mode - full terminal takeover for FPS game -->
     <DoomCanvas
       v-if="doomMode"
@@ -155,19 +173,22 @@ import { useRouter } from 'vue-router';
 import { QScrollArea, useQuasar } from 'quasar';
 import { useCommands } from '../composables/useCommands';
 import type { HistoryEntry } from '../commands/types';
-import { isNavigationCommand, getNavigationPath, isZMachineCommand, getZMachineGameId, isDoomCommand, getDoomGameId } from '../commands/types';
+import { isNavigationCommand, getNavigationPath, isZMachineCommand, getZMachineGameId, isDoomCommand, getDoomGameId, isWOPRCommand, getWOPRGameId } from '../commands/types';
 import { useTypewriter } from '../composables/useTypewriter';
 import { useZMachine, GAME_TITLES } from '../composables/useZMachine';
 import { useDoom, DOOM_TITLES } from '../composables/useDoom';
+import { useWOPR, WOPR_TITLES } from '../composables/useWOPR';
 import { hasPipe, parsePipeline, executePipeline } from '../composables/usePipeline';
 import { ansiToHtml } from '../utils/ansiToHtml';
 import TerminalPrompt from './TerminalPrompt.vue';
 import ZMachineQuitModal from './ZMachineQuitModal.vue';
+import WOPRQuitModal from './WOPRQuitModal.vue';
 import DoomCanvas from './DoomCanvas.vue';
 import DoomPauseModal from './DoomPauseModal.vue';
 import ScrollIndicators from './terminal/ScrollIndicators.vue';
 import TerminalPager from './terminal/TerminalPager.vue';
 import TerminalZMachine from './terminal/TerminalZMachine.vue';
+import TerminalWOPR from './terminal/TerminalWOPR.vue';
 import { 
   TYPEWRITER_SPEEDS,
   TERMINAL_CONFIG,
@@ -287,10 +308,24 @@ const showDoomPauseModal = ref(false);
 const doomTransitioning = ref(false);
 const doomTransitionType = ref<'smack' | 'roll'>('smack');
 
+// WOPR mode state
+const woprMode = ref(false);
+const woprRef = ref<InstanceType<typeof TerminalWOPR> | null>(null);
+const woprInput = ref('');                    // Separate input state for WOPR mode
+const woprOutput = ref<string[]>([]);         // WOPR output lines (fully typed)
+const woprTypingLine = ref('');               // Currently typing line
+const woprIsTyping = ref(false);              // Whether typewriter is active
+const showWOPRQuitModal = ref(false);         // Quit confirmation modal
+
+// CRT transition effects for WOPR mode (reuses same animation types)
+const woprTransitioning = ref(false);
+const woprTransitionType = ref<'smack' | 'roll'>('smack');
+
 const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
 const { typeText, isTyping } = useTypewriter();
 const zmachine = useZMachine();
 const doom = useDoom();
+const wopr = useWOPR();
 
 // Current game title for display (Z-Machine)
 const currentGameTitle = computed(() => {
@@ -302,6 +337,12 @@ const currentGameTitle = computed(() => {
 const currentDoomTitle = computed(() => {
   const gameId = doom.currentGame.value;
   return DOOM_TITLES[gameId || ''] || 'DOOM';
+});
+
+// Current WOPR title for display
+const currentWOPRTitle = computed(() => {
+  const gameId = wopr.currentGame.value;
+  return WOPR_TITLES[gameId || ''] || 'WOPR';
 });
 
 // Click handler stored at module level for proper cleanup
@@ -684,6 +725,196 @@ watch(() => zmachine.output.value.length, async (newLength) => {
   }
 });
 
+// =============================================================================
+// WOPR Mode Functions
+// =============================================================================
+
+/**
+ * Enter WOPR mode - start the WOPR simulator
+ */
+const enterWOPRMode = async (gameId: string = 'wopr') => {
+  // Don't add command to history - the magic word just vanishes mysteriously
+  history.value.push({
+    command: '',
+    output: '<em>Establishing connection...</em>',
+    isStartup: true
+  });
+  const loadingIdx = history.value.length - 1;
+  scrollToBottom();
+
+  // Start the WOPR simulator
+  const success = await wopr.startGame(gameId);
+
+  if (!success) {
+    history.value[loadingIdx].output = `<span style="color: var(--terminal-error)">Connection failed: ${wopr.error.value}</span>`;
+    return;
+  }
+
+  // Clear the loading message
+  history.value[loadingIdx].output = '<em>Connected to WOPR...</em>';
+
+  // Randomly choose CRT transition effect
+  woprTransitionType.value = Math.random() > 0.5 ? 'smack' : 'roll';
+
+  // Trigger CRT transition effect
+  woprTransitioning.value = true;
+
+  // Wait for transition, then enter WOPR mode
+  const transitionDuration = 1800;
+  await new Promise(resolve => setTimeout(resolve, transitionDuration));
+
+  // Enter WOPR mode AFTER transition completes
+  woprMode.value = true;
+  woprOutput.value = [];
+  woprTypingLine.value = '';
+  woprTransitioning.value = false;
+
+  // Explicitly reset transform after animation to prevent layout issues on mobile
+  if (terminalRef.value) {
+    terminalRef.value.style.transform = '';
+  }
+
+  // Focus WOPR input
+  nextTick(() => {
+    woprRef.value?.focus();
+  });
+
+  // Get any initial output from WOPR startup and type it out
+  const initialOutput = wopr.getOutputText();
+  if (initialOutput) {
+    wopr.clearOutput();
+    await typeWOPROutput(initialOutput);
+  }
+
+  // Refocus after typing completes
+  nextTick(() => {
+    woprRef.value?.focus();
+  });
+};
+
+/**
+ * Exit WOPR mode - clean up and redirect to home for clean state
+ */
+const exitWOPRMode = () => {
+  wopr.quit();
+  woprMode.value = false;
+  woprOutput.value = [];
+  showWOPRQuitModal.value = false;
+
+  // Redirect to home page for a clean terminal state
+  router.push('/');
+};
+
+/**
+ * Handle WOPR quit command - show confirmation
+ */
+const handleWOPRQuit = () => {
+  showWOPRQuitModal.value = true;
+};
+
+/**
+ * Confirm WOPR quit
+ */
+const confirmWOPRQuit = () => {
+  exitWOPRMode();
+};
+
+/**
+ * Cancel WOPR quit - return to simulator
+ */
+const cancelWOPRQuit = () => {
+  showWOPRQuitModal.value = false;
+  nextTick(() => {
+    woprRef.value?.focus();
+  });
+};
+
+/**
+ * Send input to WOPR
+ */
+const sendWOPRInput = (input: string) => {
+  // Check for quit commands
+  const lowerInput = input.toLowerCase().trim();
+  if (lowerInput === 'quit' || lowerInput === 'q' || lowerInput === 'disconnect') {
+    handleWOPRQuit();
+    return;
+  }
+
+  // Add input to output display
+  woprOutput.value.push(`> ${input}`);
+
+  // Send to WOPR simulator
+  wopr.sendInput(input);
+
+  // Scroll to bottom
+  scrollWOPRToBottom();
+};
+
+/**
+ * Scroll WOPR output to bottom
+ */
+const scrollWOPRToBottom = () => {
+  nextTick(() => {
+    woprRef.value?.scrollToBottom();
+  });
+};
+
+/**
+ * Handle WOPR command submission from component
+ */
+const handleWOPRSubmit = (command: string) => {
+  if (command) {
+    sendWOPRInput(command);
+  }
+};
+
+/**
+ * Type WOPR output through the typewriter effect
+ */
+const typeWOPROutput = async (text: string) => {
+  if (!text) return;
+
+  woprIsTyping.value = true;
+
+  // Split into lines and type each one
+  const lines = text.split('\n');
+
+  for (const line of lines) {
+    if (!woprMode.value) break; // Exit if user quit during typing
+
+    // Type this line
+    await typeText(line, {
+      ...TYPEWRITER_SPEEDS.zmachine,
+      onChar: (partialText) => {
+        woprTypingLine.value = partialText;
+        scrollWOPRToBottom();
+      },
+    });
+
+    // Move completed line to output array (skip empty prompts like ">")
+    const isEmptyPrompt = /^>\s*$/.test(line);
+    if (!isEmptyPrompt) {
+      woprOutput.value.push(line);
+    }
+    woprTypingLine.value = '';
+  }
+
+  woprIsTyping.value = false;
+  scrollWOPRToBottom();
+};
+
+// Watch WOPR output length (not deep) to sync to display with typewriter
+watch(() => wopr.output.value.length, async (newLength) => {
+  if (woprMode.value && newLength > 0) {
+    // Get new output (the composable accumulates)
+    const text = wopr.getOutputText();
+    if (text) {
+      wopr.clearOutput();
+      await typeWOPROutput(text);
+    }
+  }
+});
+
 // Process a startup command (output only, no prompt shown)
 const processStartupCommand = async (command: string) => {
   // Execute command through the same path as user commands
@@ -791,7 +1022,14 @@ const processCommand = async (command: string) => {
     await enterDoomMode(gameId);
     return;
   }
-  
+
+  // Check if this is a WOPR command (hidden Easter egg)
+  if (isWOPRCommand(rawOutput)) {
+    const gameId = getWOPRGameId(rawOutput);
+    await enterWOPRMode(gameId);
+    return;
+  }
+
   const output = await renderForDisplay(rawOutput);
   
   // Add command to history first (without output)
@@ -1078,7 +1316,12 @@ const clearTerminal = () => {
   if (doomMode.value) {
     exitDoomMode();
   }
-  
+
+  // Exit WOPR mode if active
+  if (woprMode.value) {
+    exitWOPRMode();
+  }
+
   updateCursorPosition();
   nextTick(() => {
     inputRef.value?.focus();
@@ -1086,24 +1329,29 @@ const clearTerminal = () => {
   });
 };
 
-// Handle keyboard shortcuts (Z-Machine mode, DOOM mode, and global shortcuts)
+// Handle keyboard shortcuts (Z-Machine mode, DOOM mode, WOPR mode, and global shortcuts)
 // Note: Pager mode keyboard handling is in TerminalPager component
 const handleKeyDown = (e: KeyboardEvent) => {
   // Z-Machine quit modal is handled by the modal component itself
   if (showZMachineQuitModal.value) {
     return;
   }
-  
+
   // DOOM pause modal is handled by the modal component itself
   if (showDoomPauseModal.value) {
     return;
   }
-  
+
+  // WOPR quit modal is handled by the modal component itself
+  if (showWOPRQuitModal.value) {
+    return;
+  }
+
   // Pager mode handles its own keyboard events
   if (pagerMode.value) {
     return;
   }
-  
+
   // DOOM mode - let game handle input, Escape triggers pause
   if (doomMode.value) {
     if (e.key === 'Escape') {
@@ -1114,7 +1362,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
     // Let DOOM handle all other keys
     return;
   }
-  
+
   // Z-Machine mode - let normal input through, but handle Ctrl+L
   if (zmachineMode.value) {
     if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
@@ -1130,7 +1378,23 @@ const handleKeyDown = (e: KeyboardEvent) => {
     }
     return;
   }
-  
+
+  // WOPR mode - let normal input through, but handle Ctrl+L
+  if (woprMode.value) {
+    if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
+      e.preventDefault();
+      // Clear WOPR output but stay in simulator
+      woprOutput.value = [];
+      return;
+    }
+    // Ensure WOPR input is focused for all other keys
+    const woprInput = woprRef.value?.inputRef;
+    if (woprInput && document.activeElement !== woprInput) {
+      woprRef.value?.focus();
+    }
+    return;
+  }
+
   // Normal mode: Ctrl+L to clear (works globally)
   if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
     e.preventDefault();
@@ -1191,7 +1455,12 @@ const focusInputSafely = () => {
     zmachineRef.value?.focus();
     return;
   }
-  
+
+  if (woprMode.value) {
+    woprRef.value?.focus();
+    return;
+  }
+
   const input = isMobile.value ? inputRefMobile.value : inputRef.value;
   
   if (input) {
