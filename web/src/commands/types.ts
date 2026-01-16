@@ -91,6 +91,8 @@ export const COMMAND_PREFIXES = {
   ZMACHINE: '__Z__',
   /** DOOM command - triggers FPS game mode */
   DOOM: '__DOOM__',
+  /** WOPR command - triggers WarGames simulator mode */
+  WOPR: '__WOPR__',
 } as const;
 
 /**
@@ -133,5 +135,19 @@ export function isDoomCommand(output: string): boolean {
  */
 export function getDoomGameId(output: string): string {
   return output.slice(COMMAND_PREFIXES.DOOM.length) || 'doom1';
+}
+
+/**
+ * Check if output is a WOPR command
+ */
+export function isWOPRCommand(output: string): boolean {
+  return output.startsWith(COMMAND_PREFIXES.WOPR);
+}
+
+/**
+ * Extract game ID from WOPR command
+ */
+export function getWOPRGameId(output: string): string {
+  return output.slice(COMMAND_PREFIXES.WOPR.length) || 'wopr';
 }
 

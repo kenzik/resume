@@ -52,11 +52,14 @@ const HIDDEN_COMMANDS = [
   { trigger: 'xyzzy', action: 'zork1' },  // Classic IF magic word
   { trigger: 'plugh', action: 'zork1' },  // Another classic IF magic word
   // { trigger: 'frotz', action: 'zork2' },
-  
+
   // DOOM (FPS game via WebAssembly)
   { trigger: 'iddqd', action: 'doom' },      // God mode cheat code
   { trigger: 'idkfa', action: 'doom' },      // All keys/weapons cheat code
   { trigger: 'idspispopd', action: 'doom' }, // No-clip cheat code
+
+  // WOPR (WarGames 1983 simulator)
+  { trigger: 'joshua', action: 'wopr' },     // "Shall we play a game?"
 ];
 
 /**
@@ -77,7 +80,9 @@ function obfuscatePlugin() {
   const responsePrefix = xorEncode('__Z__', git.hash);
   // DOOM prefix for FPS games
   const doomPrefix = xorEncode('__DOOM__', git.hash);
-  
+  // WOPR prefix for WarGames simulator
+  const woprPrefix = xorEncode('__WOPR__', git.hash);
+
   console.log(` Easter Eggs • Encoded ${HIDDEN_COMMANDS.length} triggers with hash ${git.hash}`);
   
   return {
@@ -93,6 +98,7 @@ function obfuscatePlugin() {
           __ENCODED_TRIGGERS__: JSON.stringify(encodedTriggers),
           __RESPONSE_PREFIX__: JSON.stringify(responsePrefix),
           __DOOM_PREFIX__: JSON.stringify(doomPrefix),
+          __WOPR_PREFIX__: JSON.stringify(woprPrefix),
         }
       };
     }
