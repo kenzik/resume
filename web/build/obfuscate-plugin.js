@@ -60,6 +60,7 @@ const HIDDEN_COMMANDS = [
 
   // WOPR (WarGames 1983 simulator)
   { trigger: 'joshua', action: 'wopr' },     // "Shall we play a game?"
+  { trigger: 'wopr', action: 'wopr' },       // Direct WOPR access
 ];
 
 /**
