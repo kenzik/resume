@@ -1,38 +1,36 @@
 <template>
-  <Teleport to="body">
-    <Transition name="modal-fade">
-      <div v-if="modelValue" class="wopr-modal-overlay" @click.self="handleNo" tabindex="-1">
-        <div class="wopr-modal" role="dialog" aria-modal="true" aria-labelledby="wopr-modal-title" tabindex="-1">
-          <div class="modal-border top" tabindex="-1"></div>
-          <div class="modal-content" tabindex="-1">
-            <h2 id="wopr-modal-title" class="modal-title">
-              DISCONNECT FROM WOPR?
-            </h2>
-            <p class="modal-subtitle">
-              Connection will be terminated.
-            </p>
-            <div class="modal-actions">
-              <button
-                ref="yesButtonRef"
-                class="modal-btn modal-btn-yes"
-                @click="handleYes"
-              >
-                [Y]es, disconnect
-              </button>
-              <button
-                ref="noButtonRef"
-                class="modal-btn modal-btn-no"
-                @click="handleNo"
-              >
-                [N]o, stay connected
-              </button>
-            </div>
+  <Transition name="modal-fade">
+    <div v-if="modelValue" class="wopr-modal-overlay" @click.self="handleNo" tabindex="-1">
+      <div class="wopr-modal" role="dialog" aria-modal="true" aria-labelledby="wopr-modal-title" tabindex="-1">
+        <div class="modal-border top" tabindex="-1"></div>
+        <div class="modal-content" tabindex="-1">
+          <h2 id="wopr-modal-title" class="modal-title">
+            DISCONNECT FROM WOPR?
+          </h2>
+          <p class="modal-subtitle">
+            Connection will be terminated.
+          </p>
+          <div class="modal-actions">
+            <button
+              ref="yesButtonRef"
+              class="modal-btn modal-btn-yes"
+              @click="handleYes"
+            >
+              [Y]es, disconnect
+            </button>
+            <button
+              ref="noButtonRef"
+              class="modal-btn modal-btn-no"
+              @click="handleNo"
+            >
+              [N]o, stay connected
+            </button>
           </div>
-          <div class="modal-border bottom" tabindex="-1"></div>
         </div>
+        <div class="modal-border bottom" tabindex="-1"></div>
       </div>
-    </Transition>
-  </Teleport>
+    </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
@@ -143,13 +141,13 @@ $wopr-red: #ff3333;
 $wopr-red-glow: rgba(255, 51, 51, 0.3);
 
 .wopr-modal-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.85);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  z-index: 100;  // Within terminal context, not full page
   backdrop-filter: blur(2px);
 }
 
@@ -163,21 +161,6 @@ $wopr-red-glow: rgba(255, 51, 51, 0.3);
   box-shadow:
     0 0 40px rgba(0, 0, 0, 0.5),
     0 0 20px $wopr-green-glow;
-
-  // Subtle CRT glow
-  &::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    background: linear-gradient(
-      45deg,
-      transparent 40%,
-      $wopr-green-glow 50%,
-      transparent 60%
-    );
-    pointer-events: none;
-    border-radius: 4px;
-  }
 }
 
 .modal-border {
