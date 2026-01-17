@@ -29,3 +29,6 @@ declare const __RESPONSE_PREFIX__: string;
 /** XOR-encoded response prefix for DOOM (decodes to "__DOOM__") */
 declare const __DOOM_PREFIX__: string;
 
+/** XOR-encoded response prefix for WOPR (decodes to "__WOPR__") */
+declare const __WOPR_PREFIX__: string;
+

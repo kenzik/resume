@@ -18,6 +18,7 @@ const BUILD_HASH = __BUILD_HASH__;
 const ENCODED_TRIGGERS = __ENCODED_TRIGGERS__;
 const RESPONSE_PREFIX = __RESPONSE_PREFIX__;  // Z-Machine games (__Z__)
 const DOOM_PREFIX = __DOOM_PREFIX__;          // DOOM games (__DOOM__)
+const WOPR_PREFIX = __WOPR_PREFIX__;          // WOPR games (__WOPR__)
 
 /**
  * XOR encode input using build hash (mirrors build-time encoding)
@@ -41,21 +42,28 @@ function decodePrefix(encodedPrefix: string): string {
 /**
  * Check if input matches an obfuscated easter egg trigger
  * Returns the action response or null if no match
- * 
+ *
  * Different game types use different prefixes:
  * - Z-Machine games (zork1, zork2, etc.) use __Z__ prefix
  * - DOOM games use __DOOM__ prefix
+ * - WOPR games use __WOPR__ prefix
  */
 function checkHiddenCommand(input: string): string | null {
   const encoded = xorEncode(input.toLowerCase().trim());
-  
+
   if (encoded in ENCODED_TRIGGERS) {
     const action = ENCODED_TRIGGERS[encoded];
-    
+
     // Determine which prefix to use based on the action
-    const isDoomAction = action === 'doom' || action.startsWith('doom');
-    const prefix = decodePrefix(isDoomAction ? DOOM_PREFIX : RESPONSE_PREFIX);
-    
+    let prefix: string;
+    if (action === 'doom' || action.startsWith('doom')) {
+      prefix = decodePrefix(DOOM_PREFIX);
+    } else if (action === 'wopr' || action.startsWith('wopr')) {
+      prefix = decodePrefix(WOPR_PREFIX);
+    } else {
+      prefix = decodePrefix(RESPONSE_PREFIX);
+    }
+
     return `${prefix}${action}`;
   }
   return null;
