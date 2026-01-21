@@ -1,6 +1,9 @@
 # Private resume data (stored as GitHub secret)
 data/kenzik.yml
 
+# Claude Code instructions (local only)
+CLAUDE.md
+
 # OS files
 .DS_Store
 Thumbs.db
