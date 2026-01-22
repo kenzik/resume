@@ -1,0 +1,28 @@
+/* Unscii - 8x8 bitmap font */
+/* https://github.com/viznut/unscii */
+/* Created by Viznut (Ville-Matias Heikkila) */
+
+@font-face {
+  font-family: 'Unscii';
+  src: url('/fonts/unscii-8.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Bitmap fonts don't have weight variations - map all weights to same file */
+@font-face {
+  font-family: 'Unscii';
+  src: url('/fonts/unscii-8.woff') format('woff');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Unscii';
+  src: url('/fonts/unscii-8.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
