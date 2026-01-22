@@ -8,6 +8,7 @@
       "family": "'Unscii', monospace",
       "webFont": "/fonts/unscii.css",
       "defaultSize": 14,
+      "bitmap": true,
       "note": "8x8 bitmap font by Viznut (github.com/viznut/unscii)"
     },
     {

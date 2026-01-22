@@ -96,6 +96,13 @@ function applyFont(fontName: string, applySize: boolean = true) {
   const root = document.documentElement;
   root.style.setProperty('--font-family', font.family);
 
+  // Toggle bitmap font class for crisp pixel-perfect rendering
+  if (font.bitmap) {
+    root.classList.add('font-bitmap');
+  } else {
+    root.classList.remove('font-bitmap');
+  }
+
   // Apply font's default size (or user's saved preference for this font)
   if (applySize) {
     const size = loadFontSizePreference(fontName);

@@ -42,6 +42,7 @@ export interface FontConfig {
   webFont?: string; // Google Fonts URL or other web font source
   note?: string; // Optional note about the font
   defaultSize?: number; // Default font size in pixels (optional, uses global default if not set)
+  bitmap?: boolean; // True for bitmap/pixel fonts that need anti-aliasing disabled
 }
 
 export interface FontsConfig {

@@ -95,6 +95,15 @@ body {
   }
 }
 
+// Bitmap font rendering - disable anti-aliasing for pixel-perfect fonts like Unscii
+html.font-bitmap,
+html.font-bitmap body {
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
+  font-smooth: never;
+}
+
 a {
   color: var(--color-white, #e5e5e5);
   text-decoration: underline;
