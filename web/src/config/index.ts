@@ -41,11 +41,13 @@ export interface FontConfig {
   family: string;
   webFont?: string; // Google Fonts URL or other web font source
   note?: string; // Optional note about the font
+  defaultSize?: number; // Default font size in pixels (optional, uses global default if not set)
 }
 
 export interface FontsConfig {
   default: string;
   defaultLineHeight: number;
+  defaultSize: number; // Global default font size in pixels
   fonts: FontConfig[];
 }
 
@@ -61,6 +63,15 @@ export function getDefaultFont(): string {
 
 export function getDefaultLineHeight(): number {
   return fonts.defaultLineHeight;
+}
+
+export function getDefaultFontSize(): number {
+  return fonts.defaultSize;
+}
+
+export function getFontDefaultSize(fontName: string): number {
+  const font = getFont(fontName);
+  return font?.defaultSize ?? fonts.defaultSize;
 }
 
 // Track which web fonts have been loaded

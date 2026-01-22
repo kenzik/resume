@@ -1,7 +1,15 @@
 {
   "default": "Fira Code",
   "defaultLineHeight": 1.8,
+  "defaultSize": 18,
   "fonts": [
+    {
+      "name": "Unscii",
+      "family": "'Unscii', monospace",
+      "webFont": "/fonts/unscii.css",
+      "defaultSize": 14,
+      "note": "8x8 bitmap font by Viznut (github.com/viznut/unscii)"
+    },
     {
       "name": "JuliaMono",
       "family": "'JuliaMono', monospace",
