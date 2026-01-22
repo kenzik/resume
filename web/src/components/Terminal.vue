@@ -189,10 +189,12 @@ import ScrollIndicators from './terminal/ScrollIndicators.vue';
 import TerminalPager from './terminal/TerminalPager.vue';
 import TerminalZMachine from './terminal/TerminalZMachine.vue';
 import TerminalWOPR from './terminal/TerminalWOPR.vue';
-import { 
+import {
   TYPEWRITER_SPEEDS,
   TERMINAL_CONFIG,
 } from '../constants';
+import { useFont } from '../composables/useFont';
+import { getFont } from '../config';
 
 const router = useRouter();
 
@@ -1205,21 +1207,51 @@ const updateCursorPosition = () => {
     if (zmachineMode.value) {
       return;
     }
-    
+
     const currentInputEl = isMobile.value ? inputRefMobile.value : inputRef.value;
-    
+
     if (currentInputEl) {
+      // Check if current font is a bitmap font
+      const font = useFont();
+      const fontConfig = getFont(font.getCurrentFont());
+      const isBitmapFont = fontConfig?.bitmap === true;
+
+      // For bitmap fonts, ALWAYS use DOM measurement because Canvas API doesn't
+      // respect CSS font-smoothing properties which affect rendered character widths
+      if (isBitmapFont) {
+        const styles = window.getComputedStyle(currentInputEl);
+        const measureSpan = document.createElement('span');
+        measureSpan.style.visibility = 'hidden';
+        measureSpan.style.position = 'absolute';
+        measureSpan.style.whiteSpace = 'pre';
+        measureSpan.style.fontFamily = styles.fontFamily;
+        measureSpan.style.fontSize = styles.fontSize;
+        measureSpan.style.fontWeight = styles.fontWeight;
+        measureSpan.style.fontStyle = styles.fontStyle;
+        // Apply bitmap font rendering CSS to match actual rendering
+        measureSpan.style.setProperty('-webkit-font-smoothing', 'none');
+        measureSpan.style.setProperty('-moz-osx-font-smoothing', 'grayscale');
+        measureSpan.style.setProperty('text-rendering', 'optimizeSpeed');
+        measureSpan.style.setProperty('font-smooth', 'never');
+        measureSpan.textContent = currentInputEl.value || '';
+
+        document.body.appendChild(measureSpan);
+        cursorLeft.value = measureSpan.offsetWidth;
+        document.body.removeChild(measureSpan);
+        return;
+      }
+
       // Initialize canvas cache on first use
       if (!measureCanvas) {
         measureCanvas = document.createElement('canvas');
         measureContext = measureCanvas.getContext('2d');
       }
-      
+
       // Initialize font cache if needed
       if (!cachedFontString) {
         updateCachedFont();
       }
-      
+
       // Use cached Canvas API for fast measurement (no getComputedStyle on each keystroke)
       if (measureContext && cachedFontString) {
         measureContext.font = cachedFontString;
@@ -1227,7 +1259,7 @@ const updateCursorPosition = () => {
         cursorLeft.value = textWidth;
         return;
       }
-      
+
       // Fallback: use hidden span to measure text width (slower)
       const styles = window.getComputedStyle(currentInputEl);
       const measureSpan = document.createElement('span');
@@ -1239,7 +1271,7 @@ const updateCursorPosition = () => {
       measureSpan.style.fontWeight = styles.fontWeight;
       measureSpan.style.fontStyle = styles.fontStyle;
       measureSpan.textContent = currentInputEl.value || '';
-      
+
       document.body.appendChild(measureSpan);
       cursorLeft.value = measureSpan.offsetWidth;
       document.body.removeChild(measureSpan);

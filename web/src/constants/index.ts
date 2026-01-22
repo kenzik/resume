@@ -27,6 +27,7 @@ export const STORAGE_KEYS = {
   theme: 'kenzik-resume-theme',
   font: 'kenzik-resume-font',
   lineHeight: 'kenzik-resume-line-height',
+  scanlines: 'kenzik-resume-scanlines',
 } as const;
 
 // =============================================================================

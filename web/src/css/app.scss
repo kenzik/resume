@@ -104,6 +104,11 @@ html.font-bitmap body {
   font-smooth: never;
 }
 
+// Scanlines toggle - hide scanlines when disabled
+html.scanlines-disabled .crt-scanlines {
+  opacity: 0 !important;
+}
+
 a {
   color: var(--color-white, #e5e5e5);
   text-decoration: underline;

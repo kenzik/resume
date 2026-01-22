@@ -121,6 +121,20 @@ ${fontList.join('\n')}
       const fontName = ctx.args.join(' ');
       const result = font.setFont(fontName);
       if (result) {
+        // Auto-toggle scanlines for bitmap fonts
+        const { useScanlines } = await import('../composables/useScanlines');
+        const { getFont } = await import('../config');
+        const scanlines = useScanlines();
+        const fontConfig = getFont(font.getCurrentFont());
+
+        if (fontConfig?.bitmap) {
+          // Disable scanlines for bitmap fonts (cleaner pixel look)
+          scanlines.setEnabled(false);
+        } else {
+          // Re-enable scanlines for vector fonts
+          scanlines.setEnabled(true);
+        }
+
         return `Font changed to: **${font.getCurrentFont()}**`;
       } else {
         return `Font not found: "${fontName}". Type \`font\` to see available fonts.`;
@@ -129,6 +143,51 @@ ${fontList.join('\n')}
     description: 'Change terminal font',
     usage: 'font [name|spacing <value>]',
     examples: ['font', 'font "JetBrains Mono"', 'font spacing 1.8'],
+  },
+
+  set: {
+    handler: async (ctx) => {
+      const { useScanlines } = await import('../composables/useScanlines');
+      const scanlines = useScanlines();
+
+      if (ctx.args.length === 0) {
+        return `**set** - Configure terminal settings
+
+**Available settings:**
+
+- \`set scanlines on|off\` - Toggle CRT scanlines effect
+
+**Current values:**
+
+- scanlines: **${scanlines.isEnabled() ? 'on' : 'off'}**`;
+      }
+
+      const setting = ctx.args[0].toLowerCase();
+
+      if (setting === 'scanlines') {
+        if (ctx.args.length < 2) {
+          return `Scanlines: **${scanlines.isEnabled() ? 'on' : 'off'}**
+
+Usage: \`set scanlines on|off\``;
+        }
+
+        const value = ctx.args[1].toLowerCase();
+        if (value === 'on' || value === 'true' || value === '1') {
+          scanlines.setEnabled(true);
+          return `Scanlines: **on**`;
+        } else if (value === 'off' || value === 'false' || value === '0') {
+          scanlines.setEnabled(false);
+          return `Scanlines: **off**`;
+        } else {
+          return `Invalid value: "${ctx.args[1]}". Use \`on\` or \`off\`.`;
+        }
+      }
+
+      return `Unknown setting: "${setting}". Type \`set\` to see available settings.`;
+    },
+    description: 'Configure terminal settings',
+    usage: 'set [setting] [value]',
+    hidden: true,
   },
 };
 

@@ -125,17 +125,28 @@ function applyLineHeight(lineHeight: number) {
 // Initialize font on first load
 let fontInitialized = false;
 
-function initializeFont() {
+async function initializeFont() {
   if (fontInitialized || typeof window === 'undefined') return;
   fontInitialized = true;
-  
+
   // Preload all web fonts so they're ready when user switches
   preloadWebFonts();
-  
+
   currentFont.value = loadFontPreference();
   currentLineHeight.value = loadLineHeightPreference();
   applyFont(currentFont.value);
   applyLineHeight(currentLineHeight.value);
+
+  // Initialize scanlines based on font type
+  const font = getFont(currentFont.value);
+  if (font) {
+    const { useScanlines } = await import('./useScanlines');
+    const scanlines = useScanlines();
+    // If bitmap font, disable scanlines (unless user explicitly set them)
+    if (font.bitmap) {
+      scanlines.setEnabled(false);
+    }
+  }
 }
 
 export function useFont() {
