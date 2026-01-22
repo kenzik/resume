@@ -1,11 +1,12 @@
 import { ref, computed, onMounted, nextTick, getCurrentInstance } from 'vue';
 import { LocalStorage } from 'quasar';
-import { fonts, getFont, getDefaultFont, getDefaultLineHeight, loadWebFont, preloadWebFonts, type FontConfig } from '../config';
+import { fonts, getFont, getDefaultFont, getDefaultLineHeight, getDefaultFontSize, getFontDefaultSize, loadWebFont, preloadWebFonts, type FontConfig } from '../config';
 import { STORAGE_KEYS } from '../constants';
 
 // Reactive state
 const currentFont = ref<string>(getDefaultFont());
 const currentLineHeight = ref<number>(getDefaultLineHeight());
+const currentFontSize = ref<number>(getDefaultFontSize());
 const hasCustomFont = ref<boolean>(false); // Track if user manually changed font
 
 // Load font preference from Quasar LocalStorage
@@ -47,8 +48,40 @@ function saveLineHeightPreference(lineHeight: number) {
   LocalStorage.set(STORAGE_KEYS.lineHeight, lineHeight.toString());
 }
 
+// Load font size preference from Quasar LocalStorage
+function loadFontSizePreference(fontName: string): number {
+  if (typeof window === 'undefined') return getFontDefaultSize(fontName);
+
+  // Check for font-specific size first
+  const fontSizeKey = `${STORAGE_KEYS.font}_size_${fontName}`;
+  const stored = LocalStorage.getItem<string>(fontSizeKey);
+  if (stored) {
+    const parsed = parseInt(stored, 10);
+    if (!isNaN(parsed) && parsed >= 8 && parsed <= 32) {
+      return parsed;
+    }
+  }
+  // Return font's default size
+  return getFontDefaultSize(fontName);
+}
+
+// Save font size preference to Quasar LocalStorage (per-font)
+function saveFontSizePreference(fontName: string, size: number) {
+  if (typeof window === 'undefined') return;
+  const fontSizeKey = `${STORAGE_KEYS.font}_size_${fontName}`;
+  LocalStorage.set(fontSizeKey, size.toString());
+}
+
+// Apply font size to document
+function applyFontSize(size: number) {
+  if (typeof document === 'undefined') return;
+
+  const root = document.documentElement;
+  root.style.setProperty('--font-size', `${size}px`);
+}
+
 // Apply font to document - IMMEDIATE application
-function applyFont(fontName: string) {
+function applyFont(fontName: string, applySize: boolean = true) {
   if (typeof document === 'undefined') return;
 
   const font = getFont(fontName);
@@ -62,7 +95,14 @@ function applyFont(fontName: string) {
 
   const root = document.documentElement;
   root.style.setProperty('--font-family', font.family);
-  
+
+  // Apply font's default size (or user's saved preference for this font)
+  if (applySize) {
+    const size = loadFontSizePreference(fontName);
+    currentFontSize.value = size;
+    applyFontSize(size);
+  }
+
   // Force immediate reflow to ensure visual update
   void root.offsetHeight;
 }
@@ -147,6 +187,22 @@ export function useFont() {
     return currentLineHeight.value;
   };
 
+  // Set font size - IMMEDIATE visual feedback (saved per-font)
+  const setFontSize = (size: number): boolean => {
+    if (size >= 8 && size <= 32) {
+      currentFontSize.value = size;
+      saveFontSizePreference(currentFont.value, size);
+      applyFontSize(size); // Apply immediately
+      return true;
+    }
+    return false;
+  };
+
+  // Get current font size
+  const getFontSize = () => {
+    return currentFontSize.value;
+  };
+
   // Check if user has set a custom font (so theme won't override it)
   const hasCustomFontPreference = () => {
     return hasCustomFont.value;
@@ -155,11 +211,14 @@ export function useFont() {
   return {
     currentFont: computed(() => currentFont.value),
     currentLineHeight: computed(() => currentLineHeight.value),
+    currentFontSize: computed(() => currentFontSize.value),
     setFont,
     getCurrentFont,
     listFonts,
     setLineHeight,
     getLineHeight,
+    setFontSize,
+    getFontSize,
     hasCustomFontPreference,
     availableFonts: fonts.fonts,
   };
