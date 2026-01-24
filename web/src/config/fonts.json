@@ -1,6 +1,6 @@
 {
   "default": "Fira Code",
-  "defaultLineHeight": 1.8,
+  "defaultLineHeight": 1.6,
   "defaultSize": 18,
   "fonts": [
     {
@@ -8,6 +8,7 @@
       "family": "'Unscii', monospace",
       "webFont": "/fonts/unscii.css",
       "defaultSize": 14,
+      "defaultLineHeight": 1.9,
       "note": "8x8 bitmap font by Viznut (github.com/viznut/unscii)"
     },
     {
