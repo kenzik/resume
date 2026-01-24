@@ -71,18 +71,11 @@ function applyTheme(theme: Theme) {
     root.style.setProperty(`--terminal-${key}`, value);
   });
 
-  // Font family is controlled by useFont composable, not themes
+  // Font family and line-height are controlled by useFont composable, not themes
   // Themes only set size and weight
   root.style.setProperty('--font-size', theme.font.size);
   root.style.setProperty('--font-weight', theme.font.weight || '400');
-  
-  // Only apply theme line-height if no custom preference
-  const customLineHeight = typeof window !== 'undefined'
-    ? LocalStorage.getItem<string>(STORAGE_KEYS.lineHeight)
-    : null;
-  if (!customLineHeight) {
-    root.style.setProperty('--font-line-height', theme.font.lineHeight);
-  }
+  // Note: line-height is now per-font and handled by useFont
 
   // Apply spacing
   root.style.setProperty('--spacing-padding', theme.spacing.padding);

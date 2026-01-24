@@ -42,6 +42,7 @@ export interface FontConfig {
   webFont?: string; // Google Fonts URL or other web font source
   note?: string; // Optional note about the font
   defaultSize?: number; // Default font size in pixels (optional, uses global default if not set)
+  defaultLineHeight?: number; // Default line height (optional, uses global default if not set)
 }
 
 export interface FontsConfig {
@@ -72,6 +73,11 @@ export function getDefaultFontSize(): number {
 export function getFontDefaultSize(fontName: string): number {
   const font = getFont(fontName);
   return font?.defaultSize ?? fonts.defaultSize;
+}
+
+export function getFontDefaultLineHeight(fontName: string): number {
+  const font = getFont(fontName);
+  return font?.defaultLineHeight ?? fonts.defaultLineHeight;
 }
 
 // Track which web fonts have been loaded

@@ -1,5 +1,7 @@
 # Private resume data (stored as GitHub secret)
 data/kenzik.yml
+data/kenzik.b64.txt
+data/kenzik.paste.txt
 
 # Claude Code instructions (local only)
 CLAUDE.md
