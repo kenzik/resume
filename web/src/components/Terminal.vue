@@ -2029,7 +2029,7 @@ onUnmounted(() => {
   max-width: 100%; // Prevent overflow
   display: block;
   white-space: normal;
-  line-height: 1.6;
+  line-height: var(--font-line-height, 1.6);
   clear: both;
   overflow-wrap: break-word; // Allow long words to break
   word-break: break-word; // Break long words if needed
@@ -2061,7 +2061,7 @@ onUnmounted(() => {
   :deep(p) {
     margin: .75em 0 .5em 0;
     padding: 0;
-    line-height: 1.4;
+    line-height: inherit;
   }
   
   :deep(div) {
@@ -2075,7 +2075,7 @@ onUnmounted(() => {
 
   :deep(h1) {
     font-size: 1.4em;
-    line-height: 1.6;
+    line-height: inherit;
     font-weight: bold;
     color: var(--terminal-success, #23d18b);
     margin: 0.75em 0 0.5em 0;
@@ -2083,7 +2083,7 @@ onUnmounted(() => {
 
   :deep(h2) {
     font-size: 1em;
-    line-height: 1.4;
+    line-height: inherit;
     font-weight: bold;
     color: var(--terminal-success, #23d18b);
     margin: 0.75em 0 0.5em 0;
@@ -2091,7 +2091,7 @@ onUnmounted(() => {
 
   :deep(h3) {
     font-size: .75em;
-    line-height: 1.4;
+    line-height: inherit;
     font-weight: bold;
     color: var(--terminal-info, #29b8db);
     margin: 0.4em 0 0.2em 0;
@@ -2119,7 +2119,7 @@ onUnmounted(() => {
 
   :deep(li) {
     margin: 0.1em 0;
-    line-height: 1.4;
+    line-height: inherit;
   }
 }
 

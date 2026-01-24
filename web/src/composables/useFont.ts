@@ -1,6 +1,6 @@
 import { ref, computed, onMounted, nextTick, getCurrentInstance } from 'vue';
 import { LocalStorage } from 'quasar';
-import { fonts, getFont, getDefaultFont, getDefaultLineHeight, getDefaultFontSize, getFontDefaultSize, loadWebFont, preloadWebFonts, type FontConfig } from '../config';
+import { fonts, getFont, getDefaultFont, getDefaultLineHeight, getDefaultFontSize, getFontDefaultSize, getFontDefaultLineHeight, loadWebFont, preloadWebFonts, type FontConfig } from '../config';
 import { STORAGE_KEYS } from '../constants';
 
 // Reactive state
@@ -21,18 +21,21 @@ function loadFontPreference(): string {
   return getDefaultFont();
 }
 
-// Load line height preference from Quasar LocalStorage
-function loadLineHeightPreference(): number {
-  if (typeof window === 'undefined') return getDefaultLineHeight();
-  
-  const stored = LocalStorage.getItem<string>(STORAGE_KEYS.lineHeight);
+// Load line height preference from Quasar LocalStorage (per-font)
+function loadLineHeightPreference(fontName: string): number {
+  if (typeof window === 'undefined') return getFontDefaultLineHeight(fontName);
+
+  // Check for font-specific line height first
+  const lineHeightKey = `${STORAGE_KEYS.font}_lineHeight_${fontName}`;
+  const stored = LocalStorage.getItem<string>(lineHeightKey);
   if (stored) {
     const parsed = parseFloat(stored);
     if (!isNaN(parsed) && parsed > 0 && parsed <= 3) {
       return parsed;
     }
   }
-  return getDefaultLineHeight();
+  // Return font's default line height
+  return getFontDefaultLineHeight(fontName);
 }
 
 // Save font preference to Quasar LocalStorage
@@ -42,10 +45,11 @@ function saveFontPreference(font: string) {
   hasCustomFont.value = true; // Mark as custom
 }
 
-// Save line height preference to Quasar LocalStorage
-function saveLineHeightPreference(lineHeight: number) {
+// Save line height preference to Quasar LocalStorage (per-font)
+function saveLineHeightPreference(fontName: string, lineHeight: number) {
   if (typeof window === 'undefined') return;
-  LocalStorage.set(STORAGE_KEYS.lineHeight, lineHeight.toString());
+  const lineHeightKey = `${STORAGE_KEYS.font}_lineHeight_${fontName}`;
+  LocalStorage.set(lineHeightKey, lineHeight.toString());
 }
 
 // Load font size preference from Quasar LocalStorage
@@ -81,7 +85,7 @@ function applyFontSize(size: number) {
 }
 
 // Apply font to document - IMMEDIATE application
-function applyFont(fontName: string, applySize: boolean = true) {
+function applyFont(fontName: string, applySettings: boolean = true) {
   if (typeof document === 'undefined') return;
 
   const font = getFont(fontName);
@@ -96,11 +100,15 @@ function applyFont(fontName: string, applySize: boolean = true) {
   const root = document.documentElement;
   root.style.setProperty('--font-family', font.family);
 
-  // Apply font's default size (or user's saved preference for this font)
-  if (applySize) {
+  // Apply font's default size and line height (or user's saved preferences for this font)
+  if (applySettings) {
     const size = loadFontSizePreference(fontName);
     currentFontSize.value = size;
     applyFontSize(size);
+
+    const lineHeight = loadLineHeightPreference(fontName);
+    currentLineHeight.value = lineHeight;
+    applyLineHeight(lineHeight);
   }
 
   // Force immediate reflow to ensure visual update
@@ -121,14 +129,13 @@ let fontInitialized = false;
 function initializeFont() {
   if (fontInitialized || typeof window === 'undefined') return;
   fontInitialized = true;
-  
+
   // Preload all web fonts so they're ready when user switches
   preloadWebFonts();
-  
+
   currentFont.value = loadFontPreference();
-  currentLineHeight.value = loadLineHeightPreference();
+  // applyFont handles loading and applying both size and line height for the font
   applyFont(currentFont.value);
-  applyLineHeight(currentLineHeight.value);
 }
 
 export function useFont() {
@@ -171,11 +178,11 @@ export function useFont() {
     return fonts.fonts.map(f => f.name);
   };
 
-  // Set line height - IMMEDIATE visual feedback
+  // Set line height - IMMEDIATE visual feedback (saved per-font)
   const setLineHeight = (lineHeight: number): boolean => {
     if (lineHeight > 0 && lineHeight <= 3) {
       currentLineHeight.value = lineHeight;
-      saveLineHeightPreference(lineHeight);
+      saveLineHeightPreference(currentFont.value, lineHeight);
       applyLineHeight(lineHeight); // Apply immediately
       return true;
     }
