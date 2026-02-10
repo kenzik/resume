@@ -27,21 +27,23 @@ export const commands: CommandRegistry = {
  * Command categories for organized help output
  */
 const commandCategories = [
-  { 
+  {
     name: 'General',
     commands: ['help', 'clear', 'history', 'motd'],
   },
   {
     name: 'Resume',
+    description: 'Discover the career narrative, skills, and achievements',
     commands: ['resume', 'skills', 'experience', 'download'],
   },
   {
     name: 'Settings',
+    description: 'Customize the terminal experience',
     commands: ['theme', 'font'],
   },
   {
     name: 'Pipe Commands',
-    description: 'Use with `|` (e.g., `resume | more`)',
+    description: 'Filter and transform output with Unix-style commands',
     commands: ['more', 'grep', 'head', 'tail', 'wc'],
   },
 ];
@@ -73,12 +75,12 @@ export function generateHelpText(): string {
   
   // Add examples section
   const examples = [
-    '`experience google` - Filter experience by company',
-    '`skills | grep kubernetes` - Find skills matching "kubernetes"',
-    '`resume | more` - Page through full resume',
-    '`download pdf` - Download resume as PDF',
+    '`resume | more` - Take a guided tour through the full career story',
+    '`experience google` - Zoom into highlights from a specific role',
+    '`skills | grep kubernetes` - Hunt for specific expertise',
+    '`download pdf` - Grab a traditional resume format',
   ];
-  
+
   sections.push(`#### Examples\n\n${examples.map(e => `- ${e}`).join('\n')}`);
   
   return sections.join('\n\n');

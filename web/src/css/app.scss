@@ -237,31 +237,79 @@ a {
     --mobile-font-size: 14px;
     --mobile-line-height: 1.4;
     --mobile-row-height: calc(var(--mobile-font-size) * var(--mobile-line-height)); // ~19.6px
-    
+
     // Reduced chrome for compact displays
     --mobile-terminal-chrome: 65px;
-    
+
     // Fewer rows for very small screens (still generous)
     --mobile-terminal-rows: 35;
-    
+
     // Recalculate content height
     --mobile-content-height: calc(var(--mobile-terminal-rows) * var(--mobile-row-height));
-    
+
     // Terminal height - row-based or 96vh (maximize screen usage)
     --terminal-width: 98vw;
     --terminal-height: min(
       calc(var(--mobile-content-height) + var(--mobile-terminal-chrome)),
       96vh
     );
-    
+
     // Even smaller radius
     --terminal-border-radius: 8px;
-    
+
     // Minimal bezel for maximum content
-    --terminal-bezel-shadow: 
+    --terminal-bezel-shadow:
       0 0 0 1px #1a1a1a,
       0 0 0 2px #0d0d0d,
       inset 0 0 30px rgba(0, 0, 0, 0.15);
+  }
+}
+
+// =============================================================================
+// Mobile Landscape Orientation
+// Optimize for phones held horizontally - reduced chrome, fewer rows
+// =============================================================================
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    // Compact typography for landscape
+    --mobile-font-size: 13px;
+    --mobile-line-height: 1.3;
+    --mobile-row-height: calc(var(--mobile-font-size) * var(--mobile-line-height)); // ~16.9px
+
+    // Minimal chrome for landscape - tight vertical space
+    --mobile-terminal-chrome: 50px;
+
+    // Fewer rows for landscape view (height is limited)
+    --mobile-terminal-rows: 18;
+
+    // Recalculate content height
+    --mobile-content-height: calc(var(--mobile-terminal-rows) * var(--mobile-row-height));
+
+    // Terminal dimensions - maximize width, fit height
+    --terminal-width: 98vw;
+    --terminal-height: min(
+      calc(var(--mobile-content-height) + var(--mobile-terminal-chrome)),
+      92vh
+    );
+
+    // Compact border radius for landscape
+    --terminal-border-radius: 6px;
+
+    // Minimal bezel shadow for compact landscape view
+    --terminal-bezel-shadow:
+      0 0 0 1px #1a1a1a,
+      0 0 0 2px #0d0d0d,
+      inset 0 0 20px rgba(0, 0, 0, 0.1);
+  }
+
+  html {
+    // Center vertically in landscape since we have more horizontal space
+    align-items: center;
+  }
+
+  body {
+    // Ensure body respects landscape sizing
+    max-height: 92vh !important;
   }
 }
 

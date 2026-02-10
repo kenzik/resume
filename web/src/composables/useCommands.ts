@@ -8,6 +8,7 @@
 import { marked } from 'marked';
 import { executeCommand, hasCommand } from '../commands';
 import type { CommandContext } from '../commands/types';
+import { sanitizeHtml } from '../utils/sanitize';
 
 // =============================================================================
 // Build-time obfuscated triggers (injected by vite plugin)
@@ -121,10 +122,14 @@ export function useCommands() {
   /**
    * Render raw command output to HTML via markdown
    * Call this only for final display (not for intermediate pipe steps)
+   *
+   * Output is sanitized with DOMPurify to prevent XSS attacks
    */
   const renderForDisplay = async (output: string): Promise<string> => {
     if (!output) return '';
-    return await marked(output, { breaks: false, gfm: true }) as string;
+    const html = await marked(output, { breaks: false, gfm: true }) as string;
+    // Sanitize HTML to prevent XSS attacks
+    return sanitizeHtml(html);
   };
 
   return {

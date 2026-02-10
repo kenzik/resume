@@ -8,7 +8,7 @@
     "selection": "#add6ff",
     "black": "#000000",
     "red": "#cd3131",
-    "green": "#0dbc79",
+    "green": "#056b38",
     "yellow": "#e5e510",
     "blue": "#2472c8",
     "magenta": "#bc3fbc",
@@ -16,7 +16,7 @@
     "white": "#e5e5e5",
     "brightBlack": "#666666",
     "brightRed": "#f14c4c",
-    "brightGreen": "#23d18b",
+    "brightGreen": "#056b38",
     "brightYellow": "#f5f543",
     "brightBlue": "#3b8eea",
     "brightMagenta": "#d670d6",
@@ -24,11 +24,11 @@
     "brightWhite": "#ffffff"
   },
   "terminal": {
-    "prompt": "#0dbc79",
+    "prompt": "#056b38",
     "command": "#2472c8",
     "output": "#333333",
     "error": "#cd3131",
-    "success": "#0dbc79",
+    "success": "#056b38",
     "warning": "#e5e510",
     "info": "#11a8cd"
   },

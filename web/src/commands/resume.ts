@@ -32,13 +32,13 @@ async function withResume<T>(
 export const resumeCommands: CommandRegistry = {
   resume: {
     handler: async () => withResume(r => r.getFullResume()),
-    description: 'Display full resume',
+    description: 'Explore the complete career narrative',
     examples: ['resume', 'resume | more'],
   },
 
   skills: {
     handler: async () => withResume(r => r.getSkills()),
-    description: 'List technical skills',
+    description: 'Explore technical expertise across cloud, infrastructure, and development',
     examples: ['skills', 'skills | grep kubernetes'],
   },
 
@@ -47,7 +47,7 @@ export const resumeCommands: CommandRegistry = {
       const filter = ctx.args.length > 0 ? ctx.args.join(' ') : undefined;
       return withResume(r => r.getExperience(filter));
     },
-    description: 'Show work experience',
+    description: 'Dive into detailed project highlights and achievements',
     usage: 'experience [company]',
     examples: ['experience', 'experience google', 'experience acme'],
   },

@@ -13,7 +13,7 @@ export const coreCommands: CommandRegistry = {
       const { generateHelpText } = await import('./index');
       return generateHelpText();
     },
-    description: 'Show available commands',
+    description: 'View the command reference',
   },
 
   clear: {
@@ -21,7 +21,7 @@ export const coreCommands: CommandRegistry = {
       // Handled by Terminal.vue
       return '';
     },
-    description: 'Clear the terminal screen',
+    description: 'Clear the terminal canvas',
   },
 
   history: {
@@ -29,7 +29,7 @@ export const coreCommands: CommandRegistry = {
       // Handled by Terminal.vue (needs access to command history state)
       return '';
     },
-    description: 'Show command history',
+    description: 'Browse your command history',
   },
 
   motd: {
@@ -39,7 +39,7 @@ export const coreCommands: CommandRegistry = {
       await loadMotd();
       return getMotd();
     },
-    description: 'Show message of the day',
+    description: 'See the welcome message again',
   },
 };
 

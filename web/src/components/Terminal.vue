@@ -1,15 +1,15 @@
 <template>
   <div class="terminal" :class="{
-      'pager-active': pagerMode,
-      'zmachine-active': zmachineMode,
-      'doom-active': doomMode,
-      'wopr-active': woprMode,
-      'crt-smack': (zmachineTransitioning && zmachineTransitionType === 'smack') || (doomTransitioning && doomTransitionType === 'smack') || (woprTransitioning && woprTransitionType === 'smack'),
-      'crt-roll': (zmachineTransitioning && zmachineTransitionType === 'roll') || (doomTransitioning && doomTransitionType === 'roll') || (woprTransitioning && woprTransitionType === 'roll')
+      'pager-active': modes.pagerMode.value,
+      'zmachine-active': modes.zmachineMode.value,
+      'doom-active': modes.doomMode.value,
+      'wopr-active': modes.woprMode.value,
+      'crt-smack': (modes.zmachineTransitioning.value && modes.zmachineTransitionType.value === 'smack') || (modes.doomTransitioning.value && modes.doomTransitionType.value === 'smack') || (modes.woprTransitioning.value && modes.woprTransitionType.value === 'smack'),
+      'crt-roll': (modes.zmachineTransitioning.value && modes.zmachineTransitionType.value === 'roll') || (modes.doomTransitioning.value && modes.doomTransitionType.value === 'roll') || (modes.woprTransitioning.value && modes.woprTransitionType.value === 'roll')
     }" ref="terminalRef">
     <!-- Z-Machine Quit Confirmation Modal -->
     <ZMachineQuitModal
-      v-model="showZMachineQuitModal"
+      v-model="modes.showZMachineQuitModal.value"
       :game-title="currentGameTitle"
       @confirm="confirmZMachineQuit"
       @cancel="cancelZMachineQuit"
@@ -17,24 +17,24 @@
 
     <!-- WOPR Quit Confirmation Modal -->
     <WOPRQuitModal
-      v-model="showWOPRQuitModal"
+      v-model="modes.showWOPRQuitModal.value"
       @confirm="confirmWOPRQuit"
       @cancel="cancelWOPRQuit"
     />
 
     <!-- DOOM Pause Modal -->
     <DoomPauseModal
-      v-model="showDoomPauseModal"
+      v-model="modes.showDoomPauseModal.value"
       :audio-enabled="doom.audioEnabled.value"
       @resume="handleDoomResume"
       @quit="handleDoomQuit"
       @toggle-sound="handleDoomToggleSound"
     />
-    
+
     <!-- Normal terminal output - hidden during pager mode, zmachine mode, doom mode, or wopr mode -->
     <!-- Desktop: Use QScrollArea for smooth scrolling -->
     <q-scroll-area
-      v-if="!isMobile && !pagerMode && !zmachineMode && !doomMode && !woprMode"
+      v-if="!isMobile && !modes.pagerMode.value && !modes.zmachineMode.value && !modes.doomMode.value && !modes.woprMode.value"
       class="terminal-output"
       ref="scrollAreaRef"
       :thumb-style="{ display: 'none' }"
@@ -50,7 +50,7 @@
           <span class="typing-indicator">▋</span>
         </div>
       </template>
-      
+
       <div class="terminal-line terminal-input-line">
         <TerminalPrompt />
         <div class="input-wrapper" ref="inputWrapperRef">
@@ -59,24 +59,24 @@
             v-model="currentInput"
             @input="updateCursorPosition"
             @keydown.enter="executeCommand"
-            @keydown.up="navigateHistory(-1)"
-            @keydown.down="navigateHistory(1)"
+            @keydown.up="handleHistoryNavigation(-1)"
+            @keydown.down="handleHistoryNavigation(1)"
             class="terminal-input"
             type="text"
             autofocus
             spellcheck="false"
         />
-          <span 
-            class="cursor" 
+          <span
+            class="cursor"
             :style="{ left: cursorLeft + 'px' }"
           >█</span>
         </div>
       </div>
     </q-scroll-area>
-    
+
     <!-- Mobile: Use native scroll for better iOS Chrome compatibility -->
     <div
-      v-if="isMobile && !pagerMode && !zmachineMode && !doomMode && !woprMode"
+      v-if="isMobile && !modes.pagerMode.value && !modes.zmachineMode.value && !modes.doomMode.value && !modes.woprMode.value"
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
       @scroll.passive="handleNativeScroll"
@@ -91,7 +91,7 @@
           <span class="typing-indicator">▋</span>
         </div>
       </template>
-      
+
       <div class="terminal-line terminal-input-line">
         <TerminalPrompt />
         <div class="input-wrapper" ref="inputWrapperRefMobile">
@@ -100,8 +100,8 @@
             v-model="currentInput"
             @input="updateCursorPosition"
             @keydown.enter="executeCommand"
-            @keydown.up="navigateHistory(-1)"
-            @keydown.down="navigateHistory(1)"
+            @keydown.up="handleHistoryNavigation(-1)"
+            @keydown.down="handleHistoryNavigation(1)"
             @focus="handleMobileInputFocus"
             @blur="handleMobileInputBlur"
             class="terminal-input"
@@ -109,33 +109,33 @@
             autofocus
             spellcheck="false"
         />
-          <span 
-            class="cursor" 
+          <span
+            class="cursor"
             :style="{ left: cursorLeft + 'px' }"
           >█</span>
         </div>
       </div>
     </div>
-    
+
     <!-- Scroll indicators - show when content extends beyond visible area (mobile only) -->
     <ScrollIndicators
-      v-if="isMobile && !pagerMode && !zmachineMode && !doomMode && !woprMode"
+      v-if="isMobile && !modes.pagerMode.value && !modes.zmachineMode.value && !modes.doomMode.value && !modes.woprMode.value"
       :show-top="hasScrollableContentAbove"
       :show-bottom="hasScrollableContentBelow"
     />
-    
+
     <!-- Pager mode - separate scrollable area with keyboard navigation -->
     <TerminalPager
-      :active="pagerMode"
-      :command="pagerCommand"
-      :raw-content="pagerRawContent"
+      :active="modes.pagerMode.value"
+      :command="modes.pagerCommand.value"
+      :raw-content="modes.pagerRawContent.value"
       @exit="handlePagerExit"
     />
-    
+
     <!-- Z-Machine mode - full terminal takeover for game -->
     <TerminalZMachine
       ref="zmachineRef"
-      :active="zmachineMode"
+      :active="modes.zmachineMode.value"
       :game-title="currentGameTitle"
       :output-lines="zmachineOutput"
       :typing-line="zmachineTypingLine"
@@ -146,7 +146,7 @@
     <!-- WOPR mode - full terminal takeover for WarGames simulator -->
     <TerminalWOPR
       ref="woprRef"
-      :active="woprMode"
+      :active="modes.woprMode.value"
       :output-lines="woprOutput"
       :typing-line="woprTypingLine"
       v-model="woprInput"
@@ -155,9 +155,9 @@
 
     <!-- DOOM mode - full terminal takeover for FPS game -->
     <DoomCanvas
-      v-if="doomMode"
+      v-if="modes.doomMode.value"
       ref="doomRef"
-      :active="doomMode"
+      :active="modes.doomMode.value"
       :game-id="doom.currentGame.value || 'doom1'"
       @pause="handleDoomPause"
       @quit="handleDoomQuit"
@@ -172,6 +172,8 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { QScrollArea, useQuasar } from 'quasar';
 import { useCommands } from '../composables/useCommands';
+import { useTerminalModes } from '../composables/useTerminalModes';
+import { useTerminalHistory } from '../composables/useTerminalHistory';
 import type { HistoryEntry } from '../commands/types';
 import { isNavigationCommand, getNavigationPath, isZMachineCommand, getZMachineGameId, isDoomCommand, getDoomGameId, isWOPRCommand, getWOPRGameId } from '../commands/types';
 import { useTypewriter } from '../composables/useTypewriter';
@@ -189,7 +191,7 @@ import ScrollIndicators from './terminal/ScrollIndicators.vue';
 import TerminalPager from './terminal/TerminalPager.vue';
 import TerminalZMachine from './terminal/TerminalZMachine.vue';
 import TerminalWOPR from './terminal/TerminalWOPR.vue';
-import { 
+import {
   TYPEWRITER_SPEEDS,
   TERMINAL_CONFIG,
 } from '../constants';
@@ -215,6 +217,12 @@ const $q = useQuasar();
 const isMobile = computed(() => $q.platform.is.mobile || $q.screen.lt.md);
 
 // =============================================================================
+// Composables
+// =============================================================================
+const modes = useTerminalModes();
+const terminalHistory = useTerminalHistory();
+
+// =============================================================================
 // Scroll Indicators - show when content extends beyond visible area
 // =============================================================================
 const hasScrollableContentAbove = ref(false);
@@ -226,20 +234,20 @@ let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean = false) => {
   if (!scrollEl) return;
-  
+
   const doUpdate = () => {
     if (!scrollEl) return;
-    
+
     const { scrollTop, scrollHeight, clientHeight } = scrollEl;
     const scrollBuffer = 5; // Buffer zone to prevent flickering at edges
-    
+
     // Check if content extends above visible area
     hasScrollableContentAbove.value = scrollTop > scrollBuffer;
-    
-    // Check if content extends below visible area  
+
+    // Check if content extends below visible area
     hasScrollableContentBelow.value = scrollTop + clientHeight < scrollHeight - scrollBuffer;
   };
-  
+
   // Immediate mode skips debounce (used after programmatic scrolls)
   if (immediate) {
     if (scrollDebounceTimer) {
@@ -249,12 +257,12 @@ const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean
     doUpdate();
     return;
   }
-  
+
   // Debounced mode for scroll events
   if (scrollDebounceTimer) {
     clearTimeout(scrollDebounceTimer);
   }
-  
+
   scrollDebounceTimer = setTimeout(() => {
     scrollDebounceTimer = null;
     doUpdate();
@@ -264,12 +272,12 @@ const updateScrollIndicators = (scrollEl: HTMLElement | null, immediate: boolean
 // Handle scroll events on the native scroll container
 const handleNativeScroll = (event: Event) => {
   const target = event.target as HTMLElement;
-  
+
   // Immediately reset any horizontal scroll - this is a safety net
   if (target.scrollLeft !== 0) {
     target.scrollLeft = 0;
   }
-  
+
   updateScrollIndicators(target);
 };
 
@@ -278,48 +286,20 @@ const history = ref<HistoryEntry[]>([]);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
-// Command history settings (for up/down arrow navigation)
-const commandHistory = ref<string[]>([]);
-const commandHistoryIndex = ref(-1);
-const savedInput = ref(''); // Saves current input when starting to navigate
-
-// Pager mode state (UI logic handled by TerminalPager component)
-const pagerMode = ref(false);
-const pagerCommand = ref('');           // The command that triggered pager mode
-const pagerRawContent = ref('');        // Raw markdown content for pager
-
 // Z-Machine mode state
-const zmachineMode = ref(false);
 const zmachineOutput = ref<string[]>([]);   // Game output lines (fully typed)
 const zmachineTypingLine = ref('');          // Currently typing line
 const zmachineIsTyping = ref(false);         // Whether typewriter is active
-const showZMachineQuitModal = ref(false);   // Quit confirmation modal
-
-// CRT transition effects for Z-Machine mode
-const zmachineTransitioning = ref(false);
-const zmachineTransitionType = ref<'smack' | 'roll'>('smack'); // 'smack' = horizontal glitch, 'roll' = vertical roll
 
 // DOOM mode state
-const doomMode = ref(false);
 const doomRef = ref<InstanceType<typeof DoomCanvas> | null>(null);
-const showDoomPauseModal = ref(false);
-
-// CRT transition effects for DOOM mode (reuses same animation types)
-const doomTransitioning = ref(false);
-const doomTransitionType = ref<'smack' | 'roll'>('smack');
 
 // WOPR mode state
-const woprMode = ref(false);
 const woprRef = ref<InstanceType<typeof TerminalWOPR> | null>(null);
 const woprInput = ref('');                    // Separate input state for WOPR mode
 const woprOutput = ref<string[]>([]);         // WOPR output lines (fully typed)
 const woprTypingLine = ref('');               // Currently typing line
 const woprIsTyping = ref(false);              // Whether typewriter is active
-const showWOPRQuitModal = ref(false);         // Quit confirmation modal
-
-// CRT transition effects for WOPR mode (reuses same animation types)
-const woprTransitioning = ref(false);
-const woprTransitionType = ref<'smack' | 'roll'>('smack');
 
 const { execute: executeCmd, executeRaw, renderForDisplay } = useCommands();
 const { typeText, isTyping } = useTypewriter();
@@ -366,10 +346,10 @@ const typeOutputToHistory = async (
   config: { delay: number; charsPerTick: number } = TYPEWRITER_SPEEDS.default
 ) => {
   if (!output) return;
-  
+
   // Pre-detect ANSI codes once for efficiency
   const hasAnsi = output.includes('\x1b[');
-  
+
   await typeText(output, {
     delay: config.delay,
     charsPerTick: config.charsPerTick,
@@ -380,33 +360,24 @@ const typeOutputToHistory = async (
       scrollToBottom();
     },
   });
-  
+
   // Final ANSI conversion to ensure complete processing
   if (hasAnsi) {
     history.value[entryIndex].output = ansiToHtml(output);
   }
-  
+
   // Ensure final scroll after typewriter completes
   scrollToBottom();
-};
-
-// Enter pager mode with content
-const enterPagerMode = (command: string, rawContent: string) => {
-  pagerCommand.value = command;
-  pagerRawContent.value = rawContent;
-  pagerMode.value = true;
 };
 
 // Handle pager exit (called by TerminalPager component)
 const handlePagerExit = () => {
   // Add command to history without output (like real `more` - output was already displayed)
-  addHistoryEntry(pagerCommand.value, '');
-  
-  // Reset pager state
-  pagerMode.value = false;
-  pagerCommand.value = '';
-  pagerRawContent.value = '';
-  
+  addHistoryEntry(modes.pagerCommand.value, '');
+
+  // Reset pager state via composable
+  modes.exitPagerMode();
+
   // Refocus input
   nextTick(() => {
     inputRef.value?.focus();
@@ -423,59 +394,52 @@ const handlePagerExit = () => {
  */
 const enterZMachineMode = async (gameId: string = 'zork1') => {
   // Don't add command to history - the magic word just vanishes mysteriously
-  history.value.push({ 
-    command: '', 
-    output: '<em>Loading game...</em>', 
-    isStartup: true 
+  history.value.push({
+    command: '',
+    output: '<em>Loading game...</em>',
+    isStartup: true
   });
   const loadingIdx = history.value.length - 1;
   scrollToBottom();
-  
+
   // Start the game
   const success = await zmachine.startGame(gameId);
-  
+
   if (!success) {
     history.value[loadingIdx].output = `<span style="color: var(--terminal-error)">Failed to load game: ${zmachine.error.value}</span>`;
     return;
   }
-  
+
   // Clear the loading message
   history.value[loadingIdx].output = '<em>Starting game...</em>';
-  
-  // Randomly choose CRT transition effect
-  zmachineTransitionType.value = Math.random() > 0.5 ? 'smack' : 'roll';
-  
-  // Trigger CRT transition effect
-  zmachineTransitioning.value = true;
-  
-  // Wait for transition, then enter Z-Machine mode
-  // Both effects now have 3 escalating phases totaling ~1.8s
-  const transitionDuration = 1800;
+
+  // Begin CRT transition effect via composable
+  modes.beginZMachineTransition();
+
+  // Wait for transition
+  const transitionDuration = modes.getTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
-  
+
   // Enter Z-Machine mode AFTER transition completes
-  zmachineMode.value = true;
+  modes.enterZMachineMode();
   zmachineOutput.value = [];
   zmachineTypingLine.value = '';
-  zmachineTransitioning.value = false;
-  
+
   // Explicitly reset transform after animation to prevent layout issues on mobile
-  if (terminalRef.value) {
-    terminalRef.value.style.transform = '';
-  }
-  
+  modes.resetTransformAfterTransition(terminalRef.value);
+
   // Focus Z-Machine input
   nextTick(() => {
     zmachineRef.value?.focus();
   });
-  
+
   // Get any initial output from game startup and type it out
   const initialOutput = zmachine.getOutputText();
   if (initialOutput) {
     zmachine.clearOutput();
     await typeZMachineOutput(initialOutput);
   }
-  
+
   // Refocus after typing completes
   nextTick(() => {
     zmachineRef.value?.focus();
@@ -487,10 +451,9 @@ const enterZMachineMode = async (gameId: string = 'zork1') => {
  */
 const exitZMachineMode = () => {
   zmachine.quit();
-  zmachineMode.value = false;
+  modes.exitZMachineMode();
   zmachineOutput.value = [];
-  showZMachineQuitModal.value = false;
-  
+
   // Redirect to home page for a clean terminal state
   // This avoids mobile layout bugs that occur when switching modes
   router.push('/');
@@ -500,7 +463,7 @@ const exitZMachineMode = () => {
  * Handle Z-Machine quit command - show confirmation
  */
 const handleZMachineQuit = () => {
-  showZMachineQuitModal.value = true;
+  modes.showZMachineQuit();
 };
 
 /**
@@ -514,7 +477,7 @@ const confirmZMachineQuit = () => {
  * Cancel Z-Machine quit - return to game
  */
 const cancelZMachineQuit = () => {
-  showZMachineQuitModal.value = false;
+  modes.hideZMachineQuit();
   nextTick(() => {
     const input = isMobile.value ? inputRefMobile.value : inputRef.value;
     input?.focus();
@@ -530,36 +493,30 @@ const cancelZMachineQuit = () => {
  */
 const enterDoomMode = async (gameId: string = 'doom1') => {
   // Don't add command to history - the cheat code just vanishes mysteriously
-  history.value.push({ 
-    command: '', 
-    output: '<em>Initializing DOOM...</em>', 
-    isStartup: true 
+  history.value.push({
+    command: '',
+    output: '<em>Initializing DOOM...</em>',
+    isStartup: true
   });
   const loadingIdx = history.value.length - 1;
   scrollToBottom();
-  
-  // Randomly choose CRT transition effect
-  doomTransitionType.value = Math.random() > 0.5 ? 'smack' : 'roll';
-  
-  // Trigger CRT transition effect
-  doomTransitioning.value = true;
-  
+
+  // Begin CRT transition effect via composable
+  modes.beginDoomTransition();
+
   // Wait for transition
-  const transitionDuration = 1800;
+  const transitionDuration = modes.getTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
-  
+
   // Clear the loading message
   history.value[loadingIdx].output = '';
-  
+
   // Enter DOOM mode AFTER transition completes
-  doomMode.value = true;
-  doomTransitioning.value = false;
-  
+  modes.enterDoomMode();
+
   // Explicitly reset transform after animation
-  if (terminalRef.value) {
-    terminalRef.value.style.transform = '';
-  }
-  
+  modes.resetTransformAfterTransition(terminalRef.value);
+
   // Focus DOOM canvas
   nextTick(() => {
     doomRef.value?.focus();
@@ -571,9 +528,8 @@ const enterDoomMode = async (gameId: string = 'doom1') => {
  */
 const exitDoomMode = () => {
   doom.quit();
-  doomMode.value = false;
-  showDoomPauseModal.value = false;
-  
+  modes.exitDoomMode();
+
   // Redirect to home page for a clean terminal state
   router.push('/');
 };
@@ -583,14 +539,14 @@ const exitDoomMode = () => {
  */
 const handleDoomPause = () => {
   doom.pause();
-  showDoomPauseModal.value = true;
+  modes.showDoomPause();
 };
 
 /**
  * Handle DOOM resume from pause modal
  */
 const handleDoomResume = () => {
-  showDoomPauseModal.value = false;
+  modes.hideDoomPause();
   doom.resume();
   nextTick(() => {
     doomRef.value?.focus();
@@ -627,9 +583,9 @@ const handleDoomReady = () => {
 const handleDoomError = (message: string) => {
   console.error('DOOM error:', message);
   // Exit DOOM mode on error
-  doomMode.value = false;
+  modes.exitDoomMode();
   doom.quit();
-  
+
   // Show error in terminal
   history.value.push({
     command: '',
@@ -649,13 +605,13 @@ const sendZMachineInput = (input: string) => {
     handleZMachineQuit();
     return;
   }
-  
+
   // Add input to output display
   zmachineOutput.value.push(`> ${input}`);
-  
+
   // Send to game
   zmachine.sendInput(input);
-  
+
   // Scroll to bottom
   scrollZMachineToBottom();
 };
@@ -683,15 +639,15 @@ const handleZMachineSubmit = (command: string) => {
  */
 const typeZMachineOutput = async (text: string) => {
   if (!text) return;
-  
+
   zmachineIsTyping.value = true;
-  
+
   // Split into lines and type each one
   const lines = text.split('\n');
-  
+
   for (const line of lines) {
-    if (!zmachineMode.value) break; // Exit if user quit during typing
-    
+    if (!modes.zmachineMode.value) break; // Exit if user quit during typing
+
     // Type this line
     await typeText(line, {
       ...TYPEWRITER_SPEEDS.zmachine,
@@ -700,7 +656,7 @@ const typeZMachineOutput = async (text: string) => {
         scrollZMachineToBottom();
       },
     });
-    
+
     // Move completed line to output array (skip empty prompts like ">")
     const isEmptyPrompt = /^>\s*$/.test(line);
     if (!isEmptyPrompt) {
@@ -708,14 +664,14 @@ const typeZMachineOutput = async (text: string) => {
     }
     zmachineTypingLine.value = '';
   }
-  
+
   zmachineIsTyping.value = false;
   scrollZMachineToBottom();
 };
 
 // Watch Z-Machine output length (not deep) to sync to display with typewriter
 watch(() => zmachine.output.value.length, async (newLength) => {
-  if (zmachineMode.value && newLength > 0) {
+  if (modes.zmachineMode.value && newLength > 0) {
     // Get new output (the composable accumulates)
     const text = zmachine.getOutputText();
     if (text) {
@@ -753,26 +709,20 @@ const enterWOPRMode = async (gameId: string = 'wopr') => {
   // Clear the loading message
   history.value[loadingIdx].output = '<em>Connected to WOPR...</em>';
 
-  // Randomly choose CRT transition effect
-  woprTransitionType.value = Math.random() > 0.5 ? 'smack' : 'roll';
+  // Begin CRT transition effect via composable
+  modes.beginWOPRTransition();
 
-  // Trigger CRT transition effect
-  woprTransitioning.value = true;
-
-  // Wait for transition, then enter WOPR mode
-  const transitionDuration = 1800;
+  // Wait for transition
+  const transitionDuration = modes.getTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
 
   // Enter WOPR mode AFTER transition completes
-  woprMode.value = true;
+  modes.enterWOPRMode();
   woprOutput.value = [];
   woprTypingLine.value = '';
-  woprTransitioning.value = false;
 
   // Explicitly reset transform after animation to prevent layout issues on mobile
-  if (terminalRef.value) {
-    terminalRef.value.style.transform = '';
-  }
+  modes.resetTransformAfterTransition(terminalRef.value);
 
   // Focus WOPR input
   nextTick(() => {
@@ -797,9 +747,8 @@ const enterWOPRMode = async (gameId: string = 'wopr') => {
  */
 const exitWOPRMode = () => {
   wopr.quit();
-  woprMode.value = false;
+  modes.exitWOPRMode();
   woprOutput.value = [];
-  showWOPRQuitModal.value = false;
 
   // Redirect to home page for a clean terminal state
   router.push('/');
@@ -809,7 +758,7 @@ const exitWOPRMode = () => {
  * Handle WOPR quit command - show confirmation
  */
 const handleWOPRQuit = () => {
-  showWOPRQuitModal.value = true;
+  modes.showWOPRQuit();
 };
 
 /**
@@ -823,7 +772,7 @@ const confirmWOPRQuit = () => {
  * Cancel WOPR quit - return to simulator
  */
 const cancelWOPRQuit = () => {
-  showWOPRQuitModal.value = false;
+  modes.hideWOPRQuit();
   nextTick(() => {
     woprRef.value?.focus();
   });
@@ -880,7 +829,7 @@ const typeWOPROutput = async (text: string) => {
   const lines = text.split('\n');
 
   for (const line of lines) {
-    if (!woprMode.value) break; // Exit if user quit during typing
+    if (!modes.woprMode.value) break; // Exit if user quit during typing
 
     // Type this line
     await typeText(line, {
@@ -905,7 +854,7 @@ const typeWOPROutput = async (text: string) => {
 
 // Watch WOPR output length (not deep) to sync to display with typewriter
 watch(() => wopr.output.value.length, async (newLength) => {
-  if (woprMode.value && newLength > 0) {
+  if (modes.woprMode.value && newLength > 0) {
     // Get new output (the composable accumulates)
     const text = wopr.getOutputText();
     if (text) {
@@ -920,11 +869,11 @@ const processStartupCommand = async (command: string) => {
   // Execute command through the same path as user commands
   const rawOutput = await executeCmd(command);
   const output = await renderForDisplay(rawOutput);
-  
+
   // Add entry with isStartup flag (prompt won't be shown)
   history.value.push({ command, output: '', isStartup: true });
   const entryIndex = history.value.length - 1;
-  
+
   // Type out output with typewriter effect
   await typeOutputToHistory(entryIndex, output);
   scrollToBottom();
@@ -936,14 +885,14 @@ onMounted(async () => {
   for (const command of startupCommands) {
     await processStartupCommand(command);
   }
-  
+
   // Cursor blinking is handled by CSS animation
-  
+
   // Focus input after startup commands complete
   nextTick(() => {
     focusInputSafely();
     updateCursorPosition();
-    
+
     // Initialize scroll indicators on mobile (immediate mode)
     if (isMobile.value && nativeScrollRef.value) {
       updateScrollIndicators(nativeScrollRef.value, true);
@@ -953,7 +902,9 @@ onMounted(async () => {
 
 // Process the history command - outputs command history and pipes to more
 const processHistoryCommand = async () => {
-  if (commandHistory.value.length === 0) {
+  const formattedHistory = terminalHistory.getFormattedHistory();
+
+  if (!formattedHistory) {
     addHistoryEntry('history', '');
     const output = await renderForDisplay('*No commands in history*');
     history.value[history.value.length - 1].output = output;
@@ -961,13 +912,8 @@ const processHistoryCommand = async () => {
     return;
   }
 
-  // Format history like bash: numbered list
-  const historyOutput = commandHistory.value
-    .map((cmd, index) => `  ${String(index + 1).padStart(4)}  ${cmd}`)
-    .join('\n');
-
   // Pipe to more (enter pager mode)
-  await enterPagerMode('history', '```\n' + historyOutput + '\n```');
+  modes.enterPagerMode('history', '```\n' + formattedHistory + '\n```');
 };
 
 // Process a single command (may be a pipeline)
@@ -992,7 +938,7 @@ const processCommand = async (command: string) => {
 
   // Single command - execute and display
   const rawOutput = await executeCmd(command);
-  
+
   // Check if this is a navigation command
   if (isNavigationCommand(rawOutput)) {
     const targetPath = getNavigationPath(rawOutput);
@@ -1001,21 +947,21 @@ const processCommand = async (command: string) => {
     const entryIndex = history.value.length - 1;
     const navMessage = await renderForDisplay(`Navigating to **${targetPath}**...`);
     history.value[entryIndex].output = navMessage;
-    
+
     // Navigate after a brief delay for visual feedback
     setTimeout(() => {
       router.push(targetPath);
     }, 500);
     return;
   }
-  
+
   // Check if this is a Z-Machine command (hidden Easter egg)
   if (isZMachineCommand(rawOutput)) {
     const gameId = getZMachineGameId(rawOutput);
     await enterZMachineMode(gameId);
     return;
   }
-  
+
   // Check if this is a DOOM command (hidden Easter egg)
   if (isDoomCommand(rawOutput)) {
     const gameId = getDoomGameId(rawOutput);
@@ -1031,11 +977,11 @@ const processCommand = async (command: string) => {
   }
 
   const output = await renderForDisplay(rawOutput);
-  
+
   // Add command to history first (without output)
   addHistoryEntry(command, '');
   const entryIndex = history.value.length - 1;
-  
+
   // Type out output with typewriter effect
   await typeOutputToHistory(entryIndex, output);
   scrollToBottom();
@@ -1044,25 +990,25 @@ const processCommand = async (command: string) => {
 // Process a pipeline command (e.g., "resume | more")
 const processPipeline = async (command: string) => {
   const segments = parsePipeline(command);
-  
+
   // Execute pipeline
   const result = await executePipeline(segments, async (cmd, args, stdin) => {
     return executeRaw(cmd, args, stdin);
   });
-  
+
   // Check if we should enter pager mode
   if (result.pagerMode && result.pagerContent) {
-    await enterPagerMode(command, result.pagerContent);
+    modes.enterPagerMode(command, result.pagerContent);
     return;
   }
-  
+
   // Normal output - render and display
   const output = await renderForDisplay(result.output);
-  
+
   // Add command to history
   addHistoryEntry(command, '');
   const entryIndex = history.value.length - 1;
-  
+
   // Type out output with typewriter effect
   await typeOutputToHistory(entryIndex, output);
   scrollToBottom();
@@ -1084,7 +1030,7 @@ const processCommandQueue = async () => {
   }
 
   isExecutingCommand.value = false;
-  
+
   // On desktop: refocus input for continued typing
   // On mobile: keyboard was already dismissed in executeCommand, don't refocus
   if (!isMobile.value) {
@@ -1098,7 +1044,7 @@ const processCommandQueue = async () => {
 // Note: Z-Machine mode has its own input handled by TerminalZMachine component
 const executeCommand = async () => {
   const command = currentInput.value.trim();
-  
+
   // Empty input - just add blank line, keep keyboard open
   if (!command) {
     addHistoryEntry('', '');
@@ -1113,19 +1059,12 @@ const executeCommand = async () => {
     inputRefMobile.value?.blur();
   }
 
-  // Add to command history (avoid duplicating the last command)
-  if (commandHistory.value[commandHistory.value.length - 1] !== command) {
-    commandHistory.value.push(command);
-    // Trim to max length
-    if (commandHistory.value.length > TERMINAL_CONFIG.commandHistoryMaxLength) {
-      commandHistory.value.shift();
-    }
-  }
+  // Add to command history via composable
+  terminalHistory.addCommand(command);
 
   // Clear input
   currentInput.value = '';
-  commandHistoryIndex.value = -1;
-  savedInput.value = '';
+  terminalHistory.resetNavigation();
   updateCursorPosition();
 
   // If a command is currently executing, queue this one
@@ -1145,44 +1084,21 @@ const addHistoryEntry = (command: string, output: string) => {
 };
 
 // Navigate command history (up/down arrows - shell-like behavior)
-const navigateHistory = (direction: number) => {
-  if (commandHistory.value.length === 0) return;
-  
-  // Save current input when starting to navigate
-  if (commandHistoryIndex.value === -1 && direction === -1) {
-    savedInput.value = currentInput.value;
+const handleHistoryNavigation = (direction: number) => {
+  const newInput = terminalHistory.navigateHistory(direction, currentInput.value);
+
+  if (newInput !== null) {
+    currentInput.value = newInput;
+
+    nextTick(() => {
+      updateCursorPosition();
+      // Move cursor to end of input
+      if (inputRef.value) {
+        inputRef.value.selectionStart = inputRef.value.value.length;
+        inputRef.value.selectionEnd = inputRef.value.value.length;
+      }
+    });
   }
-  
-  // Calculate new index
-  // direction -1 = up (older), direction 1 = down (newer)
-  const newIndex = commandHistoryIndex.value - direction;
-  
-  if (newIndex < -1) {
-    // Past the newest entry - stay at current input
-    return;
-  } else if (newIndex >= commandHistory.value.length) {
-    // Past the oldest entry - stay at oldest
-    return;
-  }
-  
-  commandHistoryIndex.value = newIndex;
-  
-  if (commandHistoryIndex.value === -1) {
-    // Back to current input (not in history)
-    currentInput.value = savedInput.value;
-  } else {
-    // Show command from history (most recent is at end of array)
-    currentInput.value = commandHistory.value[commandHistory.value.length - 1 - commandHistoryIndex.value];
-  }
-  
-  nextTick(() => {
-    updateCursorPosition();
-    // Move cursor to end of input
-    if (inputRef.value) {
-      inputRef.value.selectionStart = inputRef.value.value.length;
-      inputRef.value.selectionEnd = inputRef.value.value.length;
-    }
-  });
 };
 
 /**
@@ -1202,24 +1118,24 @@ const updateCursorPosition = () => {
   nextTick(() => {
     // Get the appropriate input ref based on mode and mobile detection
     // Z-Machine mode uses native caret, skip cursor position update
-    if (zmachineMode.value) {
+    if (modes.zmachineMode.value) {
       return;
     }
-    
+
     const currentInputEl = isMobile.value ? inputRefMobile.value : inputRef.value;
-    
+
     if (currentInputEl) {
       // Initialize canvas cache on first use
       if (!measureCanvas) {
         measureCanvas = document.createElement('canvas');
         measureContext = measureCanvas.getContext('2d');
       }
-      
+
       // Initialize font cache if needed
       if (!cachedFontString) {
         updateCachedFont();
       }
-      
+
       // Use cached Canvas API for fast measurement (no getComputedStyle on each keystroke)
       if (measureContext && cachedFontString) {
         measureContext.font = cachedFontString;
@@ -1227,7 +1143,7 @@ const updateCursorPosition = () => {
         cursorLeft.value = textWidth;
         return;
       }
-      
+
       // Fallback: use hidden span to measure text width (slower)
       const styles = window.getComputedStyle(currentInputEl);
       const measureSpan = document.createElement('span');
@@ -1239,7 +1155,7 @@ const updateCursorPosition = () => {
       measureSpan.style.fontWeight = styles.fontWeight;
       measureSpan.style.fontStyle = styles.fontStyle;
       measureSpan.textContent = currentInputEl.value || '';
-      
+
       document.body.appendChild(measureSpan);
       cursorLeft.value = measureSpan.offsetWidth;
       document.body.removeChild(measureSpan);
@@ -1296,29 +1212,26 @@ const scrollToBottom = () => {
 const clearTerminal = () => {
   history.value = [];
   currentInput.value = '';
-  commandHistoryIndex.value = -1;
-  savedInput.value = '';
-  // Note: commandHistory is preserved across clears (like a real shell)
-  
+  terminalHistory.resetNavigation();
+  // Note: command history is preserved across clears (like a real shell)
+
   // Exit pager mode if active
-  if (pagerMode.value) {
-    pagerMode.value = false;
-    pagerCommand.value = '';
-    pagerRawContent.value = '';
+  if (modes.pagerMode.value) {
+    modes.exitPagerMode();
   }
-  
+
   // Exit Z-Machine mode if active
-  if (zmachineMode.value) {
+  if (modes.zmachineMode.value) {
     exitZMachineMode();
   }
-  
+
   // Exit DOOM mode if active
-  if (doomMode.value) {
+  if (modes.doomMode.value) {
     exitDoomMode();
   }
 
   // Exit WOPR mode if active
-  if (woprMode.value) {
+  if (modes.woprMode.value) {
     exitWOPRMode();
   }
 
@@ -1333,27 +1246,27 @@ const clearTerminal = () => {
 // Note: Pager mode keyboard handling is in TerminalPager component
 const handleKeyDown = (e: KeyboardEvent) => {
   // Z-Machine quit modal is handled by the modal component itself
-  if (showZMachineQuitModal.value) {
+  if (modes.showZMachineQuitModal.value) {
     return;
   }
 
   // DOOM pause modal is handled by the modal component itself
-  if (showDoomPauseModal.value) {
+  if (modes.showDoomPauseModal.value) {
     return;
   }
 
   // WOPR quit modal is handled by the modal component itself
-  if (showWOPRQuitModal.value) {
+  if (modes.showWOPRQuitModal.value) {
     return;
   }
 
   // Pager mode handles its own keyboard events
-  if (pagerMode.value) {
+  if (modes.pagerMode.value) {
     return;
   }
 
   // DOOM mode - let game handle input, Escape triggers pause
-  if (doomMode.value) {
+  if (modes.doomMode.value) {
     if (e.key === 'Escape') {
       e.preventDefault();
       handleDoomPause();
@@ -1364,7 +1277,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
   }
 
   // Z-Machine mode - let normal input through, but handle Ctrl+L
-  if (zmachineMode.value) {
+  if (modes.zmachineMode.value) {
     if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
       e.preventDefault();
       // Clear Z-Machine output but stay in game
@@ -1380,7 +1293,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
   }
 
   // WOPR mode - let normal input through, but handle Ctrl+L
-  if (woprMode.value) {
+  if (modes.woprMode.value) {
     if (e.ctrlKey && (e.key === 'l' || e.key === 'L')) {
       e.preventDefault();
       // Clear WOPR output but stay in simulator
@@ -1388,8 +1301,8 @@ const handleKeyDown = (e: KeyboardEvent) => {
       return;
     }
     // Ensure WOPR input is focused for all other keys
-    const woprInput = woprRef.value?.inputRef;
-    if (woprInput && document.activeElement !== woprInput) {
+    const woprInputEl = woprRef.value?.inputRef;
+    if (woprInputEl && document.activeElement !== woprInputEl) {
       woprRef.value?.focus();
     }
     return;
@@ -1410,7 +1323,7 @@ const handleKeyDown = (e: KeyboardEvent) => {
 const resetHorizontalScroll = () => {
   // Reset window scroll (CSS handles container overflow)
   window.scrollTo(0, window.scrollY);
-  
+
   // Reset input scroll if needed
   const input = isMobile.value ? inputRefMobile.value : inputRef.value;
   if (input) {
@@ -1427,7 +1340,7 @@ const handleMobileInputFocus = (event: FocusEvent) => {
   if (input) {
     input.scrollLeft = 0;
   }
-  
+
   // Single RAF to reset after browser processes focus
   requestAnimationFrame(() => {
     resetHorizontalScroll();
@@ -1451,18 +1364,18 @@ const handleMobileInputBlur = () => {
  * Focus input with scroll protection
  */
 const focusInputSafely = () => {
-  if (zmachineMode.value) {
+  if (modes.zmachineMode.value) {
     zmachineRef.value?.focus();
     return;
   }
 
-  if (woprMode.value) {
+  if (modes.woprMode.value) {
     woprRef.value?.focus();
     return;
   }
 
   const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-  
+
   if (input) {
     if (isMobile.value) {
       input.focus();
@@ -1488,16 +1401,16 @@ watch(() => terminalRef.value, (newEl, oldEl) => {
       oldEl.removeEventListener('touchstart', terminalTouchHandler);
     }
   }
-  
+
   // Add new listeners
   if (newEl) {
     terminalClickHandler = () => {
-      if (!pagerMode.value) {
+      if (!modes.pagerMode.value) {
         focusInputSafely();
       }
     };
     newEl.addEventListener('click', terminalClickHandler);
-    
+
     // Touch handler - immediately reset any horizontal scroll on touch
     terminalTouchHandler = () => {
       // Reset horizontal scroll on any touch to prevent left-shift bug
@@ -1522,8 +1435,8 @@ watch(() => history.value.length, () => {
   // Debounced update after content changes
   nextTick(() => {
     requestAnimationFrame(() => {
-      const scrollEl = isMobile.value 
-        ? nativeScrollRef.value 
+      const scrollEl = isMobile.value
+        ? nativeScrollRef.value
         : (scrollAreaRef.value?.getScrollTarget() as HTMLElement | null);
       if (scrollEl instanceof HTMLElement) {
         updateScrollIndicators(scrollEl, true);
@@ -1577,12 +1490,12 @@ onUnmounted(() => {
   flex-direction: column;
   box-sizing: border-box;
   border-radius: 12px;
-  
+
   // CRT screen glow
-  box-shadow: 
+  box-shadow:
     inset 0 0 100px rgba(0, 20, 20, 0.3),     // Inner dark vignette
     inset 0 0 50px rgba(0, 150, 120, 0.02);   // Subtle green tint
-  
+
   // Mobile-specific overrides to prevent horizontal scrolling issues
   @media (max-width: 768px) {
     overflow: hidden !important;
@@ -1591,10 +1504,10 @@ onUnmounted(() => {
     overscroll-behavior-x: none;
     transform: translateZ(0); // Force GPU layer on mobile to prevent scroll glitches
   }
-  
+
   // Note: Scanlines and vignette are provided by CRTFrame.vue wrapper
   // This avoids double-rendering of effects
-  
+
   // =============================================================================
   // CRT "Smack" Transition Effect - Three escalating hits
   // Used when entering Z-Machine mode
@@ -1602,7 +1515,7 @@ onUnmounted(() => {
   &.crt-smack {
     animation: crt-smack-triple 1.8s ease-out forwards;
   }
-  
+
   // =============================================================================
   // CRT "Roll" Transition Effect - Three attempts to sync vertical hold
   // Used when entering Z-Machine mode
@@ -1618,7 +1531,7 @@ onUnmounted(() => {
 
 // Three escalating smacks - like hitting a stubborn CRT multiple times
 // Hit 1: 0-20% (light tap)
-// Hit 2: 20-50% (medium smack)  
+// Hit 2: 20-50% (medium smack)
 // Hit 3: 50-100% (hard whack that finally works)
 @keyframes crt-smack-triple {
   // === HIT 1: Light tap (0-20%) ===
@@ -1650,7 +1563,7 @@ onUnmounted(() => {
     transform: translate(0, 0) skewX(0deg);
     filter: brightness(1) contrast(1) saturate(1);
   }
-  
+
   // === HIT 2: Medium smack (20-50%) ===
   22% {
     transform: translate(-12px, 4px) skewX(-1deg);
@@ -1680,7 +1593,7 @@ onUnmounted(() => {
     transform: translate(0, 0) skewX(0deg);
     filter: brightness(1) contrast(1) saturate(1);
   }
-  
+
   // === HIT 3: Hard whack - the one that works! (50-100%) ===
   52% {
     transform: translate(-20px, 6px) skewX(-1.8deg);
@@ -1730,7 +1643,7 @@ onUnmounted(() => {
 
 // Three attempts to sync vertical hold - like adjusting the V-hold knob
 // Roll 1: 0-25% (partial roll, almost catches)
-// Roll 2: 25-55% (bigger roll, nearly syncs but slips)  
+// Roll 2: 25-55% (bigger roll, nearly syncs but slips)
 // Roll 3: 55-100% (full dramatic roll that finally locks in)
 @keyframes crt-roll-triple {
   // === ROLL 1: Partial roll, almost catches (0-25%) ===
@@ -1762,7 +1675,7 @@ onUnmounted(() => {
     transform: translateY(0) scaleY(1);
     filter: brightness(1) contrast(1);
   }
-  
+
   // === ROLL 2: Bigger roll, nearly syncs but slips (25-55%) ===
   28% {
     transform: translateY(-25%) scaleY(0.96);
@@ -1802,7 +1715,7 @@ onUnmounted(() => {
     transform: translateY(0) scaleY(1);
     filter: brightness(1) contrast(1);
   }
-  
+
   // === ROLL 3: Full dramatic roll that finally locks in (55-100%) ===
   58% {
     transform: translateY(-30%) scaleY(0.94);
@@ -1866,7 +1779,7 @@ onUnmounted(() => {
   position: relative;
   z-index: 10;  // Ensure content is above any background effects
   min-height: 0; // Allow flex shrinking
-  
+
   // QScrollArea handles scrollbar hiding via thumb-style and bar-style props
 }
 
@@ -1875,31 +1788,31 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden !important; // Force no horizontal scroll
   -webkit-overflow-scrolling: touch; // Smooth scrolling on iOS
-  
+
   // Scroll containment - prevents scroll chaining to parent/page
   // This stops the "bounce" effect and address bar toggling when hitting scroll boundaries
   overscroll-behavior: contain;
   overscroll-behavior-y: contain;
   overscroll-behavior-x: none !important; // Absolutely no horizontal overscroll
-  
+
   // Restrict touch actions to vertical pan only
   // Prevents accidental horizontal swipes from triggering navigation
   touch-action: pan-y;
-  
+
   // Prevent scroll when child elements get focus
   scroll-padding: 0;
-  
+
   // CSS containment for layout optimization
   contain: layout style;
-  
+
   // Hide scrollbar but keep scroll functionality
   scrollbar-width: none;  // Firefox
   -ms-overflow-style: none;  // IE/Edge
-  
+
   &::-webkit-scrollbar {
     display: none;  // Chrome/Safari/Opera
   }
-  
+
   // Ensure all children respect container width
   > * {
     max-width: 100%;
@@ -1945,7 +1858,7 @@ onUnmounted(() => {
   max-width: 100%; // Prevent overflow
   overflow: hidden !important; // Force hide any overflow
   overflow-x: hidden !important; // Explicitly prevent horizontal scroll
-  
+
   // Mobile: Ensure no scroll-into-view behavior
   @media (max-width: 768px) {
     // Contain the input to prevent focus scroll
@@ -1967,34 +1880,34 @@ onUnmounted(() => {
   padding: 0;
   margin: 0;
   caret-color: transparent; // Hide native input caret (desktop)
-  
+
   // Force lowercase display
   text-transform: lowercase;
-  
+
   // Prevent auto-scroll on focus (mobile browsers)
   scroll-margin: 0;
   scroll-padding: 0;
-  
+
   &::placeholder {
     color: var(--color-brightBlack, #666666);
   }
-  
+
   // Mobile: Use native caret instead of custom cursor
   // This prevents horizontal scroll issues caused by cursor positioning
   @media (max-width: 768px) {
     caret-color: var(--terminal-command, #3b8eea); // Show native caret on mobile
-    
+
     // CRITICAL: Font size must be >= 16px to prevent iOS auto-zoom on focus
     font-size: 16px !important;
-    
+
     // Prevent the input from having any internal scroll
     overflow: hidden;
     text-overflow: clip;
-    
+
     // Disable any scroll-into-view behavior
     scroll-margin: 0 !important;
     scroll-padding: 0 !important;
-    
+
     // Try to prevent browser focus scrolling
     scroll-snap-type: none;
     overscroll-behavior: none;
@@ -2007,7 +1920,7 @@ onUnmounted(() => {
   animation: blink 1s infinite;
   pointer-events: none;
   flex-shrink: 0;
-  
+
   // Mobile: Hide custom cursor, use native caret instead
   @media (max-width: 768px) {
     display: none !important;
@@ -2021,8 +1934,8 @@ onUnmounted(() => {
 
 .terminal-output-text {
   color: var(--terminal-output, #d4d4d4);
-  margin-top: 0.25rem;
-  margin-bottom: 0.75rem;
+  margin-top: 0;
+  margin-bottom: 0.5rem;
   margin-left: 0;
   padding: 0;
   width: 100%;
@@ -2033,14 +1946,14 @@ onUnmounted(() => {
   clear: both;
   overflow-wrap: break-word; // Allow long words to break
   word-break: break-word; // Break long words if needed
-  
+
   :deep(pre) {
     margin: 0;
     font-family: var(--font-family, monospace);
     line-height: var(--font-line-height, 1.8);
     white-space: pre-wrap;
   }
-  
+
   :deep(code) {
     font-family: var(--font-family, monospace);
     background: var(--color-brightBlack, #666666);
@@ -2052,23 +1965,23 @@ onUnmounted(() => {
     line-height: 1.2;
     margin: .125rem 0;
   }
-  
+
   :deep(strong) {
     color: var(--terminal-success, #23d18b);
     font-weight: bold;
   }
-  
+
   :deep(p) {
     margin: .75em 0 .5em 0;
     padding: 0;
     line-height: inherit;
   }
-  
+
   :deep(div) {
     margin: 0;
     padding: 0;
   }
-  
+
   :deep(br) {
     line-height: 1.5;
   }
@@ -2135,7 +2048,7 @@ onUnmounted(() => {
 // Only apply to direct children, not nested elements
 .terminal-output {
   line-height: var(--font-line-height, 1.8);
-  
+
   // Apply line-height to direct children only
   > .terminal-line {
     line-height: inherit;
@@ -2156,23 +2069,23 @@ onUnmounted(() => {
     line-height: var(--mobile-line-height, 1.5);
     border-radius: 8px;
   }
-  
+
   .terminal-input {
     font-size: var(--mobile-font-size, 15px);
     line-height: var(--mobile-line-height, 1.5);
   }
-  
+
   .terminal-output-text {
     line-height: var(--mobile-line-height, 1.5);
-    
+
     :deep(h1) {
       font-size: 1.2em;
     }
-    
+
     :deep(h2) {
       font-size: 0.95em;
     }
-    
+
     :deep(h3) {
       font-size: 0.7em;
     }
@@ -2188,26 +2101,87 @@ onUnmounted(() => {
     line-height: var(--mobile-line-height, 1.4);
     border-radius: 6px;
   }
-  
+
   .terminal-input {
     font-size: var(--mobile-font-size, 14px);
     line-height: var(--mobile-line-height, 1.4);
   }
-  
+
   .terminal-line {
-    margin-bottom: 0.35rem;
+    // Consistent 0.5rem gap
+    margin-bottom: 0.5rem;
   }
-  
+
   .terminal-output-text {
+    // Consistent 0.5rem gap for all screen sizes
+    margin-top: 0;
     margin-bottom: 0.5rem;
     line-height: var(--mobile-line-height, 1.4);
-    
+
     :deep(p) {
       margin: 0.5em 0 0.35em 0;
     }
-    
+
     :deep(ul), :deep(ol) {
       padding-left: 1.2em;
+    }
+  }
+}
+
+// =============================================================================
+// Mobile Landscape Orientation
+// Compact styling for phones held horizontally
+// =============================================================================
+@media (orientation: landscape) and (max-height: 500px) {
+  .terminal {
+    padding: 8px 12px;
+    font-size: var(--mobile-font-size, 13px);
+    line-height: var(--mobile-line-height, 1.3);
+    border-radius: 4px;
+  }
+
+  .terminal-input {
+    font-size: var(--mobile-font-size, 13px);
+    line-height: var(--mobile-line-height, 1.3);
+  }
+
+  .terminal-line {
+    // Tighter spacing for landscape
+    margin-bottom: 0.35rem;
+    min-height: 1.3em;
+  }
+
+  .terminal-output-text {
+    margin-top: 0;
+    margin-bottom: 0.35rem;
+    line-height: var(--mobile-line-height, 1.3);
+
+    :deep(p) {
+      margin: 0.3em 0 0.2em 0;
+    }
+
+    :deep(h1) {
+      font-size: 1.1em;
+      margin: 0.4em 0 0.25em 0;
+    }
+
+    :deep(h2) {
+      font-size: 0.9em;
+      margin: 0.35em 0 0.2em 0;
+    }
+
+    :deep(h3) {
+      font-size: 0.65em;
+      margin: 0.25em 0 0.15em 0;
+    }
+
+    :deep(ul), :deep(ol) {
+      margin: 0.15em 0;
+      padding-left: 1em;
+    }
+
+    :deep(li) {
+      margin: 0.05em 0;
     }
   }
 }

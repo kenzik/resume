@@ -1,10 +1,87 @@
 /**
  * Pipe Commands
- * 
+ *
  * Commands designed to work with piped input: grep, head, tail, wc, more, less
  */
 
 import type { CommandRegistry } from './types';
+
+// =============================================================================
+// ReDoS Protection Constants
+// =============================================================================
+
+/** Maximum allowed regex pattern length */
+const MAX_REGEX_LENGTH = 200;
+
+/** Maximum time (ms) allowed for regex execution */
+const REGEX_TIMEOUT_MS = 100;
+
+/**
+ * Patterns that indicate potentially catastrophic backtracking
+ * These patterns can cause exponential time complexity
+ */
+const DANGEROUS_PATTERNS = [
+  /\(\.\*\)\+/,           // (.*)+
+  /\(\.\+\)\+/,           // (.+)+
+  /\(\.\*\)\*/,           // (.*)*
+  /\(\.\+\)\*/,           // (.+)*
+  /\([^)]*\|[^)]*\)\+/,   // (a|b)+ with alternatives
+  /\([^)]*\|[^)]*\)\*/,   // (a|b)* with alternatives
+  /\(\.\{[^}]+\}\)\+/,    // (.{n,m})+
+  /\[\^?\w*\]\+\[\^?\w*\]\+/, // [a]+[b]+ nested quantifiers
+];
+
+/**
+ * Validate regex pattern for potential ReDoS vulnerabilities
+ * Returns an error message if the pattern is problematic, null if safe
+ */
+function validateRegexPattern(pattern: string): string | null {
+  // Check length
+  if (pattern.length > MAX_REGEX_LENGTH) {
+    return `Pattern too long (max ${MAX_REGEX_LENGTH} chars). Simplify your regex.`;
+  }
+
+  // Check for dangerous patterns that could cause catastrophic backtracking
+  for (const dangerous of DANGEROUS_PATTERNS) {
+    if (dangerous.test(pattern)) {
+      return 'Pattern may cause performance issues. Avoid nested quantifiers like (.*)+';
+    }
+  }
+
+  // Check for excessive quantifier nesting
+  const quantifierCount = (pattern.match(/[+*?]|\{\d+,?\d*\}/g) || []).length;
+  if (quantifierCount > 10) {
+    return 'Too many quantifiers in pattern. Simplify your regex.';
+  }
+
+  return null;
+}
+
+/**
+ * Execute regex with timeout protection
+ * Returns matched lines or throws on timeout
+ */
+function executeRegexWithTimeout(
+  regex: RegExp,
+  lines: string[],
+  timeoutMs: number
+): string[] {
+  const startTime = performance.now();
+  const matched: string[] = [];
+
+  for (const line of lines) {
+    // Check timeout before each line
+    if (performance.now() - startTime > timeoutMs) {
+      throw new Error('timeout');
+    }
+
+    if (regex.test(line)) {
+      matched.push(line);
+    }
+  }
+
+  return matched;
+}
 
 export const pipeCommands: CommandRegistry = {
   grep: {
@@ -13,29 +90,50 @@ export const pipeCommands: CommandRegistry = {
       if (!pattern) {
         return 'Usage: grep <pattern>\nExample: resume | grep kubernetes';
       }
-      
+
       const content = ctx.stdin || '';
       if (!content) {
         return 'grep: no input. Use with pipe: command | grep <pattern>';
       }
-      
+
       try {
-        // Support regex patterns like /pattern/i
-        let regex: RegExp;
+        // Extract regex pattern and flags
+        let regexPattern: string;
+        let flags: string;
         const regexMatch = pattern.match(/^\/(.+)\/([gimsu]*)$/);
         if (regexMatch) {
-          regex = new RegExp(regexMatch[1], regexMatch[2] || 'i');
+          regexPattern = regexMatch[1];
+          flags = regexMatch[2] || 'i';
         } else {
-          regex = new RegExp(pattern, 'i');
+          regexPattern = pattern;
+          flags = 'i';
         }
-        
+
+        // Validate pattern for ReDoS vulnerabilities
+        const validationError = validateRegexPattern(regexPattern);
+        if (validationError) {
+          return `grep: ${validationError}`;
+        }
+
+        // Create regex
+        const regex = new RegExp(regexPattern, flags);
         const lines = content.split('\n');
-        const matched = lines.filter(line => regex.test(line));
-        
+
+        // Execute with timeout protection
+        let matched: string[];
+        try {
+          matched = executeRegexWithTimeout(regex, lines, REGEX_TIMEOUT_MS);
+        } catch (e) {
+          if (e instanceof Error && e.message === 'timeout') {
+            return `grep: Pattern took too long to execute (>${REGEX_TIMEOUT_MS}ms). Try a simpler pattern.`;
+          }
+          throw e;
+        }
+
         if (matched.length === 0) {
           return `No matches found for: ${pattern}`;
         }
-        
+
         return matched.join('\n');
       } catch {
         return `Invalid pattern: ${pattern}`;
