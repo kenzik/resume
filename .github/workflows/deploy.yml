@@ -99,12 +99,9 @@ jobs:
       # Deploy to Cloudflare Pages
       # ========================================
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'kenzik-resume' }}
-          directory: web/dist/spa
+          command: pages deploy web/dist/spa --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || 'kenzik-resume' }} --branch=main
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          # Production deployment
-          branch: main
