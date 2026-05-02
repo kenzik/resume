@@ -7,6 +7,7 @@ on:
   workflow_dispatch:  # Allow manual trigger from GitHub UI
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_VERSION: '22'
   PYTHON_VERSION: '3.11'
   RESUME_FILENAME_BASE: 'kenzik-resume'
@@ -21,7 +22,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       # ========================================
       # Create Private Resume Data from Secret
@@ -38,7 +39,7 @@ jobs:
       # Python: Build Resume Documents
       # ========================================
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -77,7 +78,7 @@ jobs:
       # Node.js: Build Web Application
       # ========================================
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
