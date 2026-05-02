@@ -190,9 +190,10 @@ def render_docx(data, filename):
             doc.add_paragraph(job["tech"]).italic = True
         doc.add_paragraph()
 
-    doc.add_heading(SECTION_EARLIER, level=1)
-    for role in data["earlier"]:
-        doc.add_paragraph(role)
+    if data.get("earlier"):
+        doc.add_heading(SECTION_EARLIER, level=1)
+        for role in data["earlier"]:
+            doc.add_paragraph(role)
 
     doc.add_heading(SECTION_CERTS_EDU, level=1)
     for cert in data["certs"]:
@@ -235,8 +236,9 @@ def render_md(data, filename):
                 lines.append(f"*{job['tech']}*\n")
             lines.append(f"{SEPARATOR_MD_SECTION}\n")
 
-        lines.append(f"\n## {SECTION_EARLIER}\n")
-        lines.extend(f"* {role}\n" for role in data["earlier"])
+        if data.get("earlier"):
+            lines.append(f"\n## {SECTION_EARLIER}\n")
+            lines.extend(f"* {role}\n" for role in data["earlier"])
         lines.append(f"\n## {SECTION_CERTS_EDU}\n")
         lines.extend(f"* **{cert}**\n" for cert in data["certs"])
         for edu in data["education"]:
@@ -347,15 +349,16 @@ def render_pdf(data, filename):
         pdf.ln(4)
 
     # --- TAIL SECTIONS ---
-    if pdf.get_y() > PDF_PAGE_BREAK_Y:
-        pdf.add_page()
-    pdf.set_font(PDF_FONT_FAMILY, "B", PDF_SECTION_FONT_SIZE)
-    pdf.cell(width, 8, SECTION_EARLIER, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(2)
-    pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
-    for role in data["earlier"]:
-        pdf.multi_cell(width, 5, clean_pdf(role), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-    pdf.ln(4)
+    if data.get("earlier"):
+        if pdf.get_y() > PDF_PAGE_BREAK_Y:
+            pdf.add_page()
+        pdf.set_font(PDF_FONT_FAMILY, "B", PDF_SECTION_FONT_SIZE)
+        pdf.cell(width, 8, SECTION_EARLIER, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(2)
+        pdf.set_font(PDF_FONT_FAMILY, "", PDF_BODY_FONT_SIZE)
+        for role in data["earlier"]:
+            pdf.multi_cell(width, 5, clean_pdf(role), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.ln(4)
 
     if pdf.get_y() > PDF_PAGE_BREAK_Y:
         pdf.add_page()
@@ -427,15 +430,16 @@ def render_rtf(data, filename):
         else:
             rtf.append(r"\par")
 
-    line(SECTION_EARLIER, bold=True, ul=True)
-    for role in data["earlier"]:
-        rtf.append(
-            r"\pard\sa200\sl276\slmult1\tx360\li360\fi-360 "
-            + clean_rtf(RTF_BULLET)
-            + r" \tab "
-            + clean_rtf(role)
-            + r"\par"
-        )
+    if data.get("earlier"):
+        line(SECTION_EARLIER, bold=True, ul=True)
+        for role in data["earlier"]:
+            rtf.append(
+                r"\pard\sa200\sl276\slmult1\tx360\li360\fi-360 "
+                + clean_rtf(RTF_BULLET)
+                + r" \tab "
+                + clean_rtf(role)
+                + r"\par"
+            )
 
     line(SECTION_CERTS_EDU, bold=True, ul=True)
     for item in data["certs"] + data["education"]:
