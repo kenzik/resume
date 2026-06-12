@@ -112,22 +112,22 @@ jobs:
         env:
           VITE_RESUME_YAML_PATH: /data/example.yml
 
-      # ── Performance budget: app JS + CSS ≤ 250 KB (transfer size) ──────────
-      # Excludes public/games/** which contains the 11 MB FreeDoom bundle.
+      # ── Performance budget: app JS + CSS ≤ 250 KB transfer size (gzip) ────
+      # assets/ contains only app JS+CSS; public/games stays out by construction.
       - name: Check performance budget (≤ 250 KB JS+CSS, excluding games)
         run: |
           TOTAL=0
           while IFS= read -r -d '' file; do
-            SIZE=$(wc -c < "$file")
+            SIZE=$(gzip -c "$file" | wc -c)
             TOTAL=$((TOTAL + SIZE))
-          done < <(find dist/spa/assets -name "*.js" -o -name "*.css" -print0)
+          done < <(find dist/spa/assets \( -name "*.js" -o -name "*.css" \) -print0)
           KB=$((TOTAL / 1024))
-          echo "App JS+CSS total: ${KB} KB"
+          echo "App JS+CSS gzip transfer size: ${KB} KB"
           if [ "$TOTAL" -gt $((250 * 1024)) ]; then
-            echo "ERROR: Performance budget exceeded — ${KB} KB > 250 KB"
+            echo "ERROR: Performance budget exceeded — ${KB} KB > 250 KB (gzip)"
             exit 1
           fi
-          echo "OK: ${KB} KB ≤ 250 KB"
+          echo "OK: ${KB} KB ≤ 250 KB (gzip)"
 
       # ── Obfuscation check: no plaintext easter-egg triggers in dist ──────────
       # Trigger strings are reconstructed from hex escapes (never stored as
