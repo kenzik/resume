@@ -54,16 +54,42 @@ export interface Theme {
   spacing: ThemeSpacing;
 }
 
-export type ThemeName = 'dark' | 'light' | 'auto';
-
 // Import theme JSON files
 import darkTheme from './dark.json';
 import lightTheme from './light.json';
+import amberTheme from './amber.json';
+import greenTheme from './green.json';
 
-export const themes: Record<string, Theme> = {
+/**
+ * Registry of all concrete themes. Add new themes here only.
+ * ThemeName is derived from the keys of this object — one source of truth (§9.3).
+ * Kept as Record<string, Theme> for iteration; _themeRegistry is used solely
+ * for key-literal inference.
+ */
+const _themeRegistry = {
   dark: darkTheme as Theme,
   light: lightTheme as Theme,
+  amber: amberTheme as Theme,
+  green: greenTheme as Theme,
 };
+
+export const themes: Record<string, Theme> = _themeRegistry;
+
+/** All valid theme names: concrete registry keys + the 'auto' system alias. */
+export type ThemeName = keyof typeof _themeRegistry | 'auto';
+
+/**
+ * Single validator consumed by both useTheme.loadThemePreference and the
+ * theme command in settings.ts.  'auto' is valid; anything outside the
+ * registry is not.  Stale LocalStorage values fall back to dark via getTheme.
+ *
+ * §9.3 — exactly one validator, derived from the registry.
+ */
+export function isValidThemeName(name: string | null | undefined): name is ThemeName {
+  if (!name) return false;
+  if (name === 'auto') return true;
+  return Object.prototype.hasOwnProperty.call(_themeRegistry, name);
+}
 
 export function getTheme(name: string): Theme {
   return themes[name] || themes.dark;

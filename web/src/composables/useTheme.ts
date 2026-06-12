@@ -1,6 +1,6 @@
 import { ref, computed, watch, type InjectionKey } from 'vue';
 import { LocalStorage } from 'quasar';
-import { getTheme, type Theme, type ThemeName } from '../themes';
+import { getTheme, isValidThemeName, type Theme, type ThemeName } from '../themes';
 import { STORAGE_KEYS } from '../constants';
 
 const DEFAULT_THEME: ThemeName = 'auto';
@@ -41,10 +41,10 @@ function setupMediaQueryWatcher() {
 // Load theme preference from Quasar LocalStorage
 function loadThemePreference(): ThemeName {
   if (typeof window === 'undefined') return DEFAULT_THEME;
-  
+
   const stored = LocalStorage.getItem<string>(STORAGE_KEYS.theme);
-  if (stored === 'dark' || stored === 'light' || stored === 'auto') {
-    return stored as ThemeName;
+  if (isValidThemeName(stored)) {
+    return stored;
   }
   return DEFAULT_THEME;
 }

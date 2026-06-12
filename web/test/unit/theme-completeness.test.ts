@@ -15,6 +15,8 @@ import type { ThemeColors, TerminalColors, ThemeFont, ThemeSpacing, Theme } from
 import { themes } from '../../src/themes/index';
 import darkJson from '../../src/themes/dark.json';
 import lightJson from '../../src/themes/light.json';
+import amberJson from '../../src/themes/amber.json';
+import greenJson from '../../src/themes/green.json';
 
 // ── Canonical key lists derived from the TypeScript interfaces ──────────────
 // These must stay in sync with src/themes/index.ts interfaces.
@@ -115,6 +117,8 @@ describe('theme-completeness', () => {
   it('raw JSON imports match the registered theme objects', () => {
     expect(themes.dark).toEqual(darkJson);
     expect(themes.light).toEqual(lightJson);
+    expect(themes.amber).toEqual(amberJson);
+    expect(themes.green).toEqual(greenJson);
   });
 
   // Iterate the live registry — new themes added in Phase 4 are automatically covered
