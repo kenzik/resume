@@ -5,6 +5,10 @@ node_modules/
 dist/
 .quasar/
 
+# Test outputs
+test-results/
+playwright-report/
+
 # IDE
 .vscode/
 .idea/

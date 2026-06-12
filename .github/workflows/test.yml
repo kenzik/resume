@@ -1,0 +1,165 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [development, 'feature/**', 'test/**', 'fix/**']
+    paths:
+      - 'web/**'
+      - 'data/example.yml'
+      - '.github/workflows/test.yml'
+  pull_request:
+    branches: [development]
+
+jobs:
+  unit:
+    name: Unit Tests (Vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: web/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run unit tests
+        run: yarn test:unit
+
+  e2e:
+    name: E2E Tests (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: web/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Provision test data: example.yml is the public template; kenzik.yml is
+      # a gitignored secret and must NEVER be used in CI test runs.
+      # The webServer in playwright.config.ts already sets
+      # VITE_RESUME_YAML_PATH=/data/example.yml which points at
+      # web/public/data/example.yml (committed, no personal data).
+      - name: Verify example.yml is present (not kenzik.yml)
+        run: |
+          test -f public/data/example.yml || (echo "ERROR: web/public/data/example.yml missing" && exit 1)
+          echo "OK: example.yml present"
+
+      - name: Run E2E tests
+        run: yarn test:e2e
+        env:
+          CI: true
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: web/playwright-report/
+          retention-days: 7
+
+      # test-results/ contains the actual-screenshot PNGs when a snapshot
+      # comparison fails.  Uploading them lets us download the linux render
+      # with `gh run download` and commit it as the linux baseline.
+      # This step is permanent good practice — diff evidence on every failure.
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: web/test-results/
+          retention-days: 7
+
+  build-and-perf:
+    name: Build + Performance Budget
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: web/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      # The build step copies data/kenzik.yml into dist/spa/data/.
+      # In CI, kenzik.yml is a secret — copy example.yml in its place so the
+      # afterBuild hook succeeds without ever touching personal data.
+      - name: Provision build data (example.yml only, no personal data)
+        run: cp ../data/example.yml ../data/kenzik.yml
+        working-directory: web
+
+      - name: Build production bundle
+        run: yarn build
+        env:
+          VITE_RESUME_YAML_PATH: /data/example.yml
+
+      # ── Performance budget: app JS + CSS ≤ 250 KB transfer size (gzip) ────
+      # assets/ contains only app JS+CSS; public/games stays out by construction.
+      - name: Check performance budget (≤ 250 KB JS+CSS, excluding games)
+        run: |
+          TOTAL=0
+          while IFS= read -r -d '' file; do
+            SIZE=$(gzip -c "$file" | wc -c)
+            TOTAL=$((TOTAL + SIZE))
+          done < <(find dist/spa/assets \( -name "*.js" -o -name "*.css" \) -print0)
+          KB=$((TOTAL / 1024))
+          echo "App JS+CSS gzip transfer size: ${KB} KB"
+          if [ "$TOTAL" -gt $((250 * 1024)) ]; then
+            echo "ERROR: Performance budget exceeded — ${KB} KB > 250 KB (gzip)"
+            exit 1
+          fi
+          echo "OK: ${KB} KB ≤ 250 KB (gzip)"
+
+      # ── Obfuscation check: no plaintext easter-egg triggers in dist ──────────
+      # Asserts exactly the five obfuscated launch-trigger strings are absent
+      # from built assets: xyzzy, plugh, iddqd, idkfa, idspispopd.
+      # "joshua" is the WOPR in-game password — it ships in plaintext by design
+      # (game logic string comparison) and must NOT be included in this gate.
+      # Trigger strings are reconstructed from hex escapes (never stored as
+      # literals here) so this workflow file itself stays clean under grep.
+      - name: Verify easter-egg triggers are obfuscated in dist
+        run: |
+          # Reconstruct trigger strings from hex byte values (no plaintext literals)
+          T1=$(printf '%b' '\x78\x79\x7a\x7a\x79')
+          T2=$(printf '%b' '\x70\x6c\x75\x67\x68')
+          T3=$(printf '%b' '\x69\x64\x64\x71\x64')
+          T4=$(printf '%b' '\x69\x64\x6b\x66\x61')
+          T5=$(printf '%b' '\x69\x64\x73\x70\x69\x73\x70\x6f\x70\x64')
+          FOUND=$(grep -rl "$T1\|$T2\|$T3\|$T4\|$T5" dist/spa/assets/ 2>/dev/null || true)
+          if [ -n "$FOUND" ]; then
+            echo "ERROR: Plaintext easter-egg triggers found in dist:"
+            echo "$FOUND"
+            exit 1
+          fi
+          echo "OK: No plaintext triggers found in dist/spa/assets"
