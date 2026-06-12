@@ -31,7 +31,8 @@
     "success": "#0dbc79",
     "warning": "#e5e510",
     "info": "#11a8cd",
-    "codeBackground": "#e8e8e8"
+    "codeBackground": "#e8e8e8",
+    "glow": "none"
   },
   "font": {
     "size": "18px",

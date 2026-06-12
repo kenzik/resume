@@ -44,6 +44,7 @@ describe('cssDefaults canonical-fallback policy', () => {
       'error',
       'warning',
       'codeBackground',
+      'glow',
     ] as const;
 
     for (const key of tracked) {

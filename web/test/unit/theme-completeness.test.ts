@@ -26,9 +26,16 @@ const REQUIRED_COLOR_KEYS: (keyof ThemeColors)[] = [
   'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite',
 ];
 
-const REQUIRED_TERMINAL_KEYS: (keyof TerminalColors)[] = [
+/** Terminal keys whose values must be hex colour strings. */
+const REQUIRED_TERMINAL_HEX_KEYS: (keyof TerminalColors)[] = [
   'prompt', 'command', 'output', 'error', 'success', 'warning', 'info', 'codeBackground',
 ];
+
+/**
+ * Terminal keys whose values are valid CSS strings but NOT hex colours.
+ * glow: a full text-shadow value ("none" or "0 0 Npx rgba(…)") — §9.1 / §5.
+ */
+const REQUIRED_TERMINAL_CSS_KEYS: (keyof TerminalColors)[] = ['glow'];
 
 const REQUIRED_FONT_KEYS: (keyof ThemeFont)[] = ['size'];   // family/weight/lineHeight are optional
 
@@ -56,12 +63,25 @@ function assertThemeComplete(name: string, theme: Theme) {
       }
     });
 
-    it('terminal block contains all semantic colour keys', () => {
-      for (const key of REQUIRED_TERMINAL_KEYS) {
+    it('terminal block contains all semantic hex colour keys', () => {
+      for (const key of REQUIRED_TERMINAL_HEX_KEYS) {
         expect(
           (theme.terminal as Record<string, unknown>)[key],
           `${name}.terminal.${key} must be a non-empty hex colour string`
         ).toMatch(/^#[0-9a-fA-F]{3,8}$/);
+      }
+    });
+
+    it('terminal block contains all non-hex CSS terminal keys', () => {
+      for (const key of REQUIRED_TERMINAL_CSS_KEYS) {
+        expect(
+          (theme.terminal as Record<string, unknown>)[key],
+          `${name}.terminal.${key} must be a non-empty string`
+        ).toBeTruthy();
+        expect(
+          typeof (theme.terminal as Record<string, unknown>)[key],
+          `${name}.terminal.${key} must be a string type`
+        ).toBe('string');
       }
     });
 

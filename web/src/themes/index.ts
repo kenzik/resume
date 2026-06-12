@@ -30,6 +30,8 @@ export interface TerminalColors {
   warning: string;
   info: string;
   codeBackground: string;
+  /** Full CSS text-shadow value. "none" for dark/light (P4-ish, short persistence, crisp text). */
+  glow: string;
 }
 
 export interface ThemeFont {
@@ -127,5 +129,6 @@ export const TERMINAL_TOKEN_USAGE: Readonly<Record<keyof TerminalColors, TokenUs
   warning:  { role: 'load-bearing', note: 'Warning-coloured output; ANSI yellow in ansiToHtml',                          consumers: ['ansiToHtml.ts'] },
   info:           { role: 'load-bearing', note: 'Info / cyan: h3-h6, typing indicator, prompt path, DOOM stats',               consumers: ['ansiToHtml.ts', 'DoomCanvas.vue', 'DoomPauseModal.vue', 'Download.vue', 'terminal.scss', 'TerminalPager.vue', 'TerminalPrompt.vue', 'ZMachineQuitModal.vue'] },
   codeBackground: { role: 'load-bearing', note: 'Inline-code chip well background (§5.3); dark=#333333 (zero visual change), light=#e8e8e8 (contrast fix)', consumers: ['terminal.scss'] },
+  glow:           { role: 'load-bearing', note: 'Full CSS text-shadow for phosphor bloom (§4, §5). "none" for dark/light (P4-ish, short persistence). Consumer pending: crt-effects-engineer (B-tier, §3)', consumers: [] },
 } as const;
 
