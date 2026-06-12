@@ -38,7 +38,7 @@ async function typeCommand(page: import('@playwright/test').Page, cmd: string) {
 // ── Tests ────────────────────────────────────────────────────────────────────
 
 test.describe('easter-egg CRT transitions', () => {
-  test('Zork trigger (magic word 1) fires crt-smack transition on .terminal', async ({ page }) => {
+  test('Zork trigger (magic word 1) fires a CRT transition (smack or roll) on .terminal', async ({ page }) => {
     await page.goto('/resume');
 
     // Wait for the terminal to be ready
@@ -46,20 +46,21 @@ test.describe('easter-egg CRT transitions', () => {
 
     await typeCommand(page, ZORK_TRIGGER_1);
 
-    // Terminal.vue applies .crt-smack to the .terminal div which runs the
-    // crt-smack-triple animation (1.8s — DESIGN_GUIDE §5.3, 2026-2.md §8.1)
-    const terminal = page.locator('.terminal.crt-smack');
-    await expect(terminal).toBeVisible({ timeout: 5000 });
+    // Terminal.vue randomly picks smack or roll for Z-machine transitions
+    // (Terminal.vue:446 — Math.random() > 0.5).  Both run the crt-smack-triple
+    // / crt-roll-triple animations at 1.8s (DESIGN_GUIDE §5.3, 2026-2.md §8.1)
+    const hasCrtTransition = page.locator('.terminal.crt-smack, .terminal.crt-roll');
+    await expect(hasCrtTransition).toBeVisible({ timeout: 5000 });
   });
 
-  test('Zork trigger (magic word 2) fires crt-smack transition on .terminal', async ({ page }) => {
+  test('Zork trigger (magic word 2) fires a CRT transition (smack or roll) on .terminal', async ({ page }) => {
     await page.goto('/resume');
     await page.locator('input[type="text"]').first().waitFor({ state: 'visible' });
 
     await typeCommand(page, ZORK_TRIGGER_2);
 
-    const terminal = page.locator('.terminal.crt-smack');
-    await expect(terminal).toBeVisible({ timeout: 5000 });
+    const hasCrtTransition = page.locator('.terminal.crt-smack, .terminal.crt-roll');
+    await expect(hasCrtTransition).toBeVisible({ timeout: 5000 });
   });
 
   test('DOOM trigger fires a CRT transition (smack or roll) on .terminal', async ({ page }) => {
