@@ -31,6 +31,24 @@
       @toggle-sound="handleDoomToggleSound"
     />
     
+    <!--
+      Screen reader announcer — fires exactly once per completed command output.
+      DESIGN_GUIDE_2026-2.md §7: the output scroll containers carry role="log" +
+      aria-live="off" so the typewriter per-tick innerHTML swaps do not trigger
+      per-character announcements (WAI-ARIA: aria-live="off" overrides the
+      implicit aria-live="polite" that role="log" would otherwise imply). This
+      element receives a plain-text update only after each typewriter pass
+      finishes, giving screen readers one clean announcement per result.
+      Cannot be verified with headless VoiceOver; static analysis confirms the
+      typewriter replaces innerHTML on every tick (remove + add text nodes),
+      which would chatter under a polite live region on the main container.
+    -->
+    <div
+      class="sr-only"
+      aria-live="polite"
+      aria-atomic="true"
+    >{{ announcement }}</div>
+
     <!-- Normal terminal output - hidden during pager mode, zmachine mode, doom mode, or wopr mode -->
     <!-- Desktop: Use QScrollArea for smooth scrolling -->
     <q-scroll-area
@@ -39,6 +57,9 @@
       ref="scrollAreaRef"
       :thumb-style="{ display: 'none' }"
       :bar-style="{ display: 'none' }"
+      role="log"
+      aria-live="off"
+      aria-label="Terminal output"
     >
       <template v-for="(entry, index) in history" :key="index">
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -63,6 +84,7 @@
             @keydown.down="navigateHistory(1)"
             class="terminal-input"
             type="text"
+            aria-label="Terminal command input"
             autofocus
             spellcheck="false"
         />
@@ -80,6 +102,9 @@
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
       @scroll.passive="handleNativeScroll"
+      role="log"
+      aria-live="off"
+      aria-label="Terminal output"
     >
       <template v-for="(entry, index) in history" :key="'m-' + index">
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -106,6 +131,7 @@
             @blur="handleMobileInputBlur"
             class="terminal-input"
             type="text"
+            aria-label="Terminal command input"
             autofocus
             spellcheck="false"
         />
@@ -298,6 +324,13 @@ const history = ref<HistoryEntry[]>([]);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
 
+/**
+ * Plain-text content for the sr-only aria-live announcer (§7).
+ * Updated once per completed typewriter pass so screen readers hear each
+ * command result exactly once without per-tick chatter.
+ */
+const announcement = ref('');
+
 // Command history settings (for up/down arrow navigation)
 const commandHistory = ref<string[]>([]);
 const commandHistoryIndex = ref(-1);
@@ -405,7 +438,12 @@ const typeOutputToHistory = async (
   if (hasAnsi) {
     history.value[entryIndex].output = ansiToHtml(output);
   }
-  
+
+  // Update the aria-live announcer with the completed plain-text result (§7).
+  // Strip HTML tags so the screen reader receives clean text, not markup.
+  const finalHtml = history.value[entryIndex].output || '';
+  announcement.value = finalHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
   // Ensure final scroll after typewriter completes
   scrollToBottom();
 };
@@ -427,9 +465,9 @@ const handlePagerExit = () => {
   pagerCommand.value = '';
   pagerRawContent.value = '';
   
-  // Refocus input
+  // Restore focus to terminal input — covers desktop + mobile (§7 focus restoration).
   nextTick(() => {
-    inputRef.value?.focus();
+    focusInputSafely();
     scrollToBottom();
   });
 };
@@ -532,13 +570,16 @@ const confirmZMachineQuit = () => {
 };
 
 /**
- * Cancel Z-Machine quit - return to game
+ * Cancel Z-Machine quit - return to game.
+ * Restores focus to the Z-Machine input (not the terminal input — we are staying
+ * in game mode). §7 focus restoration: the terminal input is restored only on
+ * paths that return to the prompt (confirm/quit paths redirect to home, which
+ * remounts the terminal and calls focusInputSafely() in onMounted).
  */
 const cancelZMachineQuit = () => {
   showZMachineQuitModal.value = false;
   nextTick(() => {
-    const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-    input?.focus();
+    zmachineRef.value?.focus();
   });
 };
 

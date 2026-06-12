@@ -78,9 +78,20 @@ export function generateHelpText(): string {
     '`resume | more` - Page through full resume',
     '`download pdf` - Download resume as PDF',
   ];
-  
+
   sections.push(`#### Examples\n\n${examples.map(e => `- ${e}`).join('\n')}`);
-  
+
+  // Keyboard shortcuts — period-correct affordances (DESIGN_GUIDE_2026-2.md §7).
+  // Only list shortcuts that are verifiably implemented in Terminal.vue.
+  const shortcuts = [
+    '`↑` / `↓` - Navigate command history',
+    '`Ctrl+L` - Clear the screen',
+    '`q` or `Escape` - Quit pager (when viewing long output)',
+    '`Space` / `Enter` - Next page in pager',
+  ];
+
+  sections.push(`#### Keyboard Shortcuts\n\n${shortcuts.map(s => `- ${s}`).join('\n')}`);
+
   return sections.join('\n\n');
 }
 

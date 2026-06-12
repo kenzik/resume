@@ -164,3 +164,40 @@ test.describe('pipe chain', () => {
     await waitForOutput(page, 'Cloud', 8000);
   });
 });
+
+// ── Accessibility (DESIGN_GUIDE_2026-2.md §7) ────────────────────────────────
+
+test.describe('ARIA attributes', () => {
+  test('terminal input has aria-label="Terminal command input"', async ({ page }) => {
+    await page.goto('/resume');
+    const input = page.locator('input[aria-label="Terminal command input"]').first();
+    await expect(input).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('output region carries role="log"', async ({ page }) => {
+    await page.goto('/resume');
+    // Wait for the terminal to render, then confirm the log role is present on
+    // whichever output container is active (desktop or mobile branch).
+    await page.waitForFunction(
+      () => document.querySelector('[role="log"]') !== null,
+      undefined,
+      { timeout: 10_000 },
+    );
+    const logRegion = page.locator('[role="log"]').first();
+    await expect(logRegion).toBeAttached();
+  });
+
+  test('output region has aria-live="off" (no typewriter chatter)', async ({ page }) => {
+    await page.goto('/resume');
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector('[role="log"]');
+        return el !== null && el.getAttribute('aria-live') === 'off';
+      },
+      undefined,
+      { timeout: 10_000 },
+    );
+    const logRegion = page.locator('[role="log"][aria-live="off"]').first();
+    await expect(logRegion).toBeAttached();
+  });
+});

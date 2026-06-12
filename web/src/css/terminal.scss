@@ -4,6 +4,21 @@
 // CRT smack/roll keyframes live in Terminal.vue (crt-effects-engineer's scope).
 // =============================================================================
 
+// Visually-hidden utility for screen-reader-only content (DESIGN_GUIDE_2026-2.md §7).
+// Used by the aria-live announcer div in Terminal.vue. Invisible to sighted users;
+// accessible to AT because display/visibility are left as the browser default.
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .terminal {
   position: relative;
   width: 100%;
