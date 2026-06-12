@@ -1,0 +1,24 @@
+// =============================================================================
+// CRT Motion Timeline — named timing custom properties
+// Implements DESIGN_GUIDE_2026-2.md §8.1 "Named timeline (full boot, ~3.5s)".
+//
+// Same numbers as before, named once. These are the *durations* of each boot
+// phase and the easter-egg transitions; the choreography delays (the "@ Xs"
+// offsets in the §8.1 table) and the flicker repeat count remain literals at
+// their call sites, since §8.1 names durations only — see the consuming
+// `animation:` shorthands in Landing.vue / crt-effects.scss.
+//
+// Choreographed: change one, re-derive all, and update the §8.1 table in the
+// same commit. Defined on :root (global, via app.scss) so both Landing.vue's
+// scoped boot keyframes and Terminal.vue's scoped crt-effects inherit them.
+// =============================================================================
+
+:root {
+  --crt-line-ignite: 0.5s;      // powerLineAppear — the scan line strikes
+  --crt-line-flicker: 0.1s;     // powerLineFlicker — ignition stutter (×3 @ 0.2s)
+  --crt-bloom: 2s;              // powerLineExpand — line blooms to full screen (@ 0.5s)
+  --crt-phosphor-warmup: 2s;   // phosphorWarmup — radial green settles to 0.3 (@ 0.3s)
+  --crt-screen-warmup: 2s;     // screenWarmup — brightness 0.5 → 1.2 → 1 (@ 0.5s)
+  --crt-smack-duration: 1.8s;  // crt-smack-triple — easter-egg transition
+  --crt-roll-duration: 1.8s;   // crt-roll-triple — easter-egg transition
+}

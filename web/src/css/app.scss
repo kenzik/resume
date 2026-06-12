@@ -1,6 +1,11 @@
 // App Global Styles
 // This file is imported by quasar.config.js
 
+// CRT motion timeline custom properties (DESIGN_GUIDE_2026-2.md §8.1).
+// Imported here so the --crt-* vars land on a global :root and cascade into
+// the scoped boot keyframes (Landing.vue) and scoped crt-effects (Terminal.vue).
+@import './crt-timing.scss';
+
 // JuliaMono is self-hosted in public/fonts/ and loaded via the font system
 // Downloaded from: https://github.com/cormullion/juliamono/releases
 

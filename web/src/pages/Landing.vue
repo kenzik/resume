@@ -172,19 +172,19 @@ onMounted(() => {
 .powering-on {
   // Phase 1: Line appears (0-0.5s)
   .power-line {
-    animation: powerLineAppear 0.5s ease-out forwards,
-               powerLineExpand 2s ease-out 0.5s forwards,
-               powerLineFlicker 0.1s ease-in-out 0.2s 3;
+    animation: powerLineAppear var(--crt-line-ignite, 0.5s) ease-out forwards,
+               powerLineExpand var(--crt-bloom, 2s) ease-out 0.5s forwards,
+               powerLineFlicker var(--crt-line-flicker, 0.1s) ease-in-out 0.2s 3;
   }
   
   // Phase 2: Phosphor glow builds up
   .phosphor-glow {
-    animation: phosphorWarmup 2s ease-out 0.3s forwards;
+    animation: phosphorWarmup var(--crt-phosphor-warmup, 2s) ease-out 0.3s forwards;
   }
   
   // Phase 3: Screen brightness increases
   .crt-screen {
-    animation: screenWarmup 2s ease-out 0.5s forwards;
+    animation: screenWarmup var(--crt-screen-warmup, 2s) ease-out 0.5s forwards;
   }
 }
 

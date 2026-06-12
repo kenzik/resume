@@ -12,7 +12,7 @@
   // Used when entering Z-Machine mode
   // =============================================================================
   &.crt-smack {
-    animation: crt-smack-triple 1.8s ease-out forwards;
+    animation: crt-smack-triple var(--crt-smack-duration, 1.8s) ease-out forwards;
   }
 
   // =============================================================================
@@ -20,7 +20,7 @@
   // Used when entering Z-Machine mode
   // =============================================================================
   &.crt-roll {
-    animation: crt-roll-triple 1.8s ease-out forwards;
+    animation: crt-roll-triple var(--crt-roll-duration, 1.8s) ease-out forwards;
   }
 }
 
