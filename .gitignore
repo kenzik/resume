@@ -20,3 +20,5 @@ Thumbs.db
 *.prd.md
 *.dk.md
 
+tmp/
+.claude/settings.local.json
