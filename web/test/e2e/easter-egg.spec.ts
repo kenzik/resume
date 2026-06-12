@@ -25,6 +25,12 @@ const ZORK_TRIGGER_2 = String.fromCharCode(112, 108, 117, 103, 104);
 /** Classic FPS god-mode cheat (doom entry) */
 const DOOM_TRIGGER_1 = String.fromCharCode(105, 100, 100, 113, 100);
 
+/** Classic FPS full-ammo cheat (doom entry) */
+const DOOM_TRIGGER_2 = String.fromCharCode(105, 100, 107, 102, 97);
+
+/** Classic FPS no-clip cheat (doom entry) */
+const DOOM_TRIGGER_3 = String.fromCharCode(105, 100, 115, 112, 105, 115, 112, 111, 112, 100);
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 async function typeCommand(page: import('@playwright/test').Page, cmd: string) {
@@ -63,7 +69,7 @@ test.describe('easter-egg CRT transitions', () => {
     await expect(hasCrtTransition).toBeVisible({ timeout: 5000 });
   });
 
-  test('DOOM trigger fires a CRT transition (smack or roll) on .terminal', async ({ page }) => {
+  test('DOOM trigger (god-mode cheat) fires a CRT transition (smack or roll) on .terminal', async ({ page }) => {
     await page.goto('/resume');
     await page.locator('input[type="text"]').first().waitFor({ state: 'visible' });
 
@@ -71,6 +77,26 @@ test.describe('easter-egg CRT transitions', () => {
 
     // DOOM randomly selects smack or roll (Terminal.vue:542 — Math.random() > 0.5)
     // Assert that either the crt-smack or crt-roll class fires on .terminal
+    const hasCrtTransition = page.locator('.terminal.crt-smack, .terminal.crt-roll');
+    await expect(hasCrtTransition).toBeVisible({ timeout: 5000 });
+  });
+
+  test('DOOM trigger (full-ammo cheat) fires a CRT transition (smack or roll) on .terminal', async ({ page }) => {
+    await page.goto('/resume');
+    await page.locator('input[type="text"]').first().waitFor({ state: 'visible' });
+
+    await typeCommand(page, DOOM_TRIGGER_2);
+
+    const hasCrtTransition = page.locator('.terminal.crt-smack, .terminal.crt-roll');
+    await expect(hasCrtTransition).toBeVisible({ timeout: 5000 });
+  });
+
+  test('DOOM trigger (no-clip cheat) fires a CRT transition (smack or roll) on .terminal', async ({ page }) => {
+    await page.goto('/resume');
+    await page.locator('input[type="text"]').first().waitFor({ state: 'visible' });
+
+    await typeCommand(page, DOOM_TRIGGER_3);
+
     const hasCrtTransition = page.locator('.terminal.crt-smack, .terminal.crt-roll');
     await expect(hasCrtTransition).toBeVisible({ timeout: 5000 });
   });

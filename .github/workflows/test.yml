@@ -130,6 +130,10 @@ jobs:
           echo "OK: ${KB} KB ≤ 250 KB (gzip)"
 
       # ── Obfuscation check: no plaintext easter-egg triggers in dist ──────────
+      # Asserts exactly the five obfuscated launch-trigger strings are absent
+      # from built assets: xyzzy, plugh, iddqd, idkfa, idspispopd.
+      # "joshua" is the WOPR in-game password — it ships in plaintext by design
+      # (game logic string comparison) and must NOT be included in this gate.
       # Trigger strings are reconstructed from hex escapes (never stored as
       # literals here) so this workflow file itself stays clean under grep.
       - name: Verify easter-egg triggers are obfuscated in dist
@@ -139,7 +143,7 @@ jobs:
           T2=$(printf '%b' '\x70\x6c\x75\x67\x68')
           T3=$(printf '%b' '\x69\x64\x64\x71\x64')
           T4=$(printf '%b' '\x69\x64\x6b\x66\x61')
-          T5=$(printf '%b' '\x6a\x6f\x73\x68\x75\x61')
+          T5=$(printf '%b' '\x69\x64\x73\x70\x69\x73\x70\x6f\x70\x64')
           FOUND=$(grep -rl "$T1\|$T2\|$T3\|$T4\|$T5" dist/spa/assets/ 2>/dev/null || true)
           if [ -n "$FOUND" ]; then
             echo "ERROR: Plaintext easter-egg triggers found in dist:"
