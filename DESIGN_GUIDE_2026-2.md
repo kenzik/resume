@@ -267,6 +267,28 @@ nothing in S/A/B was altered by intent. It is platform raster noise below the de
 and it is the sanctioned cost of §2's second clause ("use modern platform features wherever
 they are invisible").
 
+### 11.2 Net-new baseline precedent — Phase 4 (amber/green home)
+
+**Ruling (design-director, 2026-06-12): SIGN-OFF.** The four new baselines
+(`amber|green-home-{darwin,linux}.png`) are *net-new* artifacts for net-new themes —
+there is no prior baseline to regress, so §11.1's five-condition regen gate does not apply.
+Distinct path: §11.1 governs *regenerating an existing* baseline; §11.2 governs *adding* one.
+Committing net-new per-platform baselines is sanctioned when: (1) the theme JSON matches the
+§5 table byte-for-byte; (2) rendered output passes the §4 physics read (verified below);
+(3) capture is deterministic ×3 on both platforms under strict 0-diff (no `maxDiffPixels`
+tolerance introduced); (4) the dark/light zero-regression invariant is structurally intact —
+here by construction: dark/light store `glow:"none"`, fallback is `none`, so `text-shadow`
+resolves to `none` and dark/light stay pixel-identical.
+
+**Whole-tube glow is intended (Q3 affirmed).** The §5 `glow` token is consumed as a single
+inherited `text-shadow` on `.terminal`, blooming every lit glyph — output, prompt, command,
+input, cursor. This is correct, not a scope error: a real P1/P3 tube glows *every* excited
+phosphor; glow-on-output-only would encode a web-app semantic ("glow = this is output"),
+precisely the skin/parody failure §4 rejects. The dim-beam prompt blooms *less* because its
+base color is darker (fixed alpha × darker glyph = fainter halo) — the correct physical
+behavior, and what renders. §3's "the whole screen is the easter egg" exception authorizes,
+and in fact requires, the whole-tube treatment in phosphor themes only.
+
 ## 12. Backlog & Non-Goals
 
 **Explicitly out of scope** (so nobody "helpfully" adds them): sound/beep emulation, SSR, additional games, an in-terminal theme editor, telemetry/analytics, auth, comments, dark-mode toggles outside the `theme` command.
