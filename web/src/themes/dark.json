@@ -34,8 +34,7 @@
   },
   "font": {
     "size": "18px",
-    "weight": "400",
-    "lineHeight": "1.4"
+    "weight": "400"
   },
   "spacing": {
     "padding": "20px"

@@ -72,10 +72,8 @@ function applyTheme(theme: Theme) {
   });
 
   // Font family and line-height are controlled by useFont composable, not themes
-  // Themes only set size and weight
   root.style.setProperty('--font-size', theme.font.size);
   root.style.setProperty('--font-weight', theme.font.weight || '400');
-  // Note: line-height is now per-font and handled by useFont
 
   // Apply spacing
   root.style.setProperty('--spacing-padding', theme.spacing.padding);

@@ -35,7 +35,7 @@ export interface ThemeFont {
   family?: string; // Optional - font family is managed by useFont composable
   size: string;
   weight?: string;
-  lineHeight: string;
+  // lineHeight is intentionally absent: per-font line-height is owned by useFont
 }
 
 export interface ThemeSpacing {
