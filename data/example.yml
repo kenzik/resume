@@ -1,3 +1,8 @@
+web:
+  motd: |
+    Terminal Resume — Experienced software engineer.
+    Type 'help' for available commands.
+
 resume:
   profile: >
     Experienced software engineer with 10+ years of experience building scalable web applications 

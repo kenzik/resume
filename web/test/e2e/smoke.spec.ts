@@ -56,11 +56,34 @@ test.describe('boot and terminal load', () => {
   });
 
   test('default dark home screen matches screenshot baseline', async ({ page }) => {
+    // Emulate dark color scheme so "auto" theme resolves to dark (#1e1e1e).
+    // Without this, Playwright's Desktop Chrome defaults to light, causing
+    // the auto theme to render #ffffff instead of the dark phosphor screen.
+    await page.emulateMedia({ colorScheme: 'dark' });
     await page.goto('/resume');
-    // Wait for any terminal output to appear before snapping
-    await page.waitForSelector('input[type="text"]', { state: 'visible', timeout: 10_000 });
-    // Small pause so fonts/content settle
-    await page.waitForTimeout(500);
+
+    // 1. Dark theme must be applied: wait until :root CSS var equals #1e1e1e.
+    //    The useTheme composable sets this via element.style.setProperty on
+    //    document.documentElement. No raw sleeps — this polls the real DOM state.
+    await page.waitForFunction(
+      () =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--color-background')
+          .trim() === '#1e1e1e',
+      undefined,
+      { timeout: 10_000 },
+    );
+
+    // 2. MOTD boot output from example.yml must be visible before snapping.
+    //    "Terminal Resume" is the first line of web.motd in example.yml.
+    await page.waitForFunction(
+      (text) => document.body.innerText.includes(text),
+      'Terminal Resume',
+      { timeout: 10_000 },
+    );
+
+    // 3. Prompt must be idle and interactive
+    await page.locator('input[type="text"]').first().waitFor({ state: 'visible', timeout: 5_000 });
 
     await expect(page).toHaveScreenshot('dark-home.png', {
       // Allow minor anti-aliasing / font-rendering variance across platforms
@@ -87,13 +110,23 @@ test.describe('help command', () => {
     await typeCommand(page, 'help');
     await waitForOutput(page, 'General');
 
-    // Advance through pager pages by pressing Space until 'grep' appears
+    // Advance through pager pages by pressing Space until 'grep' appears.
+    // After each Space, wait until body text grows (pager rendered next page)
+    // rather than sleeping a fixed amount.
     const maxPresses = 15;
     for (let i = 0; i < maxPresses; i++) {
-      const body = await page.textContent('body');
-      if (body?.includes('grep')) break;
+      const bodyBefore = (await page.textContent('body')) ?? '';
+      if (bodyBefore.includes('grep')) break;
+      const lenBefore = bodyBefore.length;
       await page.keyboard.press('Space');
-      await page.waitForTimeout(400);
+      // Wait until the pager appends content or 'grep' appears — no raw sleep
+      await page.waitForFunction(
+        ([len, needle]) =>
+          (document.body.textContent?.length ?? 0) > (len as number) ||
+          document.body.innerText.includes(needle as string),
+        [lenBefore, 'grep'] as [number, string],
+        { timeout: 3000 },
+      );
     }
 
     await waitForOutput(page, 'grep', 8000);
