@@ -310,6 +310,18 @@
   animation: blink 1s infinite;
 }
 
+// =============================================================================
+// Reduced-motion: the block cursor holds steady (no blink).
+// DESIGN_GUIDE_2026-2.md §8.2 — "Cursor blink becomes a steady block."
+// =============================================================================
+@media (prefers-reduced-motion: reduce) {
+  .cursor,
+  .typing-indicator {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 // Note: Pager styles are in TerminalPager.vue
 // Note: Z-Machine styles are in TerminalZMachine.vue
 

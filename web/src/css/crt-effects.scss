@@ -25,6 +25,20 @@
 }
 
 // =============================================================================
+// Reduced-motion: suppress the smack/roll transitions entirely.
+// DESIGN_GUIDE_2026-2.md §8.2 — easter eggs cut directly to their mode. The JS
+// clock (Terminal.vue) collapses its transition wait to CRT_TRANSITION_TIMINGS
+// .reducedMotionMs so the mode still enters cleanly with the animation gone
+// (the wait is a setTimeout, not animationend — nothing stalls).
+// =============================================================================
+@media (prefers-reduced-motion: reduce) {
+  .terminal.crt-smack,
+  .terminal.crt-roll {
+    animation: none;
+  }
+}
+
+// =============================================================================
 // CRT Triple Smack Keyframe Animations
 // =============================================================================
 

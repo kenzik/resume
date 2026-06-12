@@ -189,12 +189,32 @@ import ScrollIndicators from './terminal/ScrollIndicators.vue';
 import TerminalPager from './terminal/TerminalPager.vue';
 import TerminalZMachine from './terminal/TerminalZMachine.vue';
 import TerminalWOPR from './terminal/TerminalWOPR.vue';
-import { 
+import {
   TYPEWRITER_SPEEDS,
   TERMINAL_CONFIG,
+  CRT_TRANSITION_TIMINGS,
 } from '../constants';
 
 const router = useRouter();
+
+/**
+ * Reduced-motion preference (DESIGN_GUIDE_2026-2.md §8.2). When set, the
+ * smack/roll easter-egg transitions are suppressed in CSS (crt-effects.scss),
+ * so the JS must not wait on them — the egg cuts directly to its mode.
+ * Read live (not cached) so a mid-session OS toggle is respected.
+ */
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Duration to hold the smack/roll CRT transition before entering a game mode.
+ * Collapses to 0 under reduced motion so the mode switch is immediate.
+ */
+const crtTransitionDuration = () =>
+  prefersReducedMotion()
+    ? CRT_TRANSITION_TIMINGS.reducedMotionMs
+    : CRT_TRANSITION_TIMINGS.durationMs;
 
 // Commands to run automatically on startup (single code path for all commands)
 const startupCommands = ['motd'];
@@ -450,7 +470,8 @@ const enterZMachineMode = async (gameId: string = 'zork1') => {
   
   // Wait for transition, then enter Z-Machine mode
   // Both effects now have 3 escalating phases totaling ~1.8s
-  const transitionDuration = 1800;
+  // (collapses to 0 under reduced motion — cut directly to the mode, §8.2)
+  const transitionDuration = crtTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
   
   // Enter Z-Machine mode AFTER transition completes
@@ -544,8 +565,8 @@ const enterDoomMode = async (gameId: string = 'doom1') => {
   // Trigger CRT transition effect
   doomTransitioning.value = true;
   
-  // Wait for transition
-  const transitionDuration = 1800;
+  // Wait for transition (collapses to 0 under reduced motion, §8.2)
+  const transitionDuration = crtTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
   
   // Clear the loading message
@@ -760,7 +781,8 @@ const enterWOPRMode = async (gameId: string = 'wopr') => {
   woprTransitioning.value = true;
 
   // Wait for transition, then enter WOPR mode
-  const transitionDuration = 1800;
+  // (collapses to 0 under reduced motion — cut directly to the mode, §8.2)
+  const transitionDuration = crtTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
 
   // Enter WOPR mode AFTER transition completes

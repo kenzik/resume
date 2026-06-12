@@ -43,20 +43,27 @@ const { registerTimeout: setPoweredOn } = useTimeout();
 const { registerTimeout: setRedirect } = useTimeout();
 
 onMounted(() => {
+  // Reduced-motion "fast-boot switch" (DESIGN_GUIDE_2026-2.md §8.2). The JS clock
+  // must collapse in lock-step with the CSS keyframes (which branch under
+  // @media prefers-reduced-motion below), or the two clocks desynchronize.
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const boot = prefersReducedMotion ? BOOT_TIMINGS.reducedMotion : BOOT_TIMINGS;
+
   // Start the power-on animation after a brief delay
   setAnimationStart(() => {
     animationClass.value = 'powering-on';
   }, 100);
 
-  // Transition to "powered on" state after animation completes (~3s)
+  // Transition to "powered on" state after the ignite completes
+  // (~3.5s normal; reducedMotion.poweredOnMs = 300ms under reduced motion)
   setPoweredOn(() => {
     animationClass.value = 'powered-on';
-  }, BOOT_TIMINGS.poweredOnMs);
+  }, boot.poweredOnMs);
 
   // Redirect to /resume after power-on delay (env-overridable via VITE_POWER_ON_DELAY_MS)
   setRedirect(() => {
     router.push('/resume');
-  }, BOOT_TIMINGS.redirectMs);
+  }, boot.redirectMs);
 });
 </script>
 
@@ -215,6 +222,55 @@ onMounted(() => {
 @keyframes cursorBlink {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
+}
+
+// ============================================
+// Reduced-motion fast boot — DESIGN_GUIDE_2026-2.md §8.2
+// The screen goes off → lit with a SINGLE opacity ease (≤300ms): no flicker,
+// no bloom sweep, no brightness oscillation. The lit screen (the expanded power
+// line at the terminal background colour) fades in as one layer; the JS clock
+// collapses in lock-step (BOOT_TIMINGS.reducedMotion). Scanlines/vignette/bezel
+// (CRTFrame.vue) remain — static texture, not motion. Still a boot: it turns on.
+// ============================================
+@media (prefers-reduced-motion: reduce) {
+  // Drop the slow background-color fade — the ignite is the only motion.
+  .crt-container {
+    transition: none;
+  }
+
+  .powering-on {
+    // One opacity ease, off → lit. This is the entire reduced-motion boot.
+    .crt-screen {
+      animation: reducedScreenIgnite var(--crt-reduced-ignite, 0.2s) ease-out forwards;
+      filter: none;
+    }
+
+    // Snap the lit screen into place (no flicker / bloom / warmup choreography);
+    // the .crt-screen opacity ease above is what fades it in.
+    .power-line {
+      animation: none;
+      transform: scaleY(1);
+      opacity: 1;
+      background: var(--color-background, #1e1e1e);
+    }
+
+    .phosphor-glow {
+      animation: none;
+      opacity: 0.1;
+    }
+  }
+
+  // Steady block cursor — no blink (DESIGN_GUIDE_2026-2.md §8.2).
+  .powered-on .startup-cursor {
+    opacity: 1;
+    animation: none;
+  }
+}
+
+// Reduced-motion single ignite — one opacity ease, off → lit.
+@keyframes reducedScreenIgnite {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
 // ============================================

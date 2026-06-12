@@ -41,15 +41,41 @@ export const TYPEWRITER_SPEEDS = {
 
 // =============================================================================
 // Boot Timings (JS clock)
-// The JS half of the dual-clocked boot ritual (DESIGN_GUIDE_2026-2.md §8.1).
+// The JS half of the dual-clocked boot ritual (DESIGN_GUIDE_2026-2.md §8.1/§8.2).
 // The CSS half lives in web/src/css/crt-timing.scss. Same numbers, named once —
 // change a phase here and re-derive the CSS timeline in the same commit.
 //   poweredOnMs — content reveal (animationClass → 'powered-on')
 //   redirectMs  — route to /resume; env-overridable via VITE_POWER_ON_DELAY_MS
+//
+// reducedMotion — the §8.2 "fast-boot switch" (prefers-reduced-motion: reduce).
+// Clocks collapse proportionally: poweredOnMs 3500 → 300, redirect 5000 → 800.
+// The env override is applied to BOTH variants, so VITE_POWER_ON_DELAY_MS wins
+// over the 800ms default exactly as it wins over the 5000ms default — the test
+// harness's fast-boot path is preserved regardless of motion preference; the
+// 800ms default only takes effect in production where no override is set.
 // =============================================================================
+const ENV_REDIRECT_MS = Number(import.meta.env.VITE_POWER_ON_DELAY_MS) || undefined;
+
 export const BOOT_TIMINGS = {
   poweredOnMs: 3500,
-  redirectMs: Number(import.meta.env.VITE_POWER_ON_DELAY_MS) || 5000,
+  redirectMs: ENV_REDIRECT_MS ?? 5000,
+  reducedMotion: {
+    poweredOnMs: 300,
+    redirectMs: ENV_REDIRECT_MS ?? 800,
+  },
+} as const;
+
+// =============================================================================
+// CRT Easter-Egg Transition Timing (JS clock)
+// Mirrors --crt-smack-duration / --crt-roll-duration in crt-timing.scss. The JS
+// (Terminal.vue) waits this long on a setTimeout — not animationend — before
+// switching into the game mode. Under reduced motion the CSS animation is
+// suppressed (crt-effects.scss), so the JS must not wait on it: the egg cuts
+// directly to its mode (DESIGN_GUIDE_2026-2.md §8.2).
+// =============================================================================
+export const CRT_TRANSITION_TIMINGS = {
+  durationMs: 1800,
+  reducedMotionMs: 0,
 } as const;
 
 // =============================================================================
