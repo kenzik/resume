@@ -9,8 +9,9 @@
  *   100 ms  → animationClass = 'powering-on' (power line ignites)
  *   3500 ms → animationClass = 'powered-on'  (phosphor settled)
  *
- * Reduced-motion variant ships in Phase 3.  Until then the e2e assertion is
- * marked expected-fail so the test slot exists but CI stays green.
+ * The reduced-motion "fast-boot switch" (§8.2) collapses both clocks: the JS
+ * fires 'powered-on' at BOOT_TIMINGS.reducedMotion.poweredOnMs and the CSS plays
+ * a single opacity ease, so powering-on → powered-on lands in ≤ 300 ms.
  */
 import { test, expect } from '@playwright/test';
 
@@ -85,21 +86,19 @@ test.describe('boot choreography', () => {
     { timeout: 20_000 },
   );
 
-  // ── Reduced-motion fast-boot (Phase 3 implements this) ────────────────────
+  // ── Reduced-motion fast-boot (§8.2) ───────────────────────────────────────
   //
-  // When prefers-reduced-motion: reduce is active, the boot should complete
-  // in ≤ 300 ms (DESIGN_GUIDE_2026-2.md §8.2).  Phase 3 wires both the CSS
-  // keyframes and the JS timers to the matchMedia branch.  Until that lands
-  // this test is expected-fail so the slot exists.
+  // With prefers-reduced-motion: reduce, the boot collapses to a single ignite:
+  // the JS clock fires 'powered-on' at BOOT_TIMINGS.reducedMotion.poweredOnMs
+  // (300 ms) while the CSS plays one opacity ease (≤ 300 ms) instead of the
+  // ~3.5 s choreography.  Measured as an in-page performance.now() delta —
+  // immune to page-load latency, exactly like the full-boot test above.
   test(
-    'reduced-motion boot completes in ≤ 300 ms (expected failure until Phase 3)',
+    'reduced-motion boot: powering-on → powered-on in ≤ 300 ms (§8.2)',
     async ({ page }) => {
-      // Mark as expected to fail — Phase 3 will flip this to a passing test
-      test.fail();
-
-      // Emulate prefers-reduced-motion
       await page.emulateMedia({ reducedMotion: 'reduce' });
 
+      // Hold the redirect so the landing page stays mounted while we measure.
       let releaseRedirect!: () => void;
       const redirectHeld = new Promise<void>((resolve) => { releaseRedirect = resolve; });
       await page.route('**/resume**', async (route) => {
@@ -107,16 +106,36 @@ test.describe('boot choreography', () => {
         await route.continue();
       });
 
-      const start = Date.now();
       await page.goto('/');
 
-      const container = page.locator('.crt-container').first();
-      // Phase 3: the powered-on state should arrive in ≤ 300 ms
-      await expect(container).toHaveClass(/powered-on/, { timeout: 600 });
+      // Capture the in-page clock at 'powering-on' (ignite begins)…
+      const poweringOnHandle = await page.waitForFunction(
+        () => {
+          const el = document.querySelector('.crt-container');
+          return el?.classList.contains('powering-on') ? performance.now() : null;
+        },
+        undefined,
+        { timeout: 1500 },
+      );
+      const poweringOnAt = (await poweringOnHandle.jsonValue()) as number;
 
-      const elapsed = Date.now() - start;
-      // This assertion will fail until Phase 3 ships the fast-boot branch
-      expect(elapsed).toBeLessThan(300);
+      // …and at 'powered-on' (ignite settled).
+      const poweredOnHandle = await page.waitForFunction(
+        () => {
+          const el = document.querySelector('.crt-container');
+          return el?.classList.contains('powered-on') ? performance.now() : null;
+        },
+        undefined,
+        { timeout: 2000 },
+      );
+      const poweredOnAt = (await poweredOnHandle.jsonValue()) as number;
+
+      // The fast-boot ignite must land within the §8.2 ceiling.
+      const delta = poweredOnAt - poweringOnAt;
+      expect(
+        delta,
+        `reduced-motion powering-on→powered-on delta: ${delta.toFixed(0)} ms; expected ≤ 300 ms (DESIGN_GUIDE_2026-2.md §8.2)`,
+      ).toBeLessThanOrEqual(300);
 
       releaseRedirect();
     },

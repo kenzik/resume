@@ -31,6 +31,29 @@
       @toggle-sound="handleDoomToggleSound"
     />
     
+    <!--
+      Screen reader announcer — fires exactly once per completed command output.
+      DESIGN_GUIDE_2026-2.md §7: the output scroll containers carry role="log" +
+      aria-live="off" so the typewriter per-tick innerHTML swaps do not trigger
+      per-character announcements (WAI-ARIA: aria-live="off" overrides the
+      implicit aria-live="polite" that role="log" would otherwise imply). This
+      element receives a plain-text update only after each typewriter pass
+      finishes, giving screen readers one clean announcement per result.
+      Cannot be verified with headless VoiceOver; static analysis confirms the
+      typewriter replaces innerHTML on every tick (remove + add text nodes),
+      which would chatter under a polite live region on the main container.
+      Note: although this div never paints (clip-rect), its text content makes
+      linux Chromium/FreeType reshade ~102px of glyph-edge antialiasing in the
+      MOTD line (invariant to DOM position, font, and paint scheduling);
+      dark-home-linux.png was rebased on this commit's rendering by
+      design-director sign-off (DESIGN_GUIDE_2026-2.md §11.1).
+    -->
+    <div
+      class="sr-only"
+      aria-live="polite"
+      aria-atomic="true"
+    >{{ announcement }}</div>
+
     <!-- Normal terminal output - hidden during pager mode, zmachine mode, doom mode, or wopr mode -->
     <!-- Desktop: Use QScrollArea for smooth scrolling -->
     <q-scroll-area
@@ -39,6 +62,9 @@
       ref="scrollAreaRef"
       :thumb-style="{ display: 'none' }"
       :bar-style="{ display: 'none' }"
+      role="log"
+      aria-live="off"
+      aria-label="Terminal output"
     >
       <template v-for="(entry, index) in history" :key="index">
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -63,6 +89,7 @@
             @keydown.down="navigateHistory(1)"
             class="terminal-input"
             type="text"
+            aria-label="Terminal command input"
             autofocus
             spellcheck="false"
         />
@@ -80,6 +107,9 @@
       class="terminal-output terminal-output-native"
       ref="nativeScrollRef"
       @scroll.passive="handleNativeScroll"
+      role="log"
+      aria-live="off"
+      aria-label="Terminal output"
     >
       <template v-for="(entry, index) in history" :key="'m-' + index">
         <div v-if="!entry.isStartup" class="terminal-line">
@@ -106,6 +136,7 @@
             @blur="handleMobileInputBlur"
             class="terminal-input"
             type="text"
+            aria-label="Terminal command input"
             autofocus
             spellcheck="false"
         />
@@ -189,12 +220,32 @@ import ScrollIndicators from './terminal/ScrollIndicators.vue';
 import TerminalPager from './terminal/TerminalPager.vue';
 import TerminalZMachine from './terminal/TerminalZMachine.vue';
 import TerminalWOPR from './terminal/TerminalWOPR.vue';
-import { 
+import {
   TYPEWRITER_SPEEDS,
   TERMINAL_CONFIG,
+  CRT_TRANSITION_TIMINGS,
 } from '../constants';
 
 const router = useRouter();
+
+/**
+ * Reduced-motion preference (DESIGN_GUIDE_2026-2.md §8.2). When set, the
+ * smack/roll easter-egg transitions are suppressed in CSS (crt-effects.scss),
+ * so the JS must not wait on them — the egg cuts directly to its mode.
+ * Read live (not cached) so a mid-session OS toggle is respected.
+ */
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Duration to hold the smack/roll CRT transition before entering a game mode.
+ * Collapses to 0 under reduced motion so the mode switch is immediate.
+ */
+const crtTransitionDuration = () =>
+  prefersReducedMotion()
+    ? CRT_TRANSITION_TIMINGS.reducedMotionMs
+    : CRT_TRANSITION_TIMINGS.durationMs;
 
 // Commands to run automatically on startup (single code path for all commands)
 const startupCommands = ['motd'];
@@ -277,6 +328,13 @@ const currentInput = ref('');
 const history = ref<HistoryEntry[]>([]);
 const commandQueue = ref<string[]>([]);
 const isExecutingCommand = ref(false);
+
+/**
+ * Plain-text content for the sr-only aria-live announcer (§7).
+ * Updated once per completed typewriter pass so screen readers hear each
+ * command result exactly once without per-tick chatter.
+ */
+const announcement = ref('');
 
 // Command history settings (for up/down arrow navigation)
 const commandHistory = ref<string[]>([]);
@@ -385,7 +443,12 @@ const typeOutputToHistory = async (
   if (hasAnsi) {
     history.value[entryIndex].output = ansiToHtml(output);
   }
-  
+
+  // Update the aria-live announcer with the completed plain-text result (§7).
+  // Strip HTML tags so the screen reader receives clean text, not markup.
+  const finalHtml = history.value[entryIndex].output || '';
+  announcement.value = finalHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
   // Ensure final scroll after typewriter completes
   scrollToBottom();
 };
@@ -407,9 +470,9 @@ const handlePagerExit = () => {
   pagerCommand.value = '';
   pagerRawContent.value = '';
   
-  // Refocus input
+  // Restore focus to terminal input — covers desktop + mobile (§7 focus restoration).
   nextTick(() => {
-    inputRef.value?.focus();
+    focusInputSafely();
     scrollToBottom();
   });
 };
@@ -450,7 +513,8 @@ const enterZMachineMode = async (gameId: string = 'zork1') => {
   
   // Wait for transition, then enter Z-Machine mode
   // Both effects now have 3 escalating phases totaling ~1.8s
-  const transitionDuration = 1800;
+  // (collapses to 0 under reduced motion — cut directly to the mode, §8.2)
+  const transitionDuration = crtTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
   
   // Enter Z-Machine mode AFTER transition completes
@@ -511,13 +575,16 @@ const confirmZMachineQuit = () => {
 };
 
 /**
- * Cancel Z-Machine quit - return to game
+ * Cancel Z-Machine quit - return to game.
+ * Restores focus to the Z-Machine input (not the terminal input — we are staying
+ * in game mode). §7 focus restoration: the terminal input is restored only on
+ * paths that return to the prompt (confirm/quit paths redirect to home, which
+ * remounts the terminal and calls focusInputSafely() in onMounted).
  */
 const cancelZMachineQuit = () => {
   showZMachineQuitModal.value = false;
   nextTick(() => {
-    const input = isMobile.value ? inputRefMobile.value : inputRef.value;
-    input?.focus();
+    zmachineRef.value?.focus();
   });
 };
 
@@ -544,8 +611,8 @@ const enterDoomMode = async (gameId: string = 'doom1') => {
   // Trigger CRT transition effect
   doomTransitioning.value = true;
   
-  // Wait for transition
-  const transitionDuration = 1800;
+  // Wait for transition (collapses to 0 under reduced motion, §8.2)
+  const transitionDuration = crtTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
   
   // Clear the loading message
@@ -760,7 +827,8 @@ const enterWOPRMode = async (gameId: string = 'wopr') => {
   woprTransitioning.value = true;
 
   // Wait for transition, then enter WOPR mode
-  const transitionDuration = 1800;
+  // (collapses to 0 under reduced motion — cut directly to the mode, §8.2)
+  const transitionDuration = crtTransitionDuration();
   await new Promise(resolve => setTimeout(resolve, transitionDuration));
 
   // Enter WOPR mode AFTER transition completes

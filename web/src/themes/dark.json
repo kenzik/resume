@@ -24,13 +24,14 @@
     "brightWhite": "#e5e5e5"
   },
   "terminal": {
-    "prompt": "#929292", 
+    "prompt": "#929292",
     "command": "#929292",
     "output": "#d4d4d4",
     "error": "#f14c4c",
     "success": "#23d18b",
     "warning": "#f5f543",
-    "info": "#29b8db"
+    "info": "#29b8db",
+    "codeBackground": "#333333"
   },
   "font": {
     "size": "18px",
