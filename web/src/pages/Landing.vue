@@ -25,6 +25,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMeta, useTimeout } from 'quasar';
+import { BOOT_TIMINGS } from '../constants';
 
 useMeta({
   title: 'Dave Kenzik - Resume',
@@ -36,9 +37,6 @@ useMeta({
 const router = useRouter();
 const animationClass = ref('power-off');
 
-// Power-on delay from env variable (default 6000ms)
-const powerOnDelayMs = Number(import.meta.env.VITE_POWER_ON_DELAY_MS) || 5000;
-
 // Need separate useTimeout instances for concurrent timers (each instance supports only 1 timer)
 const { registerTimeout: setAnimationStart } = useTimeout();
 const { registerTimeout: setPoweredOn } = useTimeout();
@@ -49,16 +47,16 @@ onMounted(() => {
   setAnimationStart(() => {
     animationClass.value = 'powering-on';
   }, 100);
-  
+
   // Transition to "powered on" state after animation completes (~3s)
   setPoweredOn(() => {
     animationClass.value = 'powered-on';
-  }, 3500);
-  
-  // Redirect to /resume after power-on delay
+  }, BOOT_TIMINGS.poweredOnMs);
+
+  // Redirect to /resume after power-on delay (env-overridable via VITE_POWER_ON_DELAY_MS)
   setRedirect(() => {
     router.push('/resume');
-  }, powerOnDelayMs);
+  }, BOOT_TIMINGS.redirectMs);
 });
 </script>
 

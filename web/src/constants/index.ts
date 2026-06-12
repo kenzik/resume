@@ -40,6 +40,19 @@ export const TYPEWRITER_SPEEDS = {
 } as const;
 
 // =============================================================================
+// Boot Timings (JS clock)
+// The JS half of the dual-clocked boot ritual (DESIGN_GUIDE_2026-2.md §8.1).
+// The CSS half lives in web/src/css/crt-timing.scss. Same numbers, named once —
+// change a phase here and re-derive the CSS timeline in the same commit.
+//   poweredOnMs — content reveal (animationClass → 'powered-on')
+//   redirectMs  — route to /resume; env-overridable via VITE_POWER_ON_DELAY_MS
+// =============================================================================
+export const BOOT_TIMINGS = {
+  poweredOnMs: 3500,
+  redirectMs: Number(import.meta.env.VITE_POWER_ON_DELAY_MS) || 5000,
+} as const;
+
+// =============================================================================
 // Terminal Configuration
 // =============================================================================
 export const TERMINAL_CONFIG = {
