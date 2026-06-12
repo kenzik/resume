@@ -7,7 +7,7 @@ export const CSS_DEFAULTS = {
   colors: {
     background: '#1e1e1e',
     foreground: '#d4d4d4',
-    brightBlack: '#666666',
+    brightBlack: '#333333',
     cursor: '#aeafad',
     selection: '#264f78',
     white: '#e5e5e5',
@@ -15,8 +15,8 @@ export const CSS_DEFAULTS = {
     brightMagenta: '#d670d6',
   },
   terminal: {
-    prompt: '#0dbc79',
-    command: '#3b8eea',
+    prompt: '#929292',
+    command: '#929292',
     output: '#d4d4d4',
     info: '#29b8db',
     success: '#23d18b',
