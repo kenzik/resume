@@ -20,6 +20,7 @@ on:
         type: string
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   NODE_VERSION: '22'
   PYTHON_VERSION: '3.11'
   RESUME_FILENAME_BASE: 'kenzik-resume'
@@ -35,7 +36,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       
       # ========================================
       # Create Private Resume Data from Secret
@@ -45,12 +46,14 @@ jobs:
           mkdir -p data
           echo "${{ secrets.RESUME_YAML_B64 }}" | base64 -d > data/kenzik.yml
           echo "Resume data file created from secret"
+          echo "File size: $(wc -c < data/kenzik.yml) bytes"
+          echo "First line: $(head -1 data/kenzik.yml)"
       
       # ========================================
       # Python: Build Resume Documents
       # ========================================
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
@@ -98,7 +101,7 @@ jobs:
       # Node.js: Build Web Application
       # ========================================
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'yarn'
@@ -123,36 +126,32 @@ jobs:
       # ========================================
       - name: Deploy Preview to Cloudflare Pages
         id: deploy
-        uses: cloudflare/pages-action@v1
+        uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'kenzik-resume' }}
-          directory: web/dist/spa
+          command: pages deploy web/dist/spa --project-name=${{ vars.CLOUDFLARE_PROJECT_NAME || 'kenzik-resume' }} --branch=${{ github.head_ref || inputs.branch || 'main' }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-          # Use PR head_ref if available, otherwise use manual input, otherwise use main as safe fallback
-          # This prevents errors when deploying from deleted branches
-          branch: ${{ github.head_ref || inputs.branch || 'main' }}
       
       - name: Print Preview URL (Manual Dispatch)
         if: github.event_name == 'workflow_dispatch'
         run: |
           echo "## 🚀 Preview Deployment Ready!"
           echo ""
-          echo "**Preview URL:** ${{ steps.deploy.outputs.url }}"
+          echo "**Preview URL:** ${{ steps.deploy.outputs.deployment-url }}"
           echo ""
           echo "**Resume Downloads:**"
-          echo "- PDF: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.pdf"
-          echo "- DOCX: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.docx"
-          echo "- Markdown: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.md"
-          echo "- RTF: ${{ steps.deploy.outputs.url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.rtf"
+          echo "- PDF: ${{ steps.deploy.outputs.deployment-url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.pdf"
+          echo "- DOCX: ${{ steps.deploy.outputs.deployment-url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.docx"
+          echo "- Markdown: ${{ steps.deploy.outputs.deployment-url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.md"
+          echo "- RTF: ${{ steps.deploy.outputs.deployment-url }}/downloads/${{ env.RESUME_FILENAME_BASE }}.rtf"
       
       - name: Comment Preview URL on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
-            const url = '${{ steps.deploy.outputs.url }}';
+            const url = '${{ steps.deploy.outputs.deployment-url }}';
             const sha = '${{ github.event.pull_request.head.sha }}';
             const shortSha = sha.substring(0, 7);
             const body = `## 🚀 Preview Deployment Ready!\n\n` +
