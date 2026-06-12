@@ -155,6 +155,6 @@ export const TERMINAL_TOKEN_USAGE: Readonly<Record<keyof TerminalColors, TokenUs
   warning:  { role: 'load-bearing', note: 'Warning-coloured output; ANSI yellow in ansiToHtml',                          consumers: ['ansiToHtml.ts'] },
   info:           { role: 'load-bearing', note: 'Info / cyan: h3-h6, typing indicator, prompt path, DOOM stats',               consumers: ['ansiToHtml.ts', 'DoomCanvas.vue', 'DoomPauseModal.vue', 'Download.vue', 'terminal.scss', 'TerminalPager.vue', 'TerminalPrompt.vue', 'ZMachineQuitModal.vue'] },
   codeBackground: { role: 'load-bearing', note: 'Inline-code chip well background (§5.3); dark=#333333 (zero visual change), light=#e8e8e8 (contrast fix)', consumers: ['terminal.scss'] },
-  glow:           { role: 'load-bearing', note: 'Full CSS text-shadow for phosphor bloom (§4, §5). "none" for dark/light (P4-ish, short persistence). Consumer pending: crt-effects-engineer (B-tier, §3)', consumers: [] },
+  glow:           { role: 'load-bearing', note: 'Full CSS text-shadow for phosphor bloom (§4, §5). Consumed as `text-shadow: var(--terminal-glow, none)` on .terminal in terminal.scss; inherits to all phosphor-lit glyphs (output/prompt/command/input/cursor). "none" for dark/light (P4-ish, short persistence) ⇒ pixel-identical. B-tier phosphor-theme exception (§3).', consumers: ['terminal.scss'] },
 } as const;
 

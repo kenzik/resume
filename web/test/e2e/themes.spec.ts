@@ -86,6 +86,37 @@ test.describe('theme switching', () => {
     expect(bg).toBe('#0a0f0a');
   });
 
+  test('amber theme blooms terminal text from the live --terminal-glow token', async ({ page }) => {
+    await page.goto('/resume');
+    await typeCommand(page, 'theme amber');
+    await waitForOutput(page, 'Amber P3', 5000);
+
+    // The glow must come from the live token, not a hardcoded shadow: the computed
+    // text-shadow on output text is non-none and the rendered colour matches amber's
+    // spec'd rgba(255, 176, 0, 0.30) (§5.1).
+    const shadow = await page.evaluate(() => {
+      const el = document.querySelector('.terminal-output-text')
+        ?? document.querySelector('.terminal-command')
+        ?? document.querySelector('.terminal');
+      return el ? getComputedStyle(el as Element).textShadow : '';
+    });
+    expect(shadow).not.toBe('none');
+    expect(shadow).not.toBe('');
+    expect(shadow).toContain('255, 176, 0');
+  });
+
+  test('dark theme leaves terminal text crisp (text-shadow none)', async ({ page }) => {
+    await page.goto('/resume');
+    await typeCommand(page, 'theme dark');
+    await waitForOutput(page, 'Dark', 5000);
+
+    const shadow = await page.evaluate(() => {
+      const el = document.querySelector('.terminal');
+      return el ? getComputedStyle(el as Element).textShadow : '';
+    });
+    expect(shadow).toBe('none');
+  });
+
   test('theme toggle switches between dark and light', async ({ page }) => {
     await page.goto('/resume');
     // Start on dark

@@ -43,6 +43,18 @@
     inset 0 0 100px rgba(0, 20, 20, 0.3),     // Inner dark vignette
     inset 0 0 50px rgba(0, 150, 120, 0.02);   // Subtle green tint
 
+  // Phosphor text bloom — driven entirely by the live --terminal-glow token.
+  // text-shadow is an inherited property, so this single declaration blooms every
+  // phosphor-lit glyph inside the tube (output, prompt, command, input, cursor,
+  // headings, code) without touching chrome (borders/box-shadow/scanlines are not
+  // text and cannot receive a text-shadow). This is the DESIGN_GUIDE_2026-2.md §3
+  // B-tier exception: "phosphor themes carry their own spec'd glow (§5) because
+  // there the *whole screen* is the easter egg."  dark/light store glow:"none"
+  // (P4-ish, short persistence — DESIGN_GUIDE.md §4 "default resume text is not
+  // glowed; keep it crisp"), so they render text-shadow:none ⇒ pixel-identical.
+  // Fallback `none` is the cssDefaults.ts canonical (CSS_DEFAULTS.terminal.glow).
+  text-shadow: var(--terminal-glow, none);
+
   // Mobile-specific overrides to prevent horizontal scrolling issues
   @media (max-width: 768px) {
     overflow: hidden !important;
