@@ -42,6 +42,11 @@
       Cannot be verified with headless VoiceOver; static analysis confirms the
       typewriter replaces innerHTML on every tick (remove + add text nodes),
       which would chatter under a polite live region on the main container.
+      Note: although this div never paints (clip-rect), its text content makes
+      linux Chromium/FreeType reshade ~102px of glyph-edge antialiasing in the
+      MOTD line (invariant to DOM position, font, and paint scheduling);
+      dark-home-linux.png was rebased on this commit's rendering by
+      design-director sign-off (DESIGN_GUIDE_2026-2.md §11.1).
     -->
     <div
       class="sr-only"

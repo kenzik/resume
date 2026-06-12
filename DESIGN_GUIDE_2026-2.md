@@ -238,6 +238,35 @@ Every phase PR clears all of these before `retro-reviewer` even reads the diff:
 
 Then the human gate: `retro-reviewer` verdict with file:line citations, judged against §3.
 
+### 11.1 Baseline-regeneration precedent — Phase 3 (linux, dark-home)
+
+**Ruling (design-director, 2026-06-12): SIGN-OFF, conditional.** The §7 screen-reader
+announcer (a non-painting `clip-rect` `aria-live="polite"` div in `Terminal.vue`) causes
+the linux Chromium/FreeType rasterizer to deterministically reshade **102 pixels
+(0.011%)** of edge antialiasing on three MOTD glyph clusters ("eri", "ail"). No layout
+shift, no color-token change, no content change, no glyph-cell move — AA coverage on
+glyph edges only, indistinguishable at 3× zoom. darwin stays 0-diff. Regenerating
+`dark-home-linux.png` from the Phase 3 branch is authorized.
+
+This does **not** weaken §11. The strict 0-diff policy (no `maxDiffPixels` tolerance) is
+retained; the new linux baseline must itself be 0-diff deterministic across runs/retries.
+§11 already anticipates this path — "new baselines only with design-director sign-off" —
+for feature phases (Phase 3 implements §7; it is not a pure refactor, which would remain
+locked at 0-diff against the existing baseline).
+
+**A baseline regen is sanctioned only when ALL five hold** (absent any one, escalate again):
+1. Cause is forensically traced to a spec-required feature (here: §7).
+2. Change is sub-perceptual: no layout, no color token, no content, no glyph-cell change — AA coverage only.
+3. Deterministic across runs and retries.
+4. The canonical/companion platform (darwin) remains 0-diff — corroborating that design intent rendered identically.
+5. Strict 0-diff is retained going forward; no tolerance is introduced.
+
+A "visible" modernization is one a *visitor* can perceive (§2 failure test). Sub-glyph AA
+reshading at 1× on one CI rasterizer is not visible and does not engage the §3 tier list:
+nothing in S/A/B was altered by intent. It is platform raster noise below the design layer,
+and it is the sanctioned cost of §2's second clause ("use modern platform features wherever
+they are invisible").
+
 ## 12. Backlog & Non-Goals
 
 **Explicitly out of scope** (so nobody "helpfully" adds them): sound/beep emulation, SSR, additional games, an in-terminal theme editor, telemetry/analytics, auth, comments, dark-mode toggles outside the `theme` command.
