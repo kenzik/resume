@@ -22,6 +22,7 @@ export const CSS_DEFAULTS = {
     success: '#23d18b',
     error: '#f14c4c',
     warning: '#f5f543',
+    codeBackground: '#333333', // §9.2 canonical fallback = dark-theme value (zero visual change on dark; light fixes via live token)
   },
   font: {
     family: 'monospace',

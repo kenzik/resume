@@ -1,14 +1,13 @@
 /**
  * Contrast regression test for light-theme inline code chips.
  *
- * Live bug documented in DESIGN_GUIDE_2026-2.md §5.3:
- *   The light theme uses --color-brightBlack (#666666) as the code-chip background,
- *   and --terminal-output (#333333) as the text colour, yielding 2.20:1 contrast.
- *   WCAG 2.1 AA requires ≥ 4.5:1 for normal text.
+ * Phase 3 shipped `terminal.codeBackground` (DESIGN_GUIDE_2026-2.md §5.3):
+ *   dark  = #333333 — identical to the old --color-brightBlack value; zero visual change.
+ *   light = #e8e8e8 — fixes the live bug: was #666666 (2.20:1), now 10.31:1.
  *
- * Phase 3 ships `terminal.codeBackground: #e8e8e8` for the light theme (10.31:1),
- * flipping this test to passing.  Until that PR lands, this test is expected-fail
- * so the regression is documented — not silent.
+ * Both theme values are reflected in terminal.scss via
+ *   var(--terminal-codeBackground, #333333)
+ * replacing the former var(--color-brightBlack, #333333).
  */
 import { describe, it, expect } from 'vitest';
 
@@ -34,41 +33,35 @@ function contrastRatio(fg: string, bg: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-// ── Token values from src/themes/light.json ──────────────────────────────────
+// ── Token values from src/themes/*.json (Phase 3) ────────────────────────────
 
-const LIGHT_OUTPUT_TEXT = '#333333';   // --terminal-output (code chip text)
-const LIGHT_BRIGHT_BLACK = '#666666';  // --color-brightBlack (code chip background, see DESIGN_GUIDE §3.3)
+const DARK_CODE_BACKGROUND  = '#333333';  // dark.json  terminal.codeBackground
+const LIGHT_CODE_BACKGROUND = '#e8e8e8';  // light.json terminal.codeBackground
+const LIGHT_OUTPUT_TEXT     = '#333333';  // light.json terminal.output (code chip text colour)
 
-// ── Passing: dark theme code chips are already contrast-safe ─────────────────
+// ── Dark theme: code chips are contrast-safe (unchanged from before Phase 3) ──
 
 describe('dark theme code chip contrast', () => {
   it('passes WCAG AA (≥ 4.5:1)', () => {
     const darkBrightGreen = '#23d18b'; // --color-brightGreen (output colour)
-    const darkBrightBlack = '#333333'; // --color-brightBlack (chip background)
-    const ratio = contrastRatio(darkBrightGreen, darkBrightBlack);
-    // Dark theme uses output text on brightBlack background — this is fine
+    const ratio = contrastRatio(darkBrightGreen, DARK_CODE_BACKGROUND);
+    // Dark theme: output text on codeBackground — already fine before Phase 3
     expect(ratio).toBeGreaterThanOrEqual(4.5);
   });
 });
 
-// ── Expected failure: light theme code chips (live bug, Phase 3 fixes this) ──
+// ── Light theme: Phase 3 fixes the live-bug (was 2.20:1, now 10.31:1) ────────
 
-describe('light theme code chip contrast (LIVE BUG — DESIGN_GUIDE_2026-2.md §5.3)', () => {
-  // it.fails() documents the known regression without hiding it.
-  // The fixing PR (Phase 3) flips this to a regular `it()` that passes.
-  it.fails(
-    'light theme code chip contrast is ≥ 4.5:1 — currently 2.20:1 (expected failure until Phase 3)',
-    () => {
-      const ratio = contrastRatio(LIGHT_OUTPUT_TEXT, LIGHT_BRIGHT_BLACK);
-      // The actual ratio is ~2.20 — assertion below will fail, as expected
-      expect(ratio).toBeGreaterThanOrEqual(4.5);
-    },
-  );
+describe('light theme code chip contrast (fixed in Phase 3 — DESIGN_GUIDE_2026-2.md §5.3)', () => {
+  it('light theme code chip contrast is ≥ 4.5:1 with terminal.codeBackground #e8e8e8', () => {
+    const ratio = contrastRatio(LIGHT_OUTPUT_TEXT, LIGHT_CODE_BACKGROUND);
+    // #333333 on #e8e8e8 — design guide specifies 10.31:1
+    expect(ratio).toBeGreaterThanOrEqual(4.5);
+  });
 
-  it('documents the actual (failing) ratio so it is visible in test output', () => {
-    const ratio = contrastRatio(LIGHT_OUTPUT_TEXT, LIGHT_BRIGHT_BLACK);
-    // Confirm this is the known broken value (within rounding tolerance)
-    expect(ratio).toBeGreaterThan(2.0);
-    expect(ratio).toBeLessThan(3.0);
+  it('light theme code chip contrast is in the expected range (~10.31:1)', () => {
+    const ratio = contrastRatio(LIGHT_OUTPUT_TEXT, LIGHT_CODE_BACKGROUND);
+    expect(ratio).toBeGreaterThan(10.0);
+    expect(ratio).toBeLessThan(11.0);
   });
 });

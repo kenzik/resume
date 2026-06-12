@@ -29,6 +29,7 @@ export interface TerminalColors {
   success: string;
   warning: string;
   info: string;
+  codeBackground: string;
 }
 
 export interface ThemeFont {
@@ -124,6 +125,7 @@ export const TERMINAL_TOKEN_USAGE: Readonly<Record<keyof TerminalColors, TokenUs
   error:    { role: 'load-bearing', note: 'Error-coloured output; ANSI error in ansiToHtml; DOOM / modal errors',        consumers: ['ansiToHtml.ts', 'DoomCanvas.vue', 'Download.vue', 'Terminal.vue', 'ZMachineQuitModal.vue'] },
   success:  { role: 'load-bearing', note: 'Success / phosphor-green: h1/h2 colour, strong text, Landing power-on glow', consumers: ['ansiToHtml.ts', 'DoomPauseModal.vue', 'Download.vue', 'Landing.vue', 'terminal.scss', 'TerminalPager.vue', 'ZMachineQuitModal.vue'] },
   warning:  { role: 'load-bearing', note: 'Warning-coloured output; ANSI yellow in ansiToHtml',                          consumers: ['ansiToHtml.ts'] },
-  info:     { role: 'load-bearing', note: 'Info / cyan: h3-h6, typing indicator, prompt path, DOOM stats',               consumers: ['ansiToHtml.ts', 'DoomCanvas.vue', 'DoomPauseModal.vue', 'Download.vue', 'terminal.scss', 'TerminalPager.vue', 'TerminalPrompt.vue', 'ZMachineQuitModal.vue'] },
+  info:           { role: 'load-bearing', note: 'Info / cyan: h3-h6, typing indicator, prompt path, DOOM stats',               consumers: ['ansiToHtml.ts', 'DoomCanvas.vue', 'DoomPauseModal.vue', 'Download.vue', 'terminal.scss', 'TerminalPager.vue', 'TerminalPrompt.vue', 'ZMachineQuitModal.vue'] },
+  codeBackground: { role: 'load-bearing', note: 'Inline-code chip well background (§5.3); dark=#333333 (zero visual change), light=#e8e8e8 (contrast fix)', consumers: ['terminal.scss'] },
 } as const;
 

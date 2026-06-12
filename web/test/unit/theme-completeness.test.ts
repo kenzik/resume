@@ -27,7 +27,7 @@ const REQUIRED_COLOR_KEYS: (keyof ThemeColors)[] = [
 ];
 
 const REQUIRED_TERMINAL_KEYS: (keyof TerminalColors)[] = [
-  'prompt', 'command', 'output', 'error', 'success', 'warning', 'info',
+  'prompt', 'command', 'output', 'error', 'success', 'warning', 'info', 'codeBackground',
 ];
 
 const REQUIRED_FONT_KEYS: (keyof ThemeFont)[] = ['size'];   // family/weight/lineHeight are optional
