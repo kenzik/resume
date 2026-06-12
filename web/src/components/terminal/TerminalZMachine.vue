@@ -134,7 +134,7 @@ defineExpose({
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px solid var(--color-brightBlack, #444);
+  border-bottom: 1px solid var(--color-brightBlack, #333333);
   margin-bottom: 0.75rem;
   max-width: 100%;
 }
@@ -149,7 +149,7 @@ defineExpose({
 }
 
 .zmachine-hint {
-  color: var(--color-brightBlack, #666);
+  color: var(--color-brightBlack, #333333);
   font-size: 0.8em;
   font-style: italic;
   white-space: nowrap;
@@ -206,7 +206,7 @@ defineExpose({
   max-width: 100%;
   overflow-x: hidden;
   flex-shrink: 0;
-  border-top: 1px solid var(--color-brightBlack, #333);
+  border-top: 1px solid var(--color-brightBlack, #333333);
   padding-top: 0.5rem;
 }
 
@@ -240,7 +240,7 @@ defineExpose({
   caret-color: var(--terminal-cursor, #23d18b);
   
   &::placeholder {
-    color: var(--color-brightBlack, #666);
+    color: var(--color-brightBlack, #333333);
     font-style: italic;
     opacity: 0.7;
   }

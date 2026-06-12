@@ -265,7 +265,7 @@ defineExpose({
 .loading-bar {
   width: 200px;
   height: 8px;
-  background: var(--color-brightBlack, #666666);
+  background: var(--color-brightBlack, #333333);
   border-radius: 4px;
   overflow: hidden;
   margin: 0 auto 0.5rem;
@@ -279,7 +279,7 @@ defineExpose({
 
 .loading-percent {
   font-size: 0.9rem;
-  color: var(--color-brightBlack, #666666);
+  color: var(--color-brightBlack, #333333);
 }
 
 // Error overlay
@@ -317,7 +317,7 @@ defineExpose({
 
 .error-hint {
   font-size: 0.9rem;
-  color: var(--color-brightBlack, #666666);
+  color: var(--color-brightBlack, #333333);
   animation: blink 1.5s infinite;
 }
 
@@ -327,7 +327,7 @@ defineExpose({
   bottom: 20px;
   right: 20px;
   background: rgba(0, 0, 0, 0.85);
-  border: 1px solid var(--color-brightBlack, #666666);
+  border: 1px solid var(--color-brightBlack, #333333);
   border-radius: 8px;
   padding: 1rem;
   font-family: var(--font-family, monospace);
@@ -349,7 +349,7 @@ defineExpose({
   gap: 0.25rem 1rem;
   
   span:nth-child(odd) {
-    color: var(--terminal-command, #3b8eea);
+    color: var(--terminal-command, #929292);
     text-align: right;
   }
   

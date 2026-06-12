@@ -157,7 +157,7 @@ onUnmounted(() => {
 
 .zmachine-modal {
   background: var(--color-background, #1e1e1e);
-  border: 2px solid var(--color-brightBlack, #333);
+  border: 2px solid var(--color-brightBlack, #333333);
   border-radius: 4px;
   min-width: 320px;
   max-width: 90vw;
@@ -186,9 +186,9 @@ onUnmounted(() => {
   height: 4px;
   background: linear-gradient(
     90deg,
-    var(--color-brightBlack, #333) 0%,
+    var(--color-brightBlack, #333333) 0%,
     var(--terminal-success, #23d18b) 50%,
-    var(--color-brightBlack, #333) 100%
+    var(--color-brightBlack, #333333) 100%
   );
   
   &.top {
@@ -230,7 +230,7 @@ onUnmounted(() => {
   font-family: var(--font-family, monospace);
   font-size: 0.95em;
   padding: 8px 20px;
-  border: 1px solid var(--color-brightBlack, #333);
+  border: 1px solid var(--color-brightBlack, #333333);
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s ease;

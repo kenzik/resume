@@ -262,12 +262,12 @@ function triggerDownload() {
   color: var(--terminal-info, #29b8db);
   text-decoration: none;
   padding: 0.5rem 1rem;
-  border: 1px solid var(--color-brightBlack, #666);
+  border: 1px solid var(--color-brightBlack, #333333);
   border-radius: 4px;
   transition: all 0.2s ease;
   
   &:hover {
-    background-color: var(--color-brightBlack, #333);
+    background-color: var(--color-brightBlack, #333333);
     border-color: var(--terminal-info, #29b8db);
   }
 }

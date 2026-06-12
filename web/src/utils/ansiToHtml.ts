@@ -20,7 +20,7 @@ export function ansiToHtml(text: string): string {
   const cssColorMap: Record<string, string> = {
     reset: 'var(--color-foreground, #d4d4d4)',
     bright: 'var(--color-foreground, #d4d4d4)',
-    dim: 'var(--color-brightBlack, #666666)',
+    dim: 'var(--color-brightBlack, #333333)',
     red: 'var(--terminal-error, #f14c4c)',
     green: 'var(--terminal-success, #23d18b)',
     yellow: 'var(--terminal-warning, #f5f543)',

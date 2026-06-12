@@ -217,7 +217,7 @@ onUnmounted(() => {
   background: var(--color-background, #1e1e1e);
   padding: 0.5rem 0;
   font-weight: bold;
-  border-bottom: 1px solid var(--color-brightBlack, #444);
+  border-bottom: 1px solid var(--color-brightBlack, #333333);
   z-index: 10;
   margin-bottom: 0.5rem;
   text-align: center;
@@ -249,10 +249,10 @@ onUnmounted(() => {
   
   :deep(code) {
     font-family: var(--font-family, monospace);
-    background: var(--color-brightBlack, #666666);
+    background: var(--color-brightBlack, #333333);
     padding: 2px 6px;
     border-radius: 3px;
-    color: var(--terminal-command, #3b8eea);
+    color: var(--terminal-command, #929292);
     display: inline-block;
     vertical-align: middle;
     line-height: 1.2;
@@ -312,7 +312,7 @@ onUnmounted(() => {
 
   :deep(hr) {
     border: none;
-    border-top: 1px solid var(--color-brightBlack, #666666);
+    border-top: 1px solid var(--color-brightBlack, #333333);
     margin: 0.5em 0;
   }
 

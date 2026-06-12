@@ -262,7 +262,7 @@ onUnmounted(() => {
   font-family: var(--font-family, monospace);
   font-size: 0.95em;
   padding: 10px 24px;
-  border: 1px solid var(--color-brightBlack, #444);
+  border: 1px solid var(--color-brightBlack, #333333);
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -309,7 +309,7 @@ onUnmounted(() => {
 
 .modal-hint {
   font-size: 0.8em;
-  color: var(--color-brightBlack, #666);
+  color: var(--color-brightBlack, #333333);
   margin: 0;
   opacity: 0.7;
 }

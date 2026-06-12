@@ -27,7 +27,7 @@ withDefaults(defineProps<{
   flex-shrink: 0;
   
   .prompt-user {
-    color: var(--terminal-prompt, #0dbc79);
+    color: var(--terminal-prompt, #929292);
     font-weight: 500;
   }
   
