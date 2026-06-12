@@ -85,9 +85,12 @@ test.describe('boot and terminal load', () => {
     // 3. Prompt must be idle and interactive
     await page.locator('input[type="text"]').first().waitFor({ state: 'visible', timeout: 5_000 });
 
+    // Per-platform baselines (darwin / linux) are committed separately so
+    // each platform is compared at 0-diff tolerance.  No maxDiffPixels
+    // tolerance is needed or permitted — see snapshotPathTemplate in
+    // playwright.config.ts.  The darwin baseline is the local dev gate;
+    // the linux baseline is the CI gate.
     await expect(page).toHaveScreenshot('dark-home.png', {
-      // Allow minor anti-aliasing / font-rendering variance across platforms
-      maxDiffPixels: 200,
       // Mask the dynamic clock/date if it appears
       mask: [page.locator('.timestamp, .time, .date')],
     });

@@ -39,9 +39,14 @@ export default defineConfig({
     navigationTimeout: 30_000,
   },
 
-  // Screenshot baselines storage
+  // Screenshot baselines storage.
+  // {platform} in the template produces per-OS files:
+  //   dark-home-darwin.png  ← macOS dev baseline (local gate)
+  //   dark-home-linux.png   ← Ubuntu CI baseline (CI gate)
+  // Both are committed and compared at 0-diff tolerance; cross-platform
+  // font-antialiasing differences no longer cause false failures.
   snapshotDir: './test/e2e/__screenshots__',
-  snapshotPathTemplate: '{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
+  snapshotPathTemplate: '{snapshotDir}/{testFileDir}/{testFileName}-snapshots/{arg}-{platform}{ext}',
 
   projects: [
     {
