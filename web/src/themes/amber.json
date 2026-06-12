@@ -1,0 +1,44 @@
+{
+  "name": "amber",
+  "displayName": "Amber P3",
+  "colors": {
+    "background": "#160e02",
+    "foreground": "#ffb000",
+    "cursor": "#ffb000",
+    "selection": "#4d3300",
+    "black": "#160e02",
+    "red": "#cc8800",
+    "green": "#ffb000",
+    "yellow": "#ffc94d",
+    "blue": "#996600",
+    "magenta": "#b37700",
+    "cyan": "#ffd060",
+    "white": "#ffdd80",
+    "brightBlack": "#664400",
+    "brightRed": "#ff9233",
+    "brightGreen": "#ffc94d",
+    "brightYellow": "#ffe066",
+    "brightBlue": "#cc8800",
+    "brightMagenta": "#d9920f",
+    "brightCyan": "#ffd98c",
+    "brightWhite": "#ffeeb3"
+  },
+  "terminal": {
+    "prompt": "#cc8800",
+    "command": "#cc8800",
+    "output": "#ffb000",
+    "error": "#ff9233",
+    "success": "#ffc94d",
+    "warning": "#ffe066",
+    "info": "#ffd060",
+    "codeBackground": "#3d2900",
+    "glow": "0 0 6px rgba(255, 176, 0, 0.30)"
+  },
+  "font": {
+    "size": "18px",
+    "weight": "400"
+  },
+  "spacing": {
+    "padding": "20px"
+  }
+}

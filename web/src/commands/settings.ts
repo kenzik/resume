@@ -10,7 +10,7 @@ export const settingsCommands: CommandRegistry = {
   theme: {
     handler: async (ctx) => {
       const { useTheme } = await import('../composables/useTheme');
-      const { themes } = await import('../themes');
+      const { themes, isValidThemeName } = await import('../themes');
       const theme = useTheme();
       
       if (ctx.args.length === 0) {
@@ -34,17 +34,18 @@ ${themeList.join('\n')}
 
 **Usage:**
 
-- \`theme <name>\` - Switch to a theme (dark, light, or auto)
+- \`theme <name>\` - Switch to a theme
 - \`theme toggle\` - Toggle between dark and light
 
 **Examples:**
 
 - \`theme dark\`
 - \`theme light\`
+- \`theme amber\`
 - \`theme auto\`
 - \`theme toggle\``;
       }
-      
+
       // Handle toggle command
       if (ctx.args[0].toLowerCase() === 'toggle') {
         theme.toggleTheme();
@@ -54,17 +55,17 @@ ${themeList.join('\n')}
           : themes[newTheme]?.displayName || newTheme;
         return `Theme toggled to: **${displayName}**`;
       }
-      
-      // Handle theme name
+
+      // Handle theme name — single validator from the registry (§9.3)
       const themeName = ctx.args[0].toLowerCase();
-      if (themeName === 'dark' || themeName === 'light' || themeName === 'auto') {
-        theme.setTheme(themeName as 'dark' | 'light' | 'auto');
-        const displayName = themeName === 'auto' 
+      if (isValidThemeName(themeName)) {
+        theme.setTheme(themeName);
+        const displayName = themeName === 'auto'
           ? `auto (${theme.systemPrefersDark.value ? 'dark' : 'light'})`
           : themes[themeName]?.displayName || themeName;
         return `Theme changed to: **${displayName}**`;
       } else {
-        return `Invalid theme: "${ctx.args[0]}". Available themes: dark, light, auto. Type \`theme\` to see details.`;
+        return `Invalid theme: "${ctx.args[0]}". Type \`theme\` to see available themes.`;
       }
     },
     description: 'Change terminal theme',

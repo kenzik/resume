@@ -97,6 +97,76 @@ test.describe('boot and terminal load', () => {
   });
 });
 
+// ── Phosphor theme baselines (amber P3 + green P1) ───────────────────────────
+
+test.describe('phosphor theme home screens', () => {
+  test('amber home screen matches screenshot baseline', async ({ page }) => {
+    // Pre-seed LocalStorage so useTheme picks it up on first paint — more
+    // deterministic than typing a theme command and waiting for typewriter
+    // output to settle before snapping.
+    await page.addInitScript(() => {
+      window.localStorage.setItem('kenzik-resume-theme', 'amber');
+    });
+    await page.goto('/resume');
+
+    // 1. Amber theme must be applied: wait until :root CSS var equals #160e02.
+    await page.waitForFunction(
+      () =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--color-background')
+          .trim() === '#160e02',
+      undefined,
+      { timeout: 10_000 },
+    );
+
+    // 2. MOTD boot output from example.yml must be visible before snapping.
+    await page.waitForFunction(
+      (text) => document.body.innerText.includes(text),
+      'Terminal Resume',
+      { timeout: 10_000 },
+    );
+
+    // 3. Prompt must be idle and interactive.
+    await page.locator('input[type="text"]').first().waitFor({ state: 'visible', timeout: 5_000 });
+
+    await expect(page).toHaveScreenshot('amber-home.png', {
+      mask: [page.locator('.timestamp, .time, .date')],
+    });
+  });
+
+  test('green home screen matches screenshot baseline', async ({ page }) => {
+    // Pre-seed LocalStorage so useTheme picks it up on first paint.
+    await page.addInitScript(() => {
+      window.localStorage.setItem('kenzik-resume-theme', 'green');
+    });
+    await page.goto('/resume');
+
+    // 1. Green theme must be applied: wait until :root CSS var equals #0a0f0a.
+    await page.waitForFunction(
+      () =>
+        getComputedStyle(document.documentElement)
+          .getPropertyValue('--color-background')
+          .trim() === '#0a0f0a',
+      undefined,
+      { timeout: 10_000 },
+    );
+
+    // 2. MOTD boot output from example.yml must be visible before snapping.
+    await page.waitForFunction(
+      (text) => document.body.innerText.includes(text),
+      'Terminal Resume',
+      { timeout: 10_000 },
+    );
+
+    // 3. Prompt must be idle and interactive.
+    await page.locator('input[type="text"]').first().waitFor({ state: 'visible', timeout: 5_000 });
+
+    await expect(page).toHaveScreenshot('green-home.png', {
+      mask: [page.locator('.timestamp, .time, .date')],
+    });
+  });
+});
+
 test.describe('help command', () => {
   test('help command triggers output and enters pager mode', async ({ page }) => {
     await page.goto('/resume');

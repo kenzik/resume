@@ -23,6 +23,7 @@ export const CSS_DEFAULTS = {
     error: '#f14c4c',
     warning: '#f5f543',
     codeBackground: '#333333', // §9.2 canonical fallback = dark-theme value (zero visual change on dark; light fixes via live token)
+    glow: 'none',              // §9.1 canonical fallback = dark-theme value; phosphor themes override with their spec'd text-shadow
   },
   font: {
     family: 'monospace',

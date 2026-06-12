@@ -1,0 +1,44 @@
+{
+  "name": "green",
+  "displayName": "Green P1",
+  "colors": {
+    "background": "#0a0f0a",
+    "foreground": "#33ff33",
+    "cursor": "#33ff33",
+    "selection": "#145214",
+    "black": "#0a0f0a",
+    "red": "#29cc29",
+    "green": "#33ff33",
+    "yellow": "#66ff66",
+    "blue": "#1f9e1f",
+    "magenta": "#24b324",
+    "cyan": "#5cf75c",
+    "white": "#99ff99",
+    "brightBlack": "#1d661d",
+    "brightRed": "#ccffcc",
+    "brightGreen": "#66ff66",
+    "brightYellow": "#99ff99",
+    "brightBlue": "#29cc29",
+    "brightMagenta": "#2eb82e",
+    "brightCyan": "#8cff8c",
+    "brightWhite": "#ccffcc"
+  },
+  "terminal": {
+    "prompt": "#29cc29",
+    "command": "#29cc29",
+    "output": "#33ff33",
+    "error": "#ccffcc",
+    "success": "#66ff66",
+    "warning": "#99ff99",
+    "info": "#5cf75c",
+    "codeBackground": "#103810",
+    "glow": "0 0 8px rgba(51, 255, 51, 0.35)"
+  },
+  "font": {
+    "size": "18px",
+    "weight": "400"
+  },
+  "spacing": {
+    "padding": "20px"
+  }
+}

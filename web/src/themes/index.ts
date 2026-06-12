@@ -30,6 +30,8 @@ export interface TerminalColors {
   warning: string;
   info: string;
   codeBackground: string;
+  /** Full CSS text-shadow value. "none" for dark/light (P4-ish, short persistence, crisp text). */
+  glow: string;
 }
 
 export interface ThemeFont {
@@ -52,16 +54,42 @@ export interface Theme {
   spacing: ThemeSpacing;
 }
 
-export type ThemeName = 'dark' | 'light' | 'auto';
-
 // Import theme JSON files
 import darkTheme from './dark.json';
 import lightTheme from './light.json';
+import amberTheme from './amber.json';
+import greenTheme from './green.json';
 
-export const themes: Record<string, Theme> = {
+/**
+ * Registry of all concrete themes. Add new themes here only.
+ * ThemeName is derived from the keys of this object — one source of truth (§9.3).
+ * Kept as Record<string, Theme> for iteration; _themeRegistry is used solely
+ * for key-literal inference.
+ */
+const _themeRegistry = {
   dark: darkTheme as Theme,
   light: lightTheme as Theme,
+  amber: amberTheme as Theme,
+  green: greenTheme as Theme,
 };
+
+export const themes: Record<string, Theme> = _themeRegistry;
+
+/** All valid theme names: concrete registry keys + the 'auto' system alias. */
+export type ThemeName = keyof typeof _themeRegistry | 'auto';
+
+/**
+ * Single validator consumed by both useTheme.loadThemePreference and the
+ * theme command in settings.ts.  'auto' is valid; anything outside the
+ * registry is not.  Stale LocalStorage values fall back to dark via getTheme.
+ *
+ * §9.3 — exactly one validator, derived from the registry.
+ */
+export function isValidThemeName(name: string | null | undefined): name is ThemeName {
+  if (!name) return false;
+  if (name === 'auto') return true;
+  return Object.prototype.hasOwnProperty.call(_themeRegistry, name);
+}
 
 export function getTheme(name: string): Theme {
   return themes[name] || themes.dark;
@@ -127,5 +155,6 @@ export const TERMINAL_TOKEN_USAGE: Readonly<Record<keyof TerminalColors, TokenUs
   warning:  { role: 'load-bearing', note: 'Warning-coloured output; ANSI yellow in ansiToHtml',                          consumers: ['ansiToHtml.ts'] },
   info:           { role: 'load-bearing', note: 'Info / cyan: h3-h6, typing indicator, prompt path, DOOM stats',               consumers: ['ansiToHtml.ts', 'DoomCanvas.vue', 'DoomPauseModal.vue', 'Download.vue', 'terminal.scss', 'TerminalPager.vue', 'TerminalPrompt.vue', 'ZMachineQuitModal.vue'] },
   codeBackground: { role: 'load-bearing', note: 'Inline-code chip well background (§5.3); dark=#333333 (zero visual change), light=#e8e8e8 (contrast fix)', consumers: ['terminal.scss'] },
+  glow:           { role: 'load-bearing', note: 'Full CSS text-shadow for phosphor bloom (§4, §5). Consumed as `text-shadow: var(--terminal-glow, none)` on .terminal in terminal.scss; inherits to all phosphor-lit glyphs (output/prompt/command/input/cursor). "none" for dark/light (P4-ish, short persistence) ⇒ pixel-identical. B-tier phosphor-theme exception (§3).', consumers: ['terminal.scss'] },
 } as const;
 
