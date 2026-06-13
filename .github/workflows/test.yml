@@ -218,9 +218,19 @@ jobs:
 
       # ── Obfuscation check: no plaintext easter-egg triggers in dist ──────────
       # Asserts exactly the five obfuscated launch-trigger strings are absent
-      # from built assets: xyzzy, plugh, iddqd, idkfa, idspispopd.
+      # from all of dist/spa — including PWA root artifacts (sw.js, workbox
+      # runtime, manifest.json) that the gate previously missed by scoping to
+      # assets/ only — except dist/spa/games/** (§11.3, widened from assets/).
       # "joshua" is the WOPR in-game password — it ships in plaintext by design
       # (game logic string comparison) and must NOT be included in this gate.
+      # games/ is excluded because the Zork story file (zork1.z3) and the
+      # FreeDoom bundle (freedoom.jsdos) legitimately embed the very trigger
+      # strings this gate hunts: the two Zork magic words and the three Doom
+      # cheat codes are plaintext by necessity inside the game payloads they
+      # originate from, and are never precached (§10 globIgnores: ['games/**']).
+      # The gate protects the launch-trigger detection code in the app shell,
+      # not the game content it launches — same rationale as the joshua
+      # exclusion above; see §11.3 for the full ruling.
       # Trigger strings are reconstructed from hex escapes (never stored as
       # literals here) so this workflow file itself stays clean under grep.
       - name: Verify easter-egg triggers are obfuscated in dist
@@ -231,13 +241,13 @@ jobs:
           T3=$(printf '%b' '\x69\x64\x64\x71\x64')
           T4=$(printf '%b' '\x69\x64\x6b\x66\x61')
           T5=$(printf '%b' '\x69\x64\x73\x70\x69\x73\x70\x6f\x70\x64')
-          FOUND=$(grep -rl "$T1\|$T2\|$T3\|$T4\|$T5" dist/spa/assets/ 2>/dev/null || true)
+          FOUND=$(grep -rl --exclude-dir=games "$T1\|$T2\|$T3\|$T4\|$T5" dist/spa/ 2>/dev/null || true)
           if [ -n "$FOUND" ]; then
             echo "ERROR: Plaintext easter-egg triggers found in dist:"
             echo "$FOUND"
             exit 1
           fi
-          echo "OK: No plaintext triggers found in dist/spa/assets"
+          echo "OK: No plaintext triggers found in dist/spa (excluding games/)"
 
   offline-e2e:
     name: Offline E2E (PWA §10)

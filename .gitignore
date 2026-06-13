@@ -4,9 +4,6 @@ data/kenzik-quantify.yml
 data/kenzik.b64.txt
 data/kenzik.paste.txt
 
-# Claude Code instructions (local only)
-CLAUDE.md
-
 # OS files
 .DS_Store
 Thumbs.db

@@ -220,7 +220,7 @@ The reduced-motion boot is still a *boot* — the screen still turns on. It is t
 - **Never precache:** `public/games/**` (11MB FreeDoom bundle, Zork story file). Runtime `CacheFirst` after first deliberate play, `NetworkOnly` before.
 - **Update flow:** `skipWaiting` + `clientsClaim`; the *only* user-visible signal is a MOTD-style terminal line on next visit (e.g. `System updated. 4 themes available.`). No toast. No refresh button. F-tier rules apply to service-worker UX too.
 - **Manifest:** `name: "kenzik.com"`, `theme_color`/`background_color: #1e1e1e`, CRT-bezel icon set.
-- **Rollback:** `pwa: false` in `quasar.config.js` — one line, documented here so nobody has to rediscover it during an incident.
+- **Rollback:** change the `build` script in `web/package.json` from `quasar build -m pwa` back to `quasar build` (SPA mode) — one line. There is **no** `pwa: false` config toggle; Quasar selects the build mode via the `-m` CLI flag, not a `quasar.config.js` boolean. (`distDir` is pinned to `dist/spa` in both modes, so no downstream path changes are needed on rollback.) Documented here so nobody has to rediscover it during an incident.
 
 ## 11. Quality Gates
 
@@ -233,7 +233,7 @@ Every phase PR clears all of these before `retro-reviewer` even reads the diff:
 | Screenshot baseline | Default dark home screen: **0-pixel diff** on refactor phases; new baselines only with design-director sign-off |
 | Contrast regression | Light-theme code chips ≥ 4.5:1 (the live bug ships as an expected-fail test until Phase 3 flips it) |
 | Performance budget | Built `dist/spa` JS+CSS transfer ≤ **250KB** (excludes `public/games/**`); current baseline ~180KB — headroom, not a target |
-| Obfuscation | `grep -rE "<trigger words>" web/dist/spa/assets` → empty |
+| Obfuscation | The five XOR-obfuscated triggers absent from **all of `dist/spa` except `dist/spa/games/**`** → empty (widened from `assets/`-only per §11.3) |
 | Boot timing | Full choreography ~3.5s preserved (one un-shortened e2e test); reduced-motion variant ≤ 300ms ignite |
 
 Then the human gate: `retro-reviewer` verdict with file:line citations, judged against §3.
@@ -288,6 +288,40 @@ precisely the skin/parody failure §4 rejects. The dim-beam prompt blooms *less*
 base color is darker (fixed alpha × darker glyph = fainter halo) — the correct physical
 behavior, and what renders. §3's "the whole screen is the easter egg" exception authorizes,
 and in fact requires, the whole-tube treatment in phosphor themes only.
+
+### 11.3 Obfuscation-gate scope precedent — Phase 6 (PWA root artifacts)
+
+**Ruling (design-director, 2026-06-12): WIDEN — YES, but scoped.** Retro-reviewer note N2
+(Phase 5) is correct: the obfuscation gate (§11 table + the `.github/workflows/test.yml`
+"Verify easter-egg triggers are obfuscated in dist" step) greps only `dist/spa/assets/`,
+but the PWA build now emits `dist/spa/sw.js` (+ a Workbox runtime) and `dist/spa/manifest.json`
+at the `dist/spa` **root**, outside the gate. The gate must cover the whole shipped artifact,
+not just `assets/`. **Widen the grep to `dist/spa` while excluding `dist/spa/games/**`**
+(e.g. `grep -rl … dist/spa/ --exclude-dir=games`). test-engineer makes the `test.yml` change
+separately; design-director does not touch `test.yml`.
+
+**Why widen.** The five launch triggers (`xyzzy`, `plugh`, `iddqd`, `idkfa`, `idspispopd`)
+are XOR-obfuscated in app JS so they cannot be discovered by viewing source. Anything the
+build ships at the `dist/spa` root is "viewable source" too. `sw.js` is clean *today* — its
+precache manifest lists files by **hashed filename + revision**, never by content, and the
+Workbox runtime config holds only route regexes (`/games/.*`, `/data/.*\.yml`), no trigger
+strings — so widening adds no current failure. It is defense-in-depth: it locks the gate
+against a future regression where a trigger could reach a root-level precached file or the
+SW config. `index.html` and `manifest.json` (app name `kenzik.com`) are likewise trigger-free.
+
+**Why exclude `games/`.** `dist/spa/games/` carries the actual game payloads —
+`zork1.z3` (Z-machine story) and `doom/freedoom.jsdos` (DOS bundle). Those payloads can
+legitimately embed the very strings the gate hunts: `xyzzy`/`plugh` are Zork's own magic
+words, and `iddqd`/`idkfa`/`idspispopd` are Doom's cheat codes baked into the engine. They
+are plaintext **by necessity** — they *are* the games the triggers launch — and they are
+never precached (§10 `globIgnores: ['games/**']`). This is the same exemption logic that
+keeps `joshua`/`wopr` out of the gate (§3 plaintext-by-design): the gate protects the
+*launch-trigger detection code*, not the game content it launches. A blanket `grep -r dist/spa`
+would false-positive on `games/`; excluding it removes the only legitimate plaintext source
+under `dist/spa`. No non-game occurrence of the five triggers exists elsewhere in the tree
+(app shell, resume YAML `data/example.yml`, fonts, icons are all trigger-free).
+
+This does not alter §3: the obfuscation gate is a §11 quality gate, not a tier-list change.
 
 ## 12. Backlog & Non-Goals
 

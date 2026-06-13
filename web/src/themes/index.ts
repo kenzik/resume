@@ -128,7 +128,7 @@ export const COLOR_TOKEN_USAGE: Readonly<Record<keyof ThemeColors, TokenUsageEnt
   selection:      { role: 'load-bearing', note: '::selection pseudo-element in app.scss',                              consumers: ['app.scss'] },
   white:          { role: 'decorative',   note: 'Scrollbar thumb hover colour in app.scss',                            consumers: ['app.scss'] },
   brightYellow:   { role: 'load-bearing', note: 'Download page accent; app.scss highlight',                            consumers: ['app.scss', 'Download.vue'] },
-  brightMagenta:  { role: 'ansi-slot',    note: 'ANSI magenta bright in ansiToHtml colour map',                        consumers: ['ansiToHtml.ts'] },
+  brightMagenta:  { role: 'load-bearing', note: 'ANSI magenta bright in ansiToHtml colour map',                        consumers: ['ansiToHtml.ts'] },
   brightCyan:     { role: 'load-bearing', note: 'Z-Machine prompt colour (TerminalZMachine)',                           consumers: ['TerminalZMachine.vue'] },
   yellow:         { role: 'load-bearing', note: 'Z-Machine title colour (TerminalZMachine)',                            consumers: ['TerminalZMachine.vue'] },
 

@@ -163,12 +163,10 @@ module.exports = configure(function (ctx) {
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#Property%3A-pwa
     // §10 Offline Doctrine — DESIGN_GUIDE_2026-2.md §10
     // Rollback: in package.json change "build" back to "quasar build" (SPA mode).
-    // Note: §10 documents rollback as `pwa: false` here, but Quasar selects the
-    // build mode via CLI flag (-m pwa), not a config toggle — the package.json
-    // script is the single rollback line. Design-director will true up §10 in
-    // Phase 6.
+    // Quasar selects the build mode via CLI flag (-m pwa), not a config toggle —
+    // the package.json script is the single rollback line (§10).
     pwa: {
-      workboxMode: 'generateSW',
+      workboxMode: 'generateSW', // N1: src-pwa/custom-service-worker.ts is compiled only under injectManifest mode; it is unused here.
 
       extendGenerateSWOptions(cfg) {
         // §10: Selective precache — app shell only; full JuliaMono fonts are
