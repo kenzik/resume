@@ -27,6 +27,9 @@ export const STORAGE_KEYS = {
   theme: 'kenzik-resume-theme',
   font: 'kenzik-resume-font',
   lineHeight: 'kenzik-resume-line-height',
+  // §10: PWA update flag — set by src-pwa/register-service-worker.ts updated()
+  // hook; read-and-cleared by useMotd.getMotd() to emit ONE terminal line.
+  pwaUpdatePending: 'kenzik-resume-pwa-update',
 } as const;
 
 // =============================================================================
