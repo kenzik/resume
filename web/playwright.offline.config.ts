@@ -53,7 +53,10 @@ export default defineConfig({
   webServer: {
     // @quasar/cli global `serve` command: SPA history fallback, zero extra deps.
     // npx resolves the already-installed package locally; downloads on first CI run.
-    command: `npx @quasar/cli serve dist/spa --history --port ${OFFLINE_PORT} --silent`,
+    // --hostname localhost: quasar serve otherwise binds the machine-hostname
+    // interface only; Playwright's health check polls localhost and never
+    // connects (observed in the linux container; same hazard on CI runners).
+    command: `npx @quasar/cli serve dist/spa --history --port ${OFFLINE_PORT} --hostname localhost --silent`,
     url: BASE_URL,
     // Never reuse — we always want a fresh server pointing at the latest build.
     reuseExistingServer: false,
