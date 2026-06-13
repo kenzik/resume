@@ -105,10 +105,16 @@ module.exports = configure(function (ctx) {
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#Property%3A-build
     build: {
+      // §10 rollback: revert "build" in package.json to "quasar build" (SPA mode).
+      // PWA default output is dist/pwa; force dist/spa so all downstream
+      // references (CI workflows, Cloudflare deploy, this afterBuild hook) stay
+      // unchanged without modification.
+      distDir: 'dist/spa',
+
       // Copy data files to build output after build completes
-      afterBuild() {
+      afterBuild({ quasarConf }) {
         const srcYaml = path.resolve(__dirname, '../data/kenzik.yml');
-        const destDir = path.resolve(__dirname, 'dist/spa/data');
+        const destDir = path.join(quasarConf.build.distDir, 'data');
         const destYaml = path.join(destDir, 'kenzik.yml');
 
         // Create data directory in dist
@@ -118,7 +124,7 @@ module.exports = configure(function (ctx) {
 
         // Copy YAML file
         fs.copyFileSync(srcYaml, destYaml);
-        console.log(' Data • Copied kenzik.yml to dist/spa/data/');
+        console.log(` Data • Copied kenzik.yml to ${destDir}/`);
       },
       target: {
         browser: [ 'es2019', 'edge88', 'firefox78', 'chrome87', 'safari13.1' ],
@@ -155,21 +161,71 @@ module.exports = configure(function (ctx) {
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#Property%3A-pwa
+    // §10 Offline Doctrine — DESIGN_GUIDE_2026-2.md §10
+    // Rollback: in package.json change "build" back to "quasar build" (SPA mode).
+    // Note: §10 documents rollback as `pwa: false` here, but Quasar selects the
+    // build mode via CLI flag (-m pwa), not a config toggle — the package.json
+    // script is the single rollback line. Design-director will true up §10 in
+    // Phase 6.
     pwa: {
-      workboxMode: 'generateSW', // or 'injectManifest'
-      // injectPwaMetaTags: true,
-      // swFilename: 'sw.js',
-      // manifestFilename: 'manifest.json',
-      // useCredentialsForManifest: false,
-      // extendGenerateSWOptions (cfg) {}
-      // extendInjectManifestOptions (cfg) {},
-      // extendManifestJson (json) {}
-      // extendPWACustomSWConf (esbuildConf) {}
-      // extendSWCustomHeaders (headers) {}
-      // extendSWCustomStrategies (strategies) {}
-      // extendSWCustomRoutes (routes) {}
-      // swUrl: ...,
-      // ...
+      workboxMode: 'generateSW',
+
+      extendGenerateSWOptions(cfg) {
+        // §10: Selective precache — app shell only; full JuliaMono fonts are
+        // ~1 MB each (14 of them); only precache the two Latin subsets (28 KB
+        // each) and unscii (60 KB) so the total precache stays well under 1 MB.
+        cfg.globPatterns = [
+          '**/*.{js,css}',
+          'index.html',
+          'fonts/JuliaMono-RegularLatin.woff2',
+          'fonts/JuliaMono-BoldLatin.woff2',
+          'fonts/unscii-8.woff',
+          'fonts/juliamono.css',
+          'fonts/unscii.css',
+          'favicon.ico',
+          'favicon-16x16.png',
+          'favicon-32x32.png',
+          'android-chrome-192x192.png',
+          'android-chrome-512x512.png',
+          'apple-touch-icon.png',
+          'data/example.yml',
+        ];
+
+        // §10: Never precache games (11 MB FreeDoom + Zork story files).
+        cfg.globIgnores = [...(cfg.globIgnores || []), 'games/**'];
+
+        // §10 runtime caching:
+        //   YAML — afterBuild copies kenzik.yml AFTER workbox globs run, so it
+        //   cannot be precached. NetworkFirst keeps data fresh; 10 s timeout
+        //   falls back to cache when offline.
+        //   Games — CacheFirst after first deliberate play; before first play the
+        //   cache is empty so the network is used (NetworkOnly holds trivially).
+        cfg.runtimeCaching = [
+          {
+            urlPattern: /\/data\/.*\.yml(\?.*)?$/,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'yaml-data',
+              networkTimeoutSeconds: 10,
+              expiration: {
+                maxEntries: 4,
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
+              },
+            },
+          },
+          {
+            urlPattern: /\/games\/.*/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'games-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+              },
+            },
+          },
+        ];
+      },
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#Property%3A-cordova

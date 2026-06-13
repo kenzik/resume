@@ -141,6 +141,81 @@ jobs:
           fi
           echo "OK: ${KB} KB ≤ 250 KB (gzip)"
 
+      # ── Precache policy gate (§10 Offline Doctrine) ─────────────────────────
+      # Asserts the workbox precache manifest in sw.js satisfies §10 rules:
+      #   (a) zero games/ entries (11 MB FreeDoom bundle must never be precached)
+      #   (b) index.html + at least one assets/*.js entry are present
+      #   (c) total precache gzip payload ≤ 1 MB (§10: "well under a megabyte")
+      #   (d) sw.js and manifest.json exist in dist/spa
+      #
+      # Method: extract {url:"..."} entries with Node regex (no extra deps),
+      # then gzip-c each file and sum.  This is an approximation — it is the
+      # on-disk gzip size, not the HTTP transfer size — but it is conservative
+      # (brotli would be smaller) and sufficient for a budget gate.
+      - name: Precache policy gate (§10 — no games, ≤ 1 MB, sw.js + manifest.json present)
+        run: |
+          # (d) Existence check first — loud failure if build is broken
+          test -f dist/spa/sw.js       || (echo "ERROR: dist/spa/sw.js missing"        && exit 1)
+          test -f dist/spa/manifest.json || (echo "ERROR: dist/spa/manifest.json missing" && exit 1)
+          echo "OK: sw.js and manifest.json present"
+
+          # Extract precache URL list from sw.js via Node regex
+          URLS=$(node -e "
+          const fs = require('fs');
+          const sw = fs.readFileSync('dist/spa/sw.js', 'utf8');
+          const urls = [];
+          const re = /\{url:\"([^\"]+)\"/g;
+          let m;
+          while ((m = re.exec(sw)) !== null) urls.push(m[1]);
+          urls.forEach(u => console.log(u));
+          ")
+
+          if [ -z "$URLS" ]; then
+            echo "ERROR: No precache URLs found in sw.js — manifest may be empty"
+            exit 1
+          fi
+
+          # (a) No games/ entries in precache
+          if echo "$URLS" | grep -q 'games/'; then
+            echo "ERROR: games/ URL(s) found in precache manifest (§10 violation):"
+            echo "$URLS" | grep 'games/'
+            exit 1
+          fi
+          echo "OK: No games/ entries in precache manifest"
+
+          # (b) index.html and at least one assets/*.js are present
+          if ! echo "$URLS" | grep -q '^index\.html$'; then
+            echo "ERROR: index.html not found in precache manifest"
+            exit 1
+          fi
+          if ! echo "$URLS" | grep -qE '^assets/.*\.js$'; then
+            echo "ERROR: No assets/*.js entry found in precache manifest"
+            exit 1
+          fi
+          echo "OK: index.html and assets/*.js are in precache manifest"
+
+          # (c) Total precache gzip payload ≤ 1 MB
+          # Sum gzip -c size for every precache URL that resolves to an
+          # on-disk file.  Files absent from disk are skipped with a warning
+          # (shouldn't happen in a healthy build).
+          TOTAL=0
+          while IFS= read -r url; do
+            file="dist/spa/$url"
+            if [ -f "$file" ]; then
+              SIZE=$(gzip -c "$file" | wc -c)
+              TOTAL=$((TOTAL + SIZE))
+            else
+              echo "WARN: precache entry not found on disk: $url"
+            fi
+          done <<< "$URLS"
+          KB=$((TOTAL / 1024))
+          echo "Precache gzip payload: ${KB} KB (sum of gzip-compressed precached files)"
+          if [ "$TOTAL" -gt $((1024 * 1024)) ]; then
+            echo "ERROR: Precache payload ${KB} KB > 1024 KB (§10 budget exceeded)"
+            exit 1
+          fi
+          echo "OK: Precache payload ${KB} KB <= 1024 KB"
+
       # ── Obfuscation check: no plaintext easter-egg triggers in dist ──────────
       # Asserts exactly the five obfuscated launch-trigger strings are absent
       # from built assets: xyzzy, plugh, iddqd, idkfa, idspispopd.
@@ -163,3 +238,53 @@ jobs:
             exit 1
           fi
           echo "OK: No plaintext triggers found in dist/spa/assets"
+
+  offline-e2e:
+    name: Offline E2E (PWA §10)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: web/yarn.lock
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # Mirror the build-and-perf data provisioning exactly:
+      # kenzik.yml is a gitignored secret; copy example.yml in its place so
+      # the afterBuild hook (which copies kenzik.yml to dist/spa/data/) succeeds
+      # without ever touching personal data.  The built app uses
+      # VITE_RESUME_YAML_PATH=/data/example.yml so all YAML loads hit the public
+      # example file (which is also precached by the SW).
+      - name: Provision build data (example.yml only, no personal data)
+        run: cp ../data/example.yml ../data/kenzik.yml
+
+      - name: Build production PWA bundle
+        run: yarn build
+        env:
+          VITE_RESUME_YAML_PATH: /data/example.yml
+
+      - name: Run offline E2E tests
+        run: yarn test:e2e:offline
+        env:
+          CI: true
+
+      - name: Upload Playwright offline report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-offline-report
+          path: web/playwright-report/
+          retention-days: 7

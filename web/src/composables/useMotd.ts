@@ -4,6 +4,7 @@
  */
 
 import { ref } from 'vue';
+import { STORAGE_KEYS } from '../constants/index';
 import { loadWebConfig } from '../utils/yamlLoader';
 
 // Cached MOTD
@@ -26,8 +27,18 @@ async function loadMotd(): Promise<void> {
 }
 
 export function useMotd() {
+  // §10 Offline Doctrine: check for a pending PWA update notice.
+  // If the flag is set (by src-pwa/register-service-worker.ts updated() hook),
+  // append one plain-text line to the MOTD and clear the flag immediately so
+  // it only appears on the first visit after an update. No toast, no banner
+  // (§3 F-tier). The line is styled identically to other MOTD lines.
   const getMotd = (): string => {
-    return motdContent.value || '';
+    const base = motdContent.value || '';
+    if (localStorage.getItem(STORAGE_KEYS.pwaUpdatePending) === '1') {
+      localStorage.removeItem(STORAGE_KEYS.pwaUpdatePending);
+      return base ? base + '\nSystem updated.' : 'System updated.';
+    }
+    return base;
   };
 
   return {
