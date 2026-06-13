@@ -57,7 +57,9 @@ export default defineConfig({
     url: BASE_URL,
     // Never reuse — we always want a fresh server pointing at the latest build.
     reuseExistingServer: false,
-    timeout: 30_000,
+    // 120s (matches playwright.config.ts): npx cold-downloads @quasar/cli on
+    // first CI/container run, which alone can exceed 30s.
+    timeout: 120_000,
     stdout: 'ignore',
     stderr: 'pipe',
   },
