@@ -3,6 +3,8 @@ data/kenzik.yml
 data/kenzik-quantify.yml
 data/kenzik.b64.txt
 data/kenzik.paste.txt
+data/kenzik-linkedin.txt
+
 
 # OS files
 .DS_Store
@@ -19,3 +21,4 @@ Thumbs.db
 
 tmp/
 .claude/settings.local.json
+
